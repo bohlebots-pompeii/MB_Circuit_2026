@@ -4,8 +4,6 @@
 
 std::unique_ptr<BohleBots> bot;
 
-// hello webhook
-
 void setup() {
     Log::header();
     Log::info("Setup complete");
