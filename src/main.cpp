@@ -1,14 +1,21 @@
 #include <memory>
-#include "bohlebots.h"
-#include "../include/util/log.h"
+#include "bot.h"
+#include <util/log.h>
+#include <config.h>
+#include <Arduino.h>
 
-std::unique_ptr<BohleBots> bot;
+Bot bot;
 
 void setup() {
-    Log::header();
-    Log::info("Setup complete");
+  Serial.begin(115200);
+  bot.init();
+
+  Log::header();
+  Log::info(" Setup Complete; Switching to Loop");
 }
 
 void loop() {
-    bot->update();
+  bot.update();
+
+  delay(10);
 }
