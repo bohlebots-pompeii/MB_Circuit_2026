@@ -116,28 +116,22 @@ void Bot::readButton() {
     ;
 }
 
-void Bot::pushData(const bool enable, const bool kick, int vx, int vy, const uint8_t rotation, const uint8_t dribbler) {
-  uint8_t data[5];
+void Bot::pushData(const bool enable, const bool kick, int vx, int vy, int rot, int dribbler) {
+  MotorCmd cmd{};
 
   vx = constrain(vx, -100, 100);
   vy = constrain(vy, -100, 100);
+  rot = constrain(rot, -100, 100);
+  dribbler = constrain(dribbler, -100, 100);
 
-  const long mapped_vx = map(vx, -100, 100, 0, 255);
-  const long mapped_vy = map(vy, -100, 100, 0, 255);
+  cmd.flags = 0;
+  if (enable) cmd.flags |= 0x01;
+  if (kick)   cmd.flags |= 0x02;
 
-  const uint8_t vx_byte = static_cast<uint8_t>(constrain(mapped_vx, 0L, 255L));
-  const uint8_t vy_byte = static_cast<uint8_t>(constrain(mapped_vy, 0L, 255L));
+  cmd.vx   = static_cast<int8_t>(vx);
+  cmd.vy   = static_cast<int8_t>(vy);
+  cmd.rot  = static_cast<int8_t>(rot);
+  cmd.drib = static_cast<int8_t>(dribbler);
 
-  // Byte 1 -> ena, kick
-  data[0] = 0;
-  if (enable) data[0] |= 0x01;  // Bit 0
-  if (kick)   data[0] |= 0x02;  // Bit 1
-
-  data[1] = vx_byte;  // vx (0..255)
-  data[2] = vy_byte;  // vy (0..255)
-  data[3] = rotation; // rotation (0..255)
-  data[4] = dribbler; // dribbler
-
-  I2C::transmit(motorDriverMB, data, 5);
+  I2C::transmit(motorDriverMB, reinterpret_cast<uint8_t*>(&cmd), sizeof(cmd));
 }
-

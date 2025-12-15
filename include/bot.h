@@ -13,6 +13,14 @@ public:
 
     void update();
 private:
+    struct __attribute__((packed)) MotorCmd {
+        uint8_t flags;   // bit0 = ena, bit1 = kick
+        int8_t  vx;      // -100 .. 100
+        int8_t  vy;      // -100 .. 100
+        int8_t  rot;     // -100 .. 100
+        int8_t  drib;    // -100 .. 100
+    };
+
     float _x_pos = 0;
     float _y_pos = 0;
 
@@ -31,6 +39,6 @@ private:
 
     void readButton();
 
-    void pushData(bool enable, bool kick, int vx, int vy, uint8_t rotation, uint8_t dribbler);
+    void pushData(bool enable, bool kick, int vx, int vy, int rot, int dribbler);
 };
 #endif //BOT_2026_BOT_H
