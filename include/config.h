@@ -9,10 +9,11 @@
 #define Angle_8 1
 
 constexpr int buttonPIN = 19;
+constexpr int piezoPIN = 23;
 
 constexpr int motorDriverMB = 0x69;
 constexpr int CM5 = 0x67;
 
-constexpr int groundSensor = 0x20;
+constexpr int groundSensor = 0x40;
 constexpr int usCircuit = 0x50;
 constexpr int imuAddress = 0x60;

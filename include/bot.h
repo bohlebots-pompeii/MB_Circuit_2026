@@ -5,6 +5,9 @@
 #ifndef BOT_2026_BOT_H
 #define BOT_2026_BOT_H
 #include <Arduino.h>
+#include <cstdint>
+
+extern bool isHoming;
 
 class Bot
 {
@@ -12,6 +15,10 @@ public:
     void init();
 
     void update();
+
+    void overrideControl();
+
+    void home();
 private:
     struct __attribute__((packed)) MotorCmd {
         uint8_t flags;   // bit0 = ena, bit1 = kick
@@ -23,6 +30,9 @@ private:
 
     float _x_pos = 0;
     float _y_pos = 0;
+
+    int16_t line_rot = -1;
+    int16_t progress = -1;
 
     int _head_calib = 0;
     int _head = 0;

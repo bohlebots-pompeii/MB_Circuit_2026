@@ -7,46 +7,78 @@
 #include <comms/i2c.h>
 #include <Arduino.h>
 #include <Vector2.hpp>
+#include <util/piezo.h>
+#include <comms/serial.h>
+
+Piezo buzzer(piezoPIN, 0, 2000, 8);
 
 void Bot::init() {
   I2C::init();
+  buzzer.begin();
 
-  set_heading();
+  //set_heading();
 
   pinMode(buttonPIN, INPUT);
 }
 
+Vector2 degreeToVector(const float degrees) {
+  const float radians = degrees * (PI / 180.0f);
+  return Vector2(cosf(radians), sinf(radians));
+}
+
 void Bot::update() {
-  getSensorData();
+  constexpr int speed = 35;
 
-  constexpr float RADIUS = 30.0f;
-  constexpr float SPEED = 20.0f;
-  constexpr float ANGLE_STEP = 0.015f;
-
-  static float theta = 0.0f;
-
-  const float target_x = RADIUS * cos(theta);
-  const float target_y = RADIUS * sin(theta);
-
-  float vx_f = target_x - _x_pos;
-  float vy_f = target_y - _y_pos;
-
-  if (const float len = sqrt(vx_f * vx_f + vy_f * vy_f); len > 0.001f) {
-    vx_f = (vx_f / len) * SPEED;
-    vy_f = (vy_f / len) * SPEED;
+  if (isHoming) {
+    home();
+    buzzer.playTone(1000, 200, 128);
+    return;
   }
 
-  theta += ANGLE_STEP;
-  if (theta > TWO_PI) {
-    theta -= TWO_PI;
+  updateCM5(); // proccess cm5 data
+
+  getSensorData(); // process i2c data
+
+  float ballrot = 0.0f;
+
+  for (int i = 0; i < public_num_detections; ++i) {
+    if (public_detections[i].label == 3) {
+      ballrot = public_detections[i].rotation_deg;
+      break;
+    }
   }
 
-  const int vx = static_cast<int>(roundf(vx_f));
-  const int vy = static_cast<int>(roundf(vy_f));
+  /*
+  for (int i = 0; i < public_num_detections; ++i) {
+    Serial.print("Label ");
+    Serial.print(public_detections[i].label);
+    Serial.print(" dist ");
+    Serial.println(public_detections[i].dist_cm);
+    //Serial.print(" x ");
+    //Serial.print(public_detections[i].rel_x);
+    //Serial.print(" y ");
+    //erial.println(public_detections[i].rel_y);
+  }
+  */
 
-  const int rot = 0 - readCompass() / 4;
+  //Serial.println(heading);
 
-  pushData(_ena, false, -vx, -vy, rot, 0);
+  const Vector2 target = degreeToVector(ballrot);
+
+  int vx = static_cast<int>(roundf(target.getY() * speed));
+  int vy = static_cast<int>(roundf(target.getX() * speed));
+
+  const int rot = 0 - static_cast<int>(heading) / 4;
+
+  if (line_rot != -1 && progress != -1) {
+    const Vector2 lineDir = degreeToVector(line_rot);
+    constexpr float correction_strength = static_cast<float>(speed * 2);
+
+    vx -= lineDir.getY() * correction_strength;
+    vy -= lineDir.getX() * correction_strength;
+  }
+
+  pushData(_ena, false, static_cast<int>(roundf(vx)), static_cast<int>(roundf(vy)), rot, 0);
 }
 
 void Bot::getSensorData() {
@@ -73,12 +105,36 @@ void Bot::getSensorData() {
     local_y = static_cast<float>(y) / scale;
   }
 
-  _head = readCompass();
+  // Ground Sensor
+  constexpr uint8_t len = 4;
+  I2C::requestData(groundSensor, len);
+  if (I2C::available() >= len) {
+    const uint8_t progressLow  = I2C::read();
+    const uint8_t progressHigh = I2C::read();
+    const uint8_t lineRotLow  = I2C::read();
+    const uint8_t lineRotHigh = I2C::read();
+
+    const uint16_t lineRot_u = (static_cast<uint16_t>(lineRotHigh) << 8) | static_cast<uint16_t>(lineRotLow);
+    const uint16_t progress_u = (static_cast<uint16_t>(progressHigh) << 8) | static_cast<uint16_t>(progressLow);
+
+    line_rot = static_cast<int16_t>(lineRot_u);
+    progress = static_cast<int16_t>(progress_u);
+
+    if (progress > 16) {
+      line_rot += 180;
+    }
+
+    if (line_rot > 360) {
+      line_rot -= 360;
+    }
+  }
+
+  Serial.println(line_rot);
+  Serial.println(progress);
 
   readButton();
 
   localToWorld(local_x, local_y, _head, _x_pos, _y_pos);
-
 }
 
 int Bot::readCompass() {
@@ -119,6 +175,9 @@ void Bot::readButton() {
 void Bot::pushData(const bool enable, const bool kick, int vx, int vy, int rot, int dribbler) {
   MotorCmd cmd{};
 
+  vx *= -1;
+  vy *= -1;
+
   vx = constrain(vx, -100, 100);
   vy = constrain(vy, -100, 100);
   rot = constrain(rot, -100, 100);
@@ -134,4 +193,50 @@ void Bot::pushData(const bool enable, const bool kick, int vx, int vy, int rot, 
   cmd.drib = static_cast<int8_t>(dribbler);
 
   I2C::transmit(motorDriverMB, reinterpret_cast<uint8_t*>(&cmd), sizeof(cmd));
+}
+
+void Bot::overrideControl() {
+  pushData(false, false, 0, 0, 0, 0);
+}
+
+void Bot::home() {
+  getSensorData();
+
+  constexpr float TARGET_X = -50.0f;
+  constexpr float TARGET_Y = -90.0f;
+  constexpr float KP_POS = 1.5f;
+  constexpr float KP_ROT = 0.8f;
+  constexpr float MAX_SPEED = 40.0f;
+  constexpr float MAX_ROT_SPEED = 50.0f;
+
+  const float error_x = TARGET_X - _x_pos;
+  const float error_y = TARGET_Y - _y_pos;
+  const float distance = sqrtf(error_x * error_x + error_y * error_y);
+
+  if (constexpr float GOAL_RADIUS = 3.0f; distance < GOAL_RADIUS) {
+    isHoming = false;
+    _ena = 0;
+    pushData(_ena, false, 0, 0, 0, 0);
+    return;
+  }
+
+  float world_vx = error_x * KP_POS;
+  float world_vy = error_y * KP_POS;
+
+  if (const float speed = sqrtf(world_vx * world_vx + world_vy * world_vy); speed > MAX_SPEED) {
+    world_vx = (world_vx / speed) * MAX_SPEED;
+    world_vy = (world_vy / speed) * MAX_SPEED;
+  }
+
+  const float theta = _head * (PI / 180.0f);
+  const float cos_theta = cosf(theta);
+  const float sin_theta = sinf(theta);
+
+  const float local_vx = cos_theta * world_vx + sin_theta * world_vy;
+  const float local_vy = -sin_theta * world_vx + cos_theta * world_vy;
+
+  float rot_speed = -_head * KP_ROT;
+  rot_speed = constrain(rot_speed, -MAX_ROT_SPEED, MAX_ROT_SPEED);
+
+  pushData(true, false, static_cast<int>(local_vx), static_cast<int>(local_vy), static_cast<int>(rot_speed), 0);
 }
