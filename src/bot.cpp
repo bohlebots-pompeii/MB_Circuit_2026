@@ -27,7 +27,7 @@ Vector2 degreeToVector(const float degrees) {
 }
 
 void Bot::update() {
-  constexpr int speed = 35;
+  constexpr int speed = 30;
 
   if (isHoming) {
     home();
@@ -40,10 +40,12 @@ void Bot::update() {
   getSensorData(); // process i2c data
 
   float ballrot = 0.0f;
+  float balldist = 0.0f;
 
   for (int i = 0; i < public_num_detections; ++i) {
     if (public_detections[i].label == 3) {
       ballrot = public_detections[i].rotation_deg;
+      balldist = public_detections[i].dist_cm;
       break;
     }
   }
@@ -62,8 +64,23 @@ void Bot::update() {
   */
 
   //Serial.println(heading);
+  Serial.println(balldist);
+  if (balldist > 100) {
+    balldist = 100;
+  }
+  const float factor = 20 / balldist;
 
-  const Vector2 target = degreeToVector(ballrot);
+  float target_angle = ballrot * factor;
+
+  if (target_angle > 270) {
+    target_angle = 270;
+  }
+
+  if (target_angle < -270) {
+    target_angle = -270;
+  }
+
+  const Vector2 target = degreeToVector(target_angle);
 
   int vx = static_cast<int>(roundf(target.getY() * speed));
   int vy = static_cast<int>(roundf(target.getX() * speed));
@@ -129,12 +146,9 @@ void Bot::getSensorData() {
     }
   }
 
-  Serial.println(line_rot);
-  Serial.println(progress);
-
   readButton();
 
-  localToWorld(local_x, local_y, _head, _x_pos, _y_pos);
+  localToWorld(local_x, local_y, heading, _x_pos, _y_pos);
 }
 
 int Bot::readCompass() {
