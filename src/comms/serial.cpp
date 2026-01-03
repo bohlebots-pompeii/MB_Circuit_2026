@@ -10,7 +10,7 @@
 
 Object public_detections[MAX_DETECTIONS]; // memory because memory issues
 int public_num_detections = 0;
-float heading = 444.0f;
+float heading = 0.0f;
 
 constexpr CalibPoint calib[] = {
   {  81.0f,  10.0f },

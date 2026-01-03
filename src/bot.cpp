@@ -29,24 +29,44 @@ Vector2 degreeToVector(const float degrees) {
 void Bot::update() {
   constexpr int speed = 30;
 
+  getSensorData(); // process i2c data
+
+  updateCM5(); // proccess cm5 data
+
   if (isHoming) {
     home();
     buzzer.playTone(1000, 200, 128);
     return;
   }
 
-  updateCM5(); // proccess cm5 data
+  int vx, vy;
+  if (line_rot != -1 && progress != -1) {
+    Vector2 lineDir = degreeToVector(line_rot);
 
-  getSensorData(); // process i2c data
+    lineDir.rotate(M_PI);
+
+    vx = static_cast<int>(roundf(lineDir.getY() * 100));
+    vy = static_cast<int>(roundf(lineDir.getX() * 100));
+
+    pushData(_ena, false, static_cast<int>(roundf(vx)), static_cast<int>(roundf(vy)), 0, 0);
+    return;
+  }
+
+  int rot = 0 - static_cast<int>(heading) / 4;
 
   float ballrot = 0.0f;
   float balldist = 0.0f;
+
+  float yellow_rot = 0.0f;
 
   for (int i = 0; i < public_num_detections; ++i) {
     if (public_detections[i].label == 3) {
       ballrot = public_detections[i].rotation_deg;
       balldist = public_detections[i].dist_cm;
       break;
+    }
+    if (public_detections[i].label == 2) {
+      yellow_rot = public_detections[i].rotation_deg;
     }
   }
 
@@ -63,37 +83,33 @@ void Bot::update() {
   }
   */
 
-  //Serial.println(heading);
-  Serial.println(balldist);
   if (balldist > 100) {
     balldist = 100;
   }
-  const float factor = 20 / balldist;
 
-  float target_angle = ballrot * factor;
+  const float ballRad = ballrot * (PI / 180.0f);
+  auto target = Vector2(cosf(ballRad) * balldist, sinf(ballRad) * balldist);
 
-  if (target_angle > 270) {
-    target_angle = 270;
+  target.normalize();
+
+  if (abs(ballrot) > 30.0f) {
+    if (balldist < 25.0f) {
+      if (ballrot > 0) {
+        target.rotate(M_PI / 2);
+      }
+      else {
+        target.rotate(-M_PI / 2);
+      }
+    }
   }
 
-  if (target_angle < -270) {
-    target_angle = -270;
+  if (abs(ballrot) < 10.0f) {
+    target = degreeToVector(yellow_rot);
+     rot = 0 - static_cast<int>(-yellow_rot) / 2;
   }
 
-  const Vector2 target = degreeToVector(target_angle);
-
-  int vx = static_cast<int>(roundf(target.getY() * speed));
-  int vy = static_cast<int>(roundf(target.getX() * speed));
-
-  const int rot = 0 - static_cast<int>(heading) / 4;
-
-  if (line_rot != -1 && progress != -1) {
-    const Vector2 lineDir = degreeToVector(line_rot);
-    constexpr float correction_strength = static_cast<float>(speed * 2);
-
-    vx -= lineDir.getY() * correction_strength;
-    vy -= lineDir.getX() * correction_strength;
-  }
+  vx = static_cast<int>(roundf(target.getY() * speed));
+  vy = static_cast<int>(roundf(target.getX() * speed));
 
   pushData(_ena, false, static_cast<int>(roundf(vx)), static_cast<int>(roundf(vy)), rot, 0);
 }
@@ -137,7 +153,7 @@ void Bot::getSensorData() {
     line_rot = static_cast<int16_t>(lineRot_u);
     progress = static_cast<int16_t>(progress_u);
 
-    if (progress > 16) {
+    if (progress >= 16) {
       line_rot += 180;
     }
 
