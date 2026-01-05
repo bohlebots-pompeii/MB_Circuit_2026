@@ -1,16 +1,15 @@
 #include <memory>
-#include "bot.h"
+#include "Bot.h"
 #include <util/log.h>
 #include <config.h>
 #include <Arduino.h>
 #include <comms/esp-now.h>
 
-Bot bot;
+std::shared_ptr<Bot> bot;
 
 void setup() {
-  Serial.begin(115200);
-  Serial2.begin(115200, SERIAL_8N2, 16, 17);
-  bot.init();
+  bot = std::make_shared<Bot>();
+
   initEspNow();
 
   Log::header();
@@ -19,10 +18,10 @@ void setup() {
 
 void loop() {
   if (!overrideActive) {
-    bot.update();
+    bot->update();
   }
   else {
-    bot.overrideControl();
+    bot->overrideControl();
   }
-  delay(10);
+  delay(1);
 }

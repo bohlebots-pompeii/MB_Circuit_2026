@@ -1,18 +1,18 @@
-// cpp
-#include <comms/serial.h>
+//
+// by Julius Gerhardus on 05.01.26
+//
+#include <comms/CM5.h>
 #include <Arduino.h>
 #include <cmath>
 #include <cstring>
+#include <numbers>
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846f
-#endif
-
-Object public_detections[MAX_DETECTIONS]; // memory because memory issues
-int public_num_detections = 0;
+Detection detections[6]; // memory because memory issues
+Object objects[6] = {};
+int num_detections = 0;
 float heading = 0.0f;
 
-constexpr CalibPoint calib[] = {
+static CalibPoint calib[] = {
   {  81.0f,  10.0f },
   { 125.0f,  20.0f },
   { 147.0f,  30.0f },
@@ -37,9 +37,9 @@ constexpr CalibPoint calib[] = {
   { 229.0f,220.0f }
 };
 
-constexpr int CALIB_N = std::size(calib);
+static int CALIB_N = std::size(calib);
 
-static float pixelToCm(const float pixel) {
+float CM5::pixelToCm(const float pixel) {
   if (pixel <= calib[0].pixel) return calib[0].cm;
   if (pixel >= calib[CALIB_N - 1].pixel) return calib[CALIB_N - 1].cm;
 
@@ -54,13 +54,13 @@ static float pixelToCm(const float pixel) {
   return 0.0f;
 }
 
-void calibMirror(const Object* detections, const int num_detections) {
+void CM5::calibMirror(const Detection* det, const int num_det) {
   constexpr float cx = 320.0f; // screen center
   constexpr float cy = 320.0f;
-  for (int i = 0; i < num_detections; ++i) {
-    if (detections[i].label == 1 || detections[i].label == 2) {
-      const float dx = detections[i].center[0] - cx;
-      const float dy = detections[i].center[1] - cy;
+  for (int i = 0; i < num_det; ++i) {
+    if (det[i].label == 1 || det[i].label == 2) {
+      const float dx = det[i].center[0] - cx;
+      const float dy = det[i].center[1] - cy;
 
       const float r = sqrtf(dx * dx + dy * dy);
       Serial.println(r);
@@ -68,14 +68,14 @@ void calibMirror(const Object* detections, const int num_detections) {
   }
 }
 
-static void computeCenters(Object* detections, const int num_detections) {
-  for (int i = 0; i < num_detections; ++i) {
-    detections[i].center[0] = (detections[i].bbox[0] + detections[i].bbox[2]) * 0.5f;
-    detections[i].center[1] = (detections[i].bbox[1] + detections[i].bbox[3]) * 0.5f;
+void CM5::computeCenters(Detection* det, const int num_det) {
+  for (int i = 0; i < num_det; ++i) {
+    det[i].center[0] = (det[i].bbox[0] + det[i].bbox[2]) * 0.5f;
+    det[i].center[1] = (det[i].bbox[1] + det[i].bbox[3]) * 0.5f;
   }
 }
 
-float halfToFloat(const uint16_t h) {
+float CM5::halfToFloat(const uint16_t h) {
   uint16_t h_exp = (h & 0x7C00) >> 10;
   uint16_t h_sig = h & 0x03FF;
   const uint32_t f_sgn = (h & 0x8000) << 16;
@@ -110,69 +110,71 @@ float halfToFloat(const uint16_t h) {
   return result;
 }
 
-static void computeRotations(Object* detections, const int num_detections) {
-  for (int i = 0; i < num_detections; ++i) {
-    constexpr float cx = 320.0f; // screen center
-    constexpr float cy = 320.0f;
-    const float dx = detections[i].center[0] - cx; // position relative to center
-    const float dy = detections[i].center[1] - cy;
+void CM5::computeRotations(const Detection* det, const int num_det) {
+  constexpr float cx = 320.0f; // screen center
+  constexpr float cy = 320.0f;
+  for (int i = 0; i < num_det; ++i) {
+    const float dx = det[i].center[0] - cx; // position relative to center
+    const float dy = det[i].center[1] - cy;
     const float angle_rad = atan2f(dx, dy); // rotation relative to center
-    detections[i].rotation_deg = angle_rad * 180.0f / M_PI; // to deg
+    objects[i].rotation_deg = angle_rad * 180.0f / std::numbers::pi; // to deg
+    objects[i].label = det[i].label;
+    if (det[i].label == 1) {
+      blueRot = objects[i].rotation_deg;
+    }
+    else if (det[i].label == 2) {
+      yellowRot = objects[i].rotation_deg;
+    }
+    else if (det[i].label == 3) {
+      ballRot = objects[i].rotation_deg;
+    }
   }
 }
 
-void computeDistances(Object* detections, const int num_detections) {
+void CM5::computeDistances(const Detection* det, const int num_det) {
   constexpr float cx = 320.0f; // mirror center
   constexpr float cy = 320.0f;
 
-  for (int i = 0; i < num_detections; ++i) {
-    const float dx = detections[i].center[0] - cx;
-    const float dy = detections[i].center[1] - cy;
+  for (int i = 0; i < num_det; ++i) {
+    const float dx = det[i].center[0] - cx;
+    const float dy = det[i].center[1] - cy;
 
     const float r = sqrtf(dx * dx + dy * dy);
 
     const float dist = pixelToCm(r);
-    detections[i].dist_cm = dist;
+    objects[i].dist_cm = dist;
 
     const float angle_rad = atan2f(dx, dy);
 
     // position rel to robot
-    detections[i].rel_x = dist * cosf(angle_rad);
-    detections[i].rel_y = dist * sinf(angle_rad);
+    objects[i].rel_x = dist * cosf(angle_rad);
+    objects[i].rel_y = dist * sinf(angle_rad);
+
+    if (objects[i].label == 1) {
+      blueDist = dist;
+    }
+    else if (objects[i].label == 2) {
+      yellowDist = dist;
+    }
+    else if (objects[i].label == 3) {
+      ballDist = dist;
+    }
   }
 }
 
-static void computeHeading(const Object* detections, const int num_detections) {
-  bool blue = false;
-  bool yellow = false;
-  float bluerot = 0.0f, yellowrot = 0.0f;
-  for (int i = 0; i < num_detections; ++i) {
-    if (detections[i].label == 1) {
-      blue = true;
-      bluerot = detections[i].rotation_deg;
-    }
-    else if (detections[i].label == 2) {
-      yellow = true;
-      yellowrot = detections[i].rotation_deg;
-    }
-  }
-  if ((!blue && yellow) || (blue && !yellow)) { return; }
-  heading = yellowrot - bluerot;
-}
-
-void computeHeadingFromPolar(const Object* detections, const int num_detections) {
+void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
   float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
   bool foundBlue = false, foundYellow = false;
 
-  for (int i = 0; i < num_detections; i++) {
-    float theta = detections[i].rotation_deg * M_PI / 180.0f;
-    float d = detections[i].dist_cm;
-    float x = d * sinf(theta);
-    float y = d * cosf(theta);
+  for (int i = 0; i < num_det; i++) {
+    const float theta = objects[i].rotation_deg * std::numbers::pi / 180.0f;
+    const float d = objects[i].dist_cm;
+    const float x = d * sinf(theta);
+    const float y = d * cosf(theta);
 
-    if (detections[i].label == 1) { // blue
+    if (det[i].label == 1) { // blue
       x1 = x; y1 = y; foundBlue = true;
-    } else if (detections[i].label == 2) { // yellow
+    } else if (det[i].label == 2) { // yellow
       x2 = x; y2 = y; foundYellow = true;
     }
   }
@@ -180,31 +182,31 @@ void computeHeadingFromPolar(const Object* detections, const int num_detections)
   if (foundBlue && foundYellow) {
     const float dx = x2 - x1;
     const float dy = y2 - y1;
-    heading = atan2f(dx, dy) * 180.0f / M_PI;
+    heading = atan2f(dx, dy) * 180.0f / std::numbers::pi;
     heading *= -1.0f; // adjust direction
   }
 }
 
 
-void updateCM5() {
+void CM5::update() {
   if (Serial2.available()) {
     // read header
     const int num_detections_in = Serial2.read();
 
     if (num_detections_in == 0) {
-      public_num_detections = 0;
+      num_detections = 0;
       return;
     }
 
-    const int stored_detections = (num_detections_in > MAX_DETECTIONS) ? MAX_DETECTIONS : num_detections_in;
-    public_num_detections = stored_detections;
+    const int stored_detections = (num_detections_in > 6) ? 6 : num_detections_in;
+    num_detections = stored_detections;
 
     // read label
     for (int i = 0; i < num_detections_in; i++) {
       while (Serial2.available() < 1) {}
       const uint8_t val = Serial2.read();
       if (i < stored_detections) {
-        public_detections[i].label = val;
+        detections[i].label = val;
       }
     }
 
@@ -220,18 +222,21 @@ void updateCM5() {
         raw[j] = (bytes[1] << 8) | bytes[0];
 
         if (i < stored_detections) {
-          public_detections[i].bbox[j] = halfToFloat(raw[j]);
+          detections[i].bbox[j] = halfToFloat(raw[j]);
         }
       }
     }
 
-    // calculate bbox centers and then the rotation
-    computeCenters(public_detections, stored_detections);
-    computeRotations(public_detections, stored_detections);
-    computeDistances(public_detections, stored_detections);
+    computeCenters(detections, stored_detections);
+    computeRotations(detections, stored_detections);
+    computeDistances(detections, stored_detections);
+
     //calibMirror(public_detections, stored_detections);
 
-    // calculate robot heading based on goals
-    computeHeadingFromPolar(public_detections, stored_detections);
+    computeHeadingFromPolar(detections, stored_detections);
   }
+}
+
+float CM5::getHeading() const {
+  return heading;
 }
