@@ -84,7 +84,7 @@ void Bot::update() {
   // Calculate orbital shift to curve behind the ball
   float shift;
   if (ballDist != 0 && abs(ballRot) > 40.0f) {
-    shift = 16.0f / (ballDist / 2.0f);
+    shift = 14.0f / (ballDist / 2.0f);
     shift = constrain(shift, 1.0, 3.0);
   }
   else {
