@@ -107,7 +107,7 @@ void Bot::home() {
   constexpr float MAX_SPEED = 40.0f;
   constexpr float MAX_ROT_SPEED = 50.0f;
 
-  Vector2 pos = _sensors->getPosition();
+  const Vector2 pos = _sensors->getPosition();
   const float error_x = TARGET_X - pos.getX();
   const float error_y = TARGET_Y - pos.getY();
   const float distance = sqrtf(error_x * error_x + error_y * error_y);

@@ -50,7 +50,6 @@ void Sensors::updateLineSensor() {
 }
 
 void Sensors::updateUS() {
-  // US Positon
   constexpr uint8_t numBytes = 4;
   Wire.requestFrom(usAddress, numBytes);
   float local_x = 0;

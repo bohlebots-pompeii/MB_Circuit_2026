@@ -1,7 +1,6 @@
 #include <memory>
 #include "Bot.h"
 #include <util/log.h>
-#include <config.h>
 #include <Arduino.h>
 #include <comms/esp-now.h>
 

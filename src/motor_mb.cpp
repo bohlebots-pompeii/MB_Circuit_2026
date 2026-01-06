@@ -4,7 +4,6 @@
 
 #include "motor_mb.h"
 #include <Arduino.h>
-#include <comms/i2c.h>
 #include <Wire.h>
 #include <config.h>
 
