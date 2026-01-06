@@ -43,7 +43,7 @@ void Bot::update() {
 
   // --- Line Sensor Override Logic ---
   // If the line sensor detects the boundary, prioritize moving away
-  if (_sensors->getProgress() != -1 && _sensors->getLineRot() != -1) {
+  if (_sensors->getLineSeen()) {
     int vy_l = 0;
     int vx_l = 0;
 
@@ -71,7 +71,8 @@ void Bot::update() {
   // Calculate orbital shift to curve behind the ball
   float shift;
   if (ballDist != 0 && abs(ballRot) > 50.0f) {
-    shift = 15 / (ballDist / 2);
+    // Avoid integer division by zero when ballDist is 1 (1/2 = 0)
+    shift = 15.0f / (ballDist / 2.0f);
     shift = constrain(shift, 1.0, 3.0);
   }
   else {
@@ -140,5 +141,6 @@ void Bot::home() {
   float rot_speed = 0 - heading / 4;
   rot_speed = constrain(rot_speed, -MAX_ROT_SPEED, MAX_ROT_SPEED);
 
-  pushData(true, false, static_cast<int>(local_vx), static_cast<int>(local_vy), static_cast<int>(rot_speed), 0);
+  // Use sensor enable flag instead of hardcoded true for safety
+  pushData(_sensors->getEna(), false, static_cast<int>(local_vx), static_cast<int>(local_vy), static_cast<int>(rot_speed), 0);
 }

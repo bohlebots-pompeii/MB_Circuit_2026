@@ -17,11 +17,13 @@ public:
 
   [[nodiscard]] int16_t getLineRot() const { return line_rot; }
   [[nodiscard]] int16_t getProgress() const { return progress; }
+  [[nodiscard]] bool getLineSeen() const { return progress != -1 && line_rot != -1; }
   [[nodiscard]] Vector2 getPosition() const { return position; }
   [[nodiscard]] bool getEna() const { return ena; }
 
 private:
   bool ena = false;
+  bool lastButtonState = false;
 
   int16_t line_rot = -1;
   int16_t progress = -1;

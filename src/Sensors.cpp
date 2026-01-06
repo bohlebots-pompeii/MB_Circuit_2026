@@ -53,6 +53,10 @@ void Sensors::updateLineSensor() {
     if (line_rot > 360) {
       line_rot -= 360;
     }
+  } else {
+    // Reset values if communication fails preventing stuck values
+    line_rot = -1;
+    progress = -1;
   }
 }
 
@@ -60,8 +64,6 @@ void Sensors::updateUS() {
   constexpr uint8_t numBytes = 4;
   // Request 4 bytes containing coordinate data from US sensor
   Wire.requestFrom(usAddress, numBytes);
-  float local_x = 0;
-  float local_y = 0;
 
   if (Wire.available() >= numBytes) {
     const uint8_t xLow  = Wire.read();
@@ -76,26 +78,26 @@ void Sensors::updateUS() {
     const int16_t y = static_cast<int16_t>(y_u);
 
     constexpr float scale = 100.0f;
-    local_x = static_cast<float>(x) / scale;
-    local_y = static_cast<float>(y) / scale;
+    const float local_x = static_cast<float>(x) / scale;
+    const float local_y = static_cast<float>(y) / scale;
+
+    float g_x;
+    float g_y;
+    const float heading = _cm5->getHeading();
+
+    localToWorld(local_x, local_y, heading, g_x, g_y);
+
+    position.setX(g_x);
+    position.setY(g_y);
   }
-
-  float g_x;
-  float g_y;
-  const float heading = _cm5->getHeading();
-
-  localToWorld(local_x, local_y, heading, g_x, g_y);
-
-  position.setX(g_x);
-  position.setY(g_y);
 }
 
 void Sensors::updateButton() {
-  if (digitalRead(buttonPIN) == HIGH) {
+  const bool currentButtonState = digitalRead(buttonPIN);
+  if (currentButtonState == HIGH && !lastButtonState) {
     ena = !ena;
   }
-  while (digitalRead(buttonPIN) == HIGH)
-    ;
+  lastButtonState = currentButtonState;
 }
 
 void Sensors::localToWorld(const float lx, const float ly,const float heading_deg, float &gx, float &gy) {
