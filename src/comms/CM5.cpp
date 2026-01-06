@@ -184,9 +184,26 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
     const float dy = y2 - y1;
     heading = atan2f(dx, dy) * 180.0f / std::numbers::pi;
     heading *= -1.0f; // adjust direction
+
+    // Calculate Global Position
+    // Assuming mid point between both goals is (0,0) in global frame
+    const float h_rad = heading * std::numbers::pi / 180.0f;
+    const float mx = (x1 + x2) * 0.5f; // Midpoint relative to robot
+    const float my = (y1 + y2) * 0.5f;
+
+    // Rotate local midpoint vector by heading to align with global frame
+    // Standard rotation adapted for Y-Forward coordinate system:
+    // gx = x*cos(h) + y*sin(h)
+    // gy = y*cos(h) - x*sin(h)
+    const float gx = mx * cosf(h_rad) + my * sinf(h_rad);
+    const float gy = my * cosf(h_rad) - mx * sinf(h_rad);
+
+    // Robot position is the negation of the vector TO the midpoint
+    // (since midpoint is at global 0,0)
+    g_x = -gx;
+    g_y = -gy * 2;
   }
 }
-
 
 void CM5::update() {
   if (Serial2.available()) {

@@ -4,14 +4,19 @@
 
 #include <Bot.h>
 #include <Arduino.h>
+#include <chrono>
 #include <Vector2.hpp>
 #include <comms/CM5.h>
 #include <Sensors.h>
+#include <Positioning.h>
 #include <Wire.h>
 #include <memory>
 #include <motor_mb.h>
 #include <numbers>
 #include <iostream>
+#include <elapsedMillis.h>
+
+elapsedMillis lineLastSeen;
 
 Bot::Bot() {
   Wire.begin();
@@ -20,6 +25,7 @@ Bot::Bot() {
 
   _cm5 = std::make_shared<CM5>();
   _sensors = std::make_shared<Sensors>(_cm5);
+  _positioning = std::make_shared<Positioning>(_sensors);
 }
 
 Vector2 degreeToVector(const float degrees) {
@@ -44,18 +50,25 @@ void Bot::update() {
   // --- Line Sensor Override Logic ---
   // If the line sensor detects the boundary, prioritize moving away
   if (_sensors->getLineSeen()) {
-    int vy_l = 0;
-    int vx_l = 0;
-
     // Calculate vector away from the line (rotate 180 degrees from line normal)
     Vector2 line = degreeToVector(_sensors->getLineRot());
     line.normalize();
     line.rotate(std::numbers::pi);
 
-    vx_l = static_cast<int>(roundf(line.getY() * (speed + 10)));
-    vy_l = static_cast<int>(roundf(line.getX() * (speed + 10)));
+    const int vx_l = static_cast<int>(roundf(line.getY() * 10));
+    const int vy_l = static_cast<int>(roundf(line.getX() * 10));
 
-    pushData(_sensors->getEna(), false, vx_l, vy_l, rot, 0);
+    lineLastSeen = 0;
+    lastLine = line;
+
+    pushData(_sensors->getEna(), false, vx_l, vy_l, 0, 0);
+    return;
+  }
+  if (lineLastSeen < 100) {
+    const int vy_l = static_cast<int>(roundf(lastLine.getX() * 10));
+    const int vx_l = static_cast<int>(roundf(lastLine.getY() * 10));
+
+    pushData(_sensors->getEna(), false, vx_l, vy_l, 0, 0);
     return;
   }
 
@@ -70,9 +83,8 @@ void Bot::update() {
 
   // Calculate orbital shift to curve behind the ball
   float shift;
-  if (ballDist != 0 && abs(ballRot) > 50.0f) {
-    // Avoid integer division by zero when ballDist is 1 (1/2 = 0)
-    shift = 15.0f / (ballDist / 2.0f);
+  if (ballDist != 0 && abs(ballRot) > 40.0f) {
+    shift = 16.0f / (ballDist / 2.0f);
     shift = constrain(shift, 1.0, 3.0);
   }
   else {
@@ -91,10 +103,6 @@ void Bot::update() {
   // Convert target vector to motor velocities (swap X/Y for omni kinematics)
   const int vx = static_cast<int>(roundf(target.getY() * speed));
   const int vy = static_cast<int>(roundf(target.getX() * speed));
-
-  Serial.print(vx);
-  Serial.print(" | ");
-  Serial.println(vy);
 
   pushData(_sensors->getEna(), false, static_cast<int>(roundf(vx)), static_cast<int>(roundf(vy)), rot, 0);
 }

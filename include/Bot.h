@@ -7,6 +7,8 @@
 
 #include "comms/CM5.h"
 #include "Sensors.h"
+#include <memory>
+#include <Positioning.h>
 
 extern bool isHoming;
 
@@ -23,5 +25,8 @@ public:
 private:
     std::shared_ptr<CM5> _cm5;
     std::shared_ptr<Sensors> _sensors;
+    std::shared_ptr<Positioning> _positioning;
+
+    Vector2 lastLine;
 };
 #endif //BOT_2026_BOT_H

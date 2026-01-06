@@ -43,6 +43,9 @@ public:
   [[nodiscard]] const Object* getObjects() const { return objects; }
   [[nodiscard]] int getNumDetections() const { return num_detections; }
 
+  [[nodiscard]] float getGlobalX() const { return g_x; }
+  [[nodiscard]] float getGlobalY() const { return g_y; }
+
 private:
   Detection detections[6] = {};
   int num_detections = 0;
@@ -58,6 +61,9 @@ private:
   int16_t ballRot = 0;
   int16_t ballDist = 0;
 
+  float g_x = 0;
+  float g_y = 0;
+
   float pixelToCm(float pixel);
 
   float halfToFloat(uint16_t h);
@@ -69,8 +75,6 @@ private:
   void computeRotations(const Detection* det, int num_det);
 
   void computeDistances(const Detection* det, int num_det);
-
-  void computeHeading(int num_det);
 
   void computeHeadingFromPolar(const Detection* det, int num_det);
 };
