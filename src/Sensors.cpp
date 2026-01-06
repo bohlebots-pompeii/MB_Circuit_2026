@@ -9,12 +9,14 @@
 #include <Wire.h>
 
 Sensors::Sensors(const std::shared_ptr<CM5> &cm5) {
+  // Check if the shared pointer for CM5 is valid
   if (cm5 == nullptr) {
     std::cout << "cm5 not existent" << std::endl;
   }
 
   _cm5 = cm5;
 
+  // Initialize the button pin as input
   pinMode(buttonPIN, INPUT);
 }
 
@@ -26,6 +28,7 @@ void Sensors::update() {
 
 void Sensors::updateLineSensor() {
   constexpr uint8_t len = 4;
+  // Request 4 bytes from the line sensor via I2C
   Wire.requestFrom(lineSensorAddress, len);
   if (Wire.available() >= len) {
     const uint8_t progressLow  = Wire.read();
@@ -33,16 +36,20 @@ void Sensors::updateLineSensor() {
     const uint8_t lineRotLow  = Wire.read();
     const uint8_t lineRotHigh = Wire.read();
 
+    // Reconstruct 16-bit unsigned integers from high and low bytes
     const uint16_t lineRot_u = (static_cast<uint16_t>(lineRotHigh) << 8) | static_cast<uint16_t>(lineRotLow);
     const uint16_t progress_u = (static_cast<uint16_t>(progressHigh) << 8) | static_cast<uint16_t>(progressLow);
 
+    // convert to 16-bit signed integers
     line_rot = static_cast<int16_t>(lineRot_u);
     progress = static_cast<int16_t>(progress_u);
 
+    // Adjustment logic for rotation based on progress
     if (progress >= 16) {
       line_rot += 180;
     }
 
+    // Wrap around rotation if it exceeds 360 degrees
     if (line_rot > 360) {
       line_rot -= 360;
     }
@@ -51,6 +58,7 @@ void Sensors::updateLineSensor() {
 
 void Sensors::updateUS() {
   constexpr uint8_t numBytes = 4;
+  // Request 4 bytes containing coordinate data from US sensor
   Wire.requestFrom(usAddress, numBytes);
   float local_x = 0;
   float local_y = 0;
@@ -91,7 +99,9 @@ void Sensors::updateButton() {
 }
 
 void Sensors::localToWorld(const float lx, const float ly,const float heading_deg, float &gx, float &gy) {
+  // Convert heading to radians for trigonometric functions
   const float theta = heading_deg * (PI / 180.0f);
+  // Apply rotation matrix to convert local point (lx, ly) to global point (gx, gy)
   gx = cosf(theta) * lx - sinf(theta) * ly;
   gy = sinf(theta) * lx + cosf(theta) * ly;
 }

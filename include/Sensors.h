@@ -33,8 +33,10 @@ private:
   void updateLineSensor();
   void updateUS();
   void updateButton();
+
   void localToWorld(float lx, float ly, float heading_deg, float &gx, float &gy);
 };
 
 
 #endif //BOHLEBOTS_2026_SENSORS_H
+

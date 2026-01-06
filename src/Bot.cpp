@@ -33,6 +33,7 @@ void Bot::update() {
   _cm5->update();
   _sensors->update();
 
+  // Check homing state first to override standard gameplay logic
   if (isHoming) {
     home();
     return;
@@ -40,10 +41,13 @@ void Bot::update() {
 
   int rot = 0 - static_cast<int>(_cm5->getHeading()) / 4;
 
+  // --- Line Sensor Override Logic ---
+  // If the line sensor detects the boundary, prioritize moving away
   if (_sensors->getProgress() != -1 && _sensors->getLineRot() != -1) {
     int vy_l = 0;
     int vx_l = 0;
 
+    // Calculate vector away from the line (rotate 180 degrees from line normal)
     Vector2 line = degreeToVector(_sensors->getLineRot());
     line.normalize();
     line.rotate(std::numbers::pi);
@@ -55,16 +59,16 @@ void Bot::update() {
     return;
   }
 
+  // --- Ball Tracking Logic ---
   int16_t ballDist = _cm5->getBallDist();
-
   const int16_t ballRot = _cm5->getBallRot();
-
   const int16_t yellow_rot = _cm5->getYellowRot();
 
   if (ballDist > 100) {
     ballDist = 100;
   }
 
+  // Calculate orbital shift to curve behind the ball
   float shift;
   if (ballDist != 0 && abs(ballRot) > 50.0f) {
     shift = 15 / (ballDist / 2);
@@ -75,14 +79,15 @@ void Bot::update() {
   }
 
   Vector2 target = degreeToVector(ballRot * shift);
-
   target.normalize();
 
+  // If ball is roughly in front, align with the yellow goal
   if (abs(ballRot) < 15.0f) {
     target = degreeToVector(yellow_rot);
      rot = 0 - -yellow_rot / 2;
   }
 
+  // Convert target vector to motor velocities (swap X/Y for omni kinematics)
   const int vx = static_cast<int>(roundf(target.getY() * speed));
   const int vy = static_cast<int>(roundf(target.getX() * speed));
 
@@ -98,8 +103,6 @@ void Bot::overrideControl() {
 }
 
 void Bot::home() {
-  // getSensorData();
-
   constexpr float TARGET_X = -50.0f;
   constexpr float TARGET_Y = -90.0f;
   constexpr float KP_POS = 1.5f;
@@ -122,8 +125,8 @@ void Bot::home() {
   float world_vy = error_y * KP_POS;
 
   if (const float speed = sqrtf(world_vx * world_vx + world_vy * world_vy); speed > MAX_SPEED) {
-    world_vx = (world_vx / speed) * MAX_SPEED;
-    world_vy = (world_vy / speed) * MAX_SPEED;
+    world_vx = world_vx / speed * MAX_SPEED;
+    world_vy = world_vy / speed * MAX_SPEED;
   }
 
   const float heading = _cm5->getHeading();
@@ -134,7 +137,7 @@ void Bot::home() {
   const float local_vx = cos_theta * world_vx + sin_theta * world_vy;
   const float local_vy = -sin_theta * world_vx + cos_theta * world_vy;
 
-  float rot_speed = -heading * KP_ROT;
+  float rot_speed = 0 - heading / 4;
   rot_speed = constrain(rot_speed, -MAX_ROT_SPEED, MAX_ROT_SPEED);
 
   pushData(true, false, static_cast<int>(local_vx), static_cast<int>(local_vy), static_cast<int>(rot_speed), 0);
