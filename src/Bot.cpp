@@ -25,7 +25,7 @@ Bot::Bot() {
 
   _cm5 = std::make_shared<CM5>();
   _sensors = std::make_shared<Sensors>(_cm5);
-  _positioning = std::make_shared<Positioning>(_sensors);
+  _positioning = std::make_shared<Positioning>(_cm5);
 }
 
 Vector2 degreeToVector(const float degrees) {
