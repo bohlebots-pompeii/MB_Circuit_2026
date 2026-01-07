@@ -6,17 +6,18 @@
 #define BOHLEBOTS_2026_POSITIONING_H
 
 #include <memory>
-#include <Sensors.h>
+#include <comms/CM5.h>
+
 
 class Positioning {
 public:
-  explicit Positioning(const std::shared_ptr<Sensors> &sensors);
+  explicit Positioning(const std::shared_ptr<CM5> &cm5);
 
   void update();
 
   [[nodiscard]] Vector2 getMiddlePointVector() const { return _middlePointVector; }
 private:
-  std::shared_ptr<Sensors> _sensors;
+  std::shared_ptr<CM5> _cm5;
   Vector2 _middlePointVector;
 
   void updateMiddlePointVector();

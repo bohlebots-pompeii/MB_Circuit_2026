@@ -6,8 +6,10 @@
 #include <memory>
 #include <Arduino.h>
 
-Positioning::Positioning(const std::shared_ptr<Sensors> &sensors) {
-  _sensors = sensors;
+#include "Vector2.hpp"
+
+Positioning::Positioning(const std::shared_ptr<CM5> &cm5) {
+  _cm5 = cm5;
 }
 
 void Positioning::update() {
@@ -15,9 +17,8 @@ void Positioning::update() {
 }
 
 void Positioning::updateMiddlePointVector() {
-  const Vector2 pos = _sensors->getPosition();
-  const float x = pos.getX();
-  const float y = pos.getY();
+  const int x = _cm5->getGlobalX();
+  const int y = _cm5->getGlobalY();
 
   // Vector from current pos to origin (0,0)
   _middlePointVector = Vector2(-x, -y);

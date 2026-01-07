@@ -45,12 +45,13 @@ void Bot::update() {
     return;
   }
 
+  // rotation motion control
   int rot = 0 - static_cast<int>(_cm5->getHeading()) / 4;
 
   // --- Line Sensor Override Logic ---
   // If the line sensor detects the boundary, prioritize moving away
   if (_sensors->getLineSeen()) {
-    // Calculate vector away from the line (rotate 180 degrees from line normal)
+    // Calculate vector away from the line
     Vector2 line = degreeToVector(_sensors->getLineRot());
     line.normalize();
     line.rotate(std::numbers::pi);
