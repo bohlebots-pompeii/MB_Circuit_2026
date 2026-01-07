@@ -5,7 +5,6 @@
 #include "Positioning.h"
 #include <memory>
 #include <Arduino.h>
-
 #include "Vector2.hpp"
 
 Positioning::Positioning(const std::shared_ptr<CM5> &cm5) {
@@ -21,7 +20,9 @@ void Positioning::updateMiddlePointVector() {
   const int y = _cm5->getGlobalY();
 
   // Vector from current pos to origin (0,0)
-  _middlePointVector = Vector2(-x, -y);
+  Vector2 toMiddle(y, x);
+  toMiddle.rotate(M_PI);
+  _middlePointVector = toMiddle;
 }
 
 

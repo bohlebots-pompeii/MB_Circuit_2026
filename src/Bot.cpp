@@ -34,10 +34,11 @@ Vector2 degreeToVector(const float degrees) {
 }
 
 void Bot::update() {
-  constexpr int speed = 30;
+  constexpr int speed = 40;
 
   _cm5->update();
   _sensors->update();
+  _positioning->update();
 
   // Check homing state first to override standard gameplay logic
   if (isHoming) {
@@ -56,20 +57,26 @@ void Bot::update() {
     line.normalize();
     line.rotate(std::numbers::pi);
 
-    const int vx_l = static_cast<int>(roundf(line.getY() * 10));
-    const int vy_l = static_cast<int>(roundf(line.getX() * 10));
+    Vector2 middlePointVector = _positioning->getMiddlePointVector();
+    middlePointVector.normalize();
+    // Blend line avoidance with movement towards the center
+    line = line * 0.3f + middlePointVector * 0.7f;
+    line.normalize();
+
+    const int vx_l = static_cast<int>(roundf(line.getY() * 20));
+    const int vy_l = static_cast<int>(roundf(line.getX() * 20));
 
     lineLastSeen = 0;
     lastLine = line;
 
-    pushData(_sensors->getEna(), false, vx_l, vy_l, 0, 0);
+    pushData(_sensors->getEna(), false, vx_l, vy_l, rot, 0);
     return;
   }
   if (lineLastSeen < 100) {
-    const int vy_l = static_cast<int>(roundf(lastLine.getX() * 10));
-    const int vx_l = static_cast<int>(roundf(lastLine.getY() * 10));
+    const int vy_l = static_cast<int>(roundf(lastLine.getX() * 20));
+    const int vx_l = static_cast<int>(roundf(lastLine.getY() * 20));
 
-    pushData(_sensors->getEna(), false, vx_l, vy_l, 0, 0);
+    pushData(_sensors->getEna(), false, vx_l, vy_l, rot, 0);
     return;
   }
 
