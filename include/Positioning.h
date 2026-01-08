@@ -16,6 +16,7 @@ public:
   void update();
 
   [[nodiscard]] Vector2 getMiddlePointVector() const { return _middlePointVector; }
+  [[nodiscard]] int speedLimit(const Vector2& driveVector, int driveSpeed) const;
 private:
   std::shared_ptr<CM5> _cm5;
   Vector2 _middlePointVector;

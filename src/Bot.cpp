@@ -34,7 +34,7 @@ Vector2 degreeToVector(const float degrees) {
 }
 
 void Bot::update() {
-  constexpr int speed = 40;
+  int speed = 40;
 
   _cm5->update();
   _sensors->update();
@@ -92,21 +92,30 @@ void Bot::update() {
   // Calculate orbital shift to curve behind the ball
   float shift;
   if (ballDist != 0 && abs(ballRot) > 40.0f) {
-    shift = 14.0f / (ballDist / 2.0f);
-    shift = constrain(shift, 1.0, 3.0);
+    shift = 25.0f / ballDist;
+    shift = constrain(shift, 1.0f, 3.0f);
   }
   else {
     shift = 1.0f;
   }
 
+  Serial.print(ballDist);
+  Serial.print(" | ");
+  Serial.print(ballRot);
+  Serial.print(" | ");
+  Serial.print(shift);
+  Serial.println();
+
   Vector2 target = degreeToVector(ballRot * shift);
   target.normalize();
 
   // If ball is roughly in front, align with the yellow goal
-  if (abs(ballRot) < 15.0f) {
+  if (abs(ballRot) < 10.0f) {
     target = degreeToVector(yellow_rot);
      rot = 0 - -yellow_rot / 2;
   }
+
+  speed = _positioning->speedLimit(target, speed);
 
   // Convert target vector to motor velocities (swap X/Y for omni kinematics)
   const int vx = static_cast<int>(roundf(target.getY() * speed));
