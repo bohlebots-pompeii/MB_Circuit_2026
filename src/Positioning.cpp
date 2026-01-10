@@ -10,6 +10,14 @@
 #include <algorithm>
 
 std::vector<Vector2> Field = {
+  Vector2(-70, -90),
+  Vector2(65, -100),
+  Vector2(67, 110),
+  Vector2(-63, 110)
+};
+
+/*
+ Stored polygon
   Vector2(-70, -95),
   Vector2(-50, -110),
   Vector2(-30, -94),
@@ -22,8 +30,7 @@ std::vector<Vector2> Field = {
   Vector2(-40, 104),
   Vector2(-53, 125),
   Vector2(-75, 125)
-};
-
+ */
 Positioning::Positioning(const std::shared_ptr<CM5> &cm5) {
   _cm5 = cm5;
 }
@@ -92,24 +99,25 @@ int Positioning::speedLimit(const Vector2& driveVector, const int driveSpeed) co
   globalDriveVector.normalize();
   globalDriveVector.rotate(headingRad);
 
-  const Vector2 toMiddle = getMiddlePointVector();
+  const double dotProduct = globalDriveVector.getX() * _middlePointVector.getX() +
+                            globalDriveVector.getY() * _middlePointVector.getY();
 
-  const double dotProduct = globalDriveVector.getX() * toMiddle.getX() + globalDriveVector.getY() * toMiddle.getY();
-  if (dotProduct > -20.0) {
+  if (dotProduct >= -30.0) {
     return driveSpeed;
   }
 
   Vector2 lookAheadVector = driveVector;
   lookAheadVector.normalize();
   lookAheadVector *= 30.0;
-
   lookAheadVector.rotate(headingRad);
 
   const Vector2 futurePos = currentPos + lookAheadVector;
 
   if (!isPointInPolygon(futurePos, Field)) {
+    Serial.println("Point is not in Polygon");
     return 0;
   }
+  Serial.println("Point is in Polygon");
 
   const double distToEdge = getDistanceToPolygonEdge(futurePos, Field);
 
@@ -120,5 +128,6 @@ int Positioning::speedLimit(const Vector2& driveVector, const int driveSpeed) co
 
   return driveSpeed;
 }
+
 
 

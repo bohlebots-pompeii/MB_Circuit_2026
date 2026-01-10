@@ -40,6 +40,12 @@ void Bot::update() {
   _sensors->update();
   _positioning->update();
 
+  /*
+  Serial.print(_cm5->getGlobalX());
+  Serial.print(", ");
+  Serial.println(_cm5->getGlobalY());
+  */
+
   // Check homing state first to override standard gameplay logic
   if (isHoming) {
     home();
@@ -91,7 +97,7 @@ void Bot::update() {
 
   // Calculate orbital shift to curve behind the ball
   float shift;
-  if (ballDist != 0 && abs(ballRot) > 40.0f) {
+  if (ballDist != 0 && abs(ballRot) > 60.0f) {
     shift = 25.0f / ballDist;
     shift = constrain(shift, 1.0f, 3.0f);
   }
@@ -99,14 +105,10 @@ void Bot::update() {
     shift = 1.0f;
   }
 
-  Serial.print(ballDist);
-  Serial.print(" | ");
-  Serial.print(ballRot);
-  Serial.print(" | ");
-  Serial.print(shift);
-  Serial.println();
+  float targetAngle = ballRot * shift;
+  targetAngle = constrain(targetAngle, -220.0f, 220.0f);
 
-  Vector2 target = degreeToVector(ballRot * shift);
+  Vector2 target = degreeToVector(targetAngle);
   target.normalize();
 
   // If ball is roughly in front, align with the yellow goal
