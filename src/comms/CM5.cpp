@@ -13,28 +13,28 @@ int num_detections = 0;
 float heading = 0.0f;
 
 static CalibPoint calib[] = {
-  {  81.0f,  10.0f },
-  { 125.0f,  20.0f },
-  { 147.0f,  30.0f },
-  { 160.0f,  40.0f },
-  { 174.0f,  50.0f },
-  { 181.7f, 60.0f },
-  { 189.9f, 70.0f },
-  { 197.2f, 80.0f },
-  { 201.4f, 90.0f },
-  { 206.0f,100.0f },
-  { 209.0f,110.0f },
-  { 210.0f,120.0f },
-  { 211.5f,130.0f },
-  { 211.0f,140.0f },
-  { 216.5f,150.0f },
-  { 217.0f,160.0f },
-  { 219.5f,170.0f },
-  { 221.0f,180.0f },
-  { 223.0f,190.0f },
-  { 224.0f,200.0f },
-  { 227.15f,210.0f },
-  { 229.0f,220.0f }
+  {  75.0f,  10.0f },
+  { 100.0f,  20.0f },
+  { 130.0f,  30.0f },
+  { 148.0f,  40.0f },
+  { 161.0f,  50.0f },
+  { 169.0f, 60.0f },
+  { 176.9f, 70.0f },
+  { 183.7f, 80.0f },
+  { 188.0f, 90.0f },
+  { 191.6f,100.0f },
+  { 194.5f,110.0f },
+  { 195.8f,120.0f },
+  { 197.2f,130.0f },
+  { 198.7f,140.0f },
+  { 200.8f,150.0f },
+  { 202.7f,160.0f },
+  { 203.9f,170.0f },
+  { 206.4f,180.0f },
+  { 208.35f,190.0f },
+  { 211.4f,200.0f },
+  { 213.8f,210.0f },
+  { 215.8f,220.0f }
 };
 
 static int CALIB_N = std::size(calib);
@@ -65,13 +65,6 @@ void CM5::calibMirror(const Detection* det, const int num_det) {
       const float r = sqrtf(dx * dx + dy * dy);
       Serial.println(r);
     }
-  }
-}
-
-void CM5::computeCenters(Detection* det, const int num_det) {
-  for (int i = 0; i < num_det; ++i) {
-    det[i].center[0] = (det[i].bbox[0] + det[i].bbox[2]) * 0.5f;
-    det[i].center[1] = (det[i].bbox[1] + det[i].bbox[3]) * 0.5f;
   }
 }
 
@@ -110,13 +103,20 @@ float CM5::halfToFloat(const uint16_t h) {
   return result;
 }
 
+void CM5::computeCenters(Detection* det, const int num_det) {
+  for (int i = 0; i < num_det; ++i) {
+    det[i].center[0] = (det[i].bbox[0] + det[i].bbox[2]) * 0.5f;
+    det[i].center[1] = (det[i].bbox[1] + det[i].bbox[3]) * 0.5f;
+  }
+}
+
 void CM5::computeRotations(const Detection* det, const int num_det) {
   constexpr float cx = 320.0f; // screen center
   constexpr float cy = 320.0f;
   for (int i = 0; i < num_det; ++i) {
     const float dx = det[i].center[0] - cx; // position relative to center
     const float dy = det[i].center[1] - cy;
-    const float angle_rad = atan2f(dx, dy); // rotation relative to center
+    const float angle_rad = atan2f(dy, dx); // rotation relative to center
     objects[i].rotation_deg = angle_rad * 180.0f / std::numbers::pi; // to deg
     objects[i].label = det[i].label;
     if (det[i].label == 1) {
@@ -140,26 +140,28 @@ void CM5::computeDistances(const Detection* det, const int num_det) {
     const float dy = det[i].center[1] - cy;
 
     const float r = sqrtf(dx * dx + dy * dy);
-
     const float dist = pixelToCm(r);
+
     objects[i].dist_cm = dist;
-
-    const float angle_rad = atan2f(dx, dy);
-
-    // position rel to robot
-    objects[i].rel_x = dist * cosf(angle_rad);
-    objects[i].rel_y = dist * sinf(angle_rad);
 
     if (objects[i].label == 1) {
       blueDist = dist;
+      //Serial.print("blueDist: ");
+      //Serial.print(blueDist);
     }
     else if (objects[i].label == 2) {
       yellowDist = dist;
+      //Serial.print(" yellowDist: ");
+      //Serial.println(yellowDist);
     }
     else if (objects[i].label == 3) {
       ballDist = dist;
     }
   }
+}
+
+double correction(const double x) {
+  return 7.59502963e-06 * pow(x, 3) - 1.82918911e-03 * pow(x, 2) + 8.87600747e-01 * x - 4.79815488e-02;
 }
 
 void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
@@ -169,8 +171,8 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
   for (int i = 0; i < num_det; i++) {
     const float theta = objects[i].rotation_deg * std::numbers::pi / 180.0f;
     const float d = objects[i].dist_cm;
-    const float x = d * sinf(theta);
-    const float y = d * cosf(theta);
+    const float x = d * cosf(theta);
+    const float y = d * sinf(theta);
 
     if (det[i].label == 1) { // blue
       x1 = x; y1 = y; foundBlue = true;
@@ -182,26 +184,25 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
   if (foundBlue && foundYellow) {
     const float dx = x2 - x1;
     const float dy = y2 - y1;
-    heading = atan2f(dx, dy) * 180.0f / std::numbers::pi;
-    heading *= -1.0f; // adjust direction
+    const float h = atan2f(dy, dx) - std::numbers::pi / 2.0f;
+    if (h < 0) {
+      heading = (h + 2.0f * std::numbers::pi) * 180.0f / std::numbers::pi;
+    } else {
+      heading = h * 180.0f / std::numbers::pi;
+    }
 
-    // Calculate Global Position
-    // Assuming mid point between both goals is (0,0) in global frame
-    const float h_rad = heading * std::numbers::pi / 180.0f;
-    const float mx = (x1 + x2) * 0.5f; // Midpoint relative to robot
+    const float mx = (x1 + x2) * 0.5f;
     const float my = (y1 + y2) * 0.5f;
 
-    // Rotate local midpoint vector by heading to align with global frame
-    // Standard rotation adapted for Y-Forward coordinate system:
-    // gx = x*cos(h) + y*sin(h)
-    // gy = y*cos(h) - x*sin(h)
-    const float gx = mx * cosf(h_rad) + my * sinf(h_rad);
-    const float gy = my * cosf(h_rad) - mx * sinf(h_rad);
+    const float c = cosf(-h);
+    const float s = sinf(-h);
 
-    // Robot position is the negation of the vector TO the midpoint
-    // (since midpoint is at global 0,0)
-    g_x = -gx;
-    g_y = -gy * 2;
+    float x = -(mx * s + my * c);
+    float y = -(mx * c - my * s);
+    //x = static_cast<float>(correction(x));
+    y = static_cast<float>(correction(y));
+    g_x = x;
+    g_y = y;
   }
 }
 
@@ -248,7 +249,7 @@ void CM5::update() {
     computeRotations(detections, stored_detections);
     computeDistances(detections, stored_detections);
 
-    //calibMirror(public_detections, stored_detections);
+    // calibMirror(detections, stored_detections);
 
     computeHeadingFromPolar(detections, stored_detections);
   }

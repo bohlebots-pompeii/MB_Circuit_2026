@@ -40,11 +40,12 @@ void Bot::update() {
   _sensors->update();
   _positioning->update();
 
-  /*
   Serial.print(_cm5->getGlobalX());
   Serial.print(", ");
-  Serial.println(_cm5->getGlobalY());
-  */
+  Serial.print(_cm5->getGlobalY());
+  Serial.print(" | Heading: ");
+  Serial.println(_cm5->getHeading());
+
 
   // Check homing state first to override standard gameplay logic
   if (isHoming) {
@@ -53,7 +54,7 @@ void Bot::update() {
   }
 
   // rotation motion control
-  int rot = 0 - static_cast<int>(_cm5->getHeading()) / 4;
+  int rot = 0 - static_cast<int>(-_cm5->getHeading()) / 4;
 
   // --- Line Sensor Override Logic ---
   // If the line sensor detects the boundary, prioritize moving away
@@ -157,7 +158,7 @@ void Bot::home() {
     world_vy = world_vy / speed * MAX_SPEED;
   }
 
-  const float heading = _cm5->getHeading();
+  const float heading = -_cm5->getHeading();
   const float theta = heading * (PI / 180.0f);
   const float cos_theta = cosf(theta);
   const float sin_theta = sinf(theta);

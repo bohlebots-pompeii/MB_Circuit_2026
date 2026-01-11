@@ -113,11 +113,13 @@ int Positioning::speedLimit(const Vector2& driveVector, const int driveSpeed) co
 
   const Vector2 futurePos = currentPos + lookAheadVector;
 
+  /*
   if (!isPointInPolygon(futurePos, Field)) {
     Serial.println("Point is not in Polygon");
     return 0;
   }
   Serial.println("Point is in Polygon");
+  */
 
   const double distToEdge = getDistanceToPolygonEdge(futurePos, Field);
 
