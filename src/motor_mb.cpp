@@ -12,6 +12,7 @@ void pushData(const bool enable, const bool kick, int vx, int vy, int rot, int d
 
   vx *= -1;
   vy *= -1;
+  rot *= -1;
 
   vx = constrain(vx, -100, 100);
   vy = constrain(vy, -100, 100);

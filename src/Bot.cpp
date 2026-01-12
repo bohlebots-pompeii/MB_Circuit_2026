@@ -34,44 +34,35 @@ Vector2 degreeToVector(const float degrees) {
 }
 
 void Bot::update() {
-  int speed = 40;
+  int speed = 30;
 
   _cm5->update();
   _sensors->update();
   _positioning->update();
 
-  Serial.print(_cm5->getGlobalX());
-  Serial.print(", ");
-  Serial.print(_cm5->getGlobalY());
-  Serial.print(" | Heading: ");
-  Serial.println(_cm5->getHeading());
-
-
-  // Check homing state first to override standard gameplay logic
-  if (isHoming) {
-    home();
-    return;
-  }
-
   // rotation motion control
-  int rot = 0 - static_cast<int>(-_cm5->getHeading()) / 4;
+  float heading = _cm5->getHeading();
+  if (heading > 180) {
+    heading -= 360;
+  }
+  int rot = static_cast<int>(heading) / 4;
 
   // --- Line Sensor Override Logic ---
   // If the line sensor detects the boundary, prioritize moving away
   if (_sensors->getLineSeen()) {
     // Calculate vector away from the line
     Vector2 line = degreeToVector(_sensors->getLineRot());
-    line.normalize();
     line.rotate(std::numbers::pi);
 
     Vector2 middlePointVector = _positioning->getMiddlePointVector();
     middlePointVector.normalize();
+
     // Blend line avoidance with movement towards the center
     line = line * 0.3f + middlePointVector * 0.7f;
     line.normalize();
 
-    const int vx_l = static_cast<int>(roundf(line.getY() * 20));
-    const int vy_l = static_cast<int>(roundf(line.getX() * 20));
+    const int vx_l = static_cast<int>(roundf(line.getX() * 20));
+    const int vy_l = static_cast<int>(roundf(line.getY() * 20));
 
     lineLastSeen = 0;
     lastLine = line;
@@ -79,6 +70,7 @@ void Bot::update() {
     pushData(_sensors->getEna(), false, vx_l, vy_l, rot, 0);
     return;
   }
+
   if (lineLastSeen < 100) {
     const int vy_l = static_cast<int>(roundf(lastLine.getX() * 20));
     const int vx_l = static_cast<int>(roundf(lastLine.getY() * 20));
@@ -87,11 +79,36 @@ void Bot::update() {
     return;
   }
 
+  if (!_cm5->getBallExists()) {
+    // No ball detected, move towards the center
+    Vector2 middlePointVector = _positioning->getMiddlePointVector();
+    const float distance = middlePointVector.getMagnitude();
+    middlePointVector.normalize();
+
+    constexpr float MAX_DISTANCE = 30.0f;
+    const float ratio = std::min(distance / MAX_DISTANCE, 1.0f);
+    const float speedFactor = ratio * ratio;
+
+    const int dynamicSpeed = static_cast<int>(speed * speedFactor);
+
+    const int vx_c = static_cast<int>(roundf(middlePointVector.getX() * dynamicSpeed));
+    const int vy_c = static_cast<int>(roundf(middlePointVector.getY() * dynamicSpeed));
+
+    pushData(_sensors->getEna(), false, vx_c, vy_c, rot, 0);
+    return;
+  }
+  pushData(_sensors->getEna(), false, 0, 0, rot, 0);
+
   // --- Ball Tracking Logic ---
   int16_t ballDist = _cm5->getBallDist();
   const int16_t ballRot = _cm5->getBallRot();
+  // Serial.println(ballRot);
   const int16_t yellow_rot = _cm5->getYellowRot();
 
+  Vector2 target = degreeToVector(ballRot);
+  target.normalize();
+
+  /*
   if (ballDist > 100) {
     ballDist = 100;
   }
@@ -118,57 +135,16 @@ void Bot::update() {
      rot = 0 - -yellow_rot / 2;
   }
 
-  speed = _positioning->speedLimit(target, speed);
+  // speed = _positioning->speedLimit(target, speed);
+  */
 
   // Convert target vector to motor velocities (swap X/Y for omni kinematics)
-  const int vx = static_cast<int>(roundf(target.getY() * speed));
-  const int vy = static_cast<int>(roundf(target.getX() * speed));
+  const int vx = static_cast<int>(roundf(target.getX() * speed));
+  const int vy = static_cast<int>(roundf(target.getY() * speed));
 
   pushData(_sensors->getEna(), false, static_cast<int>(roundf(vx)), static_cast<int>(roundf(vy)), rot, 0);
 }
 
 void Bot::overrideControl() {
   pushData(false, false, 0, 0, 0, 0);
-}
-
-void Bot::home() {
-  constexpr float TARGET_X = -50.0f;
-  constexpr float TARGET_Y = -90.0f;
-  constexpr float KP_POS = 1.5f;
-  constexpr float KP_ROT = 0.8f;
-  constexpr float MAX_SPEED = 40.0f;
-  constexpr float MAX_ROT_SPEED = 50.0f;
-
-  const Vector2 pos = _sensors->getPosition();
-  const float error_x = TARGET_X - pos.getX();
-  const float error_y = TARGET_Y - pos.getY();
-  const float distance = sqrtf(error_x * error_x + error_y * error_y);
-
-  if (constexpr float GOAL_RADIUS = 3.0f; distance < GOAL_RADIUS) {
-    isHoming = false;
-    pushData(false, false, 0, 0, 0, 0);
-    return;
-  }
-
-  float world_vx = error_x * KP_POS;
-  float world_vy = error_y * KP_POS;
-
-  if (const float speed = sqrtf(world_vx * world_vx + world_vy * world_vy); speed > MAX_SPEED) {
-    world_vx = world_vx / speed * MAX_SPEED;
-    world_vy = world_vy / speed * MAX_SPEED;
-  }
-
-  const float heading = -_cm5->getHeading();
-  const float theta = heading * (PI / 180.0f);
-  const float cos_theta = cosf(theta);
-  const float sin_theta = sinf(theta);
-
-  const float local_vx = cos_theta * world_vx + sin_theta * world_vy;
-  const float local_vy = -sin_theta * world_vx + cos_theta * world_vy;
-
-  float rot_speed = 0 - heading / 4;
-  rot_speed = constrain(rot_speed, -MAX_ROT_SPEED, MAX_ROT_SPEED);
-
-  // Use sensor enable flag instead of hardcoded true for safety
-  pushData(_sensors->getEna(), false, static_cast<int>(local_vx), static_cast<int>(local_vy), static_cast<int>(rot_speed), 0);
 }

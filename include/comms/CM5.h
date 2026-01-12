@@ -5,6 +5,7 @@
 #ifndef BOHLEBOTS_2026_SERIAL_H
 #define BOHLEBOTS_2026_SERIAL_H
 #include <Arduino.h>
+#include <numbers>
 
 struct CalibPoint {
   float pixel;
@@ -39,6 +40,7 @@ public:
 
   [[nodiscard]] float getBallRot() const { return ballRot; }
   [[nodiscard]] float getBallDist() const { return ballDist; }
+  [[nodiscard]] bool getBallExists() const { return ballDist != 0; }
 
   [[nodiscard]] const Object* getObjects() const { return objects; }
   [[nodiscard]] int getNumDetections() const { return num_detections; }
