@@ -9,6 +9,7 @@
 #include "Sensors.h"
 #include <memory>
 #include <Positioning.h>
+#include <Vector2.hpp>
 
 extern bool isHoming;
 
@@ -20,8 +21,6 @@ public:
     void update();
 
     void overrideControl();
-
-    void home();
 private:
     std::shared_ptr<CM5> _cm5;
     std::shared_ptr<Sensors> _sensors;

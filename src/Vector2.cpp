@@ -73,11 +73,11 @@ void Vector2::operator*=(const double &d) { this->multiply(d); }
 
 bool Vector2::operator==(const Vector2 &v) const { return _x == v.getX() && _y == v.getY(); }
 
-Vector2 Vector2::operator+(const Vector2 &v) { return Vector2::add(*this, v); }
+Vector2 Vector2::operator+(const Vector2 &v) const { return Vector2::add(*this, v); }
 
-Vector2 Vector2::operator-(const Vector2 &v) { return Vector2::subtract(*this, v); }
+Vector2 Vector2::operator-(const Vector2 &v) const { return Vector2::subtract(*this, v); }
 
-Vector2 Vector2::operator*(const double &d) { return Vector2::multiply(*this, d); }
+Vector2 Vector2::operator*(const double &d) const { return Vector2::multiply(*this, d); }
 
 double Vector2::operator*(const Vector2 &v) { return Vector2::dotProduct(*this, v); }
 

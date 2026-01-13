@@ -30,22 +30,19 @@ Bot::Bot() {
 
 Vector2 degreeToVector(const float degrees) {
   const float radians = degrees * (PI / 180.0f);
-  return Vector2(cosf(radians), sinf(radians));
+  return Vector2(sinf(radians), cosf(radians));
 }
 
 void Bot::update() {
-  int speed = 30;
+  int speed = 35;
 
   _cm5->update();
   _sensors->update();
   _positioning->update();
 
   // rotation motion control
-  float heading = _cm5->getHeading();
-  if (heading > 180) {
-    heading -= 360;
-  }
-  int rot = static_cast<int>(heading) / 4;
+  const float heading = _cm5->getHeading();
+  int rot = 0 - static_cast<int>(heading) / 4;
 
   // --- Line Sensor Override Logic ---
   // If the line sensor detects the boundary, prioritize moving away
@@ -97,46 +94,43 @@ void Bot::update() {
     pushData(_sensors->getEna(), false, vx_c, vy_c, rot, 0);
     return;
   }
-  pushData(_sensors->getEna(), false, 0, 0, rot, 0);
 
-  // --- Ball Tracking Logic ---
+  // --- get Sensor Data ---
   int16_t ballDist = _cm5->getBallDist();
   const int16_t ballRot = _cm5->getBallRot();
-  // Serial.println(ballRot);
   const int16_t yellow_rot = _cm5->getYellowRot();
 
-  Vector2 target = degreeToVector(ballRot);
-  target.normalize();
-
-  /*
   if (ballDist > 100) {
     ballDist = 100;
   }
+  // --- Movement Logic ---
+  Vector2 botPos = _positioning->getMiddlePointVector();
+  botPos.rotate(std::numbers::pi);
 
-  // Calculate orbital shift to curve behind the ball
-  float shift;
-  if (ballDist != 0 && abs(ballRot) > 60.0f) {
-    shift = 25.0f / ballDist;
-    shift = constrain(shift, 1.0f, 3.0f);
-  }
-  else {
-    shift = 1.0f;
-  }
+  const Vector2 goalVec = degreeToVector(yellow_rot);
+  // auto ballVec = Vector2(sinf(ballRot) * ballDist, cosf(ballRot) * ballDist);
 
-  float targetAngle = ballRot * shift;
-  targetAngle = constrain(targetAngle, -220.0f, 220.0f);
+  float shiftFactor = 25 / static_cast<float>(ballDist);
+  shiftFactor = constrain(shiftFactor, 1.0f, 3.0f);
 
-  Vector2 target = degreeToVector(targetAngle);
+  float shift = ballRot * shiftFactor;
+  shift = constrain(shift, -220.0f, 220.0f);
+  Serial.println(shift);
+  Vector2 shiftVec = degreeToVector(shift);
+  shiftVec.normalize();
+
+  shiftVec *= ballDist;
+
+  Vector2 target = shiftVec;
   target.normalize();
 
   // If ball is roughly in front, align with the yellow goal
   if (abs(ballRot) < 10.0f) {
     target = degreeToVector(yellow_rot);
-     rot = 0 - -yellow_rot / 2;
+     rot = 0 - yellow_rot / 2;
   }
 
   // speed = _positioning->speedLimit(target, speed);
-  */
 
   // Convert target vector to motor velocities (swap X/Y for omni kinematics)
   const int vx = static_cast<int>(roundf(target.getX() * speed));

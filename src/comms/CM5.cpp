@@ -114,8 +114,8 @@ void CM5::computeRotations(const Detection* det, const int num_det) {
   constexpr float cx = 320.0f; // screen center
   constexpr float cy = 320.0f;
   for (int i = 0; i < num_det; ++i) {
-    const float dx = det[i].center[1] - cx;
-    const float dy = cy - det[i].center[0];
+    const float dx = det[i].center[1] - cx; // swap x and y to match ai output
+    const float dy = det[i].center[0] - cy;
     const float angle_rad = atan2f(dy, dx);
     objects[i].rotation_deg = angle_rad * 180.0f / std::numbers::pi;
 
@@ -142,7 +142,7 @@ void CM5::computeDistances(const Detection* det, const int num_det) {
 
   for (int i = 0; i < num_det; ++i) {
     const float dx = det[i].center[1] - cx;
-    const float dy = cy - det[i].center[0];
+    const float dy = det[i].center[0] - cy;
 
     const float r = sqrtf(dx * dx + dy * dy);
     const float dist = pixelToCm(r);
@@ -180,9 +180,9 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
     const float y = d * sinf(theta);
 
     if (det[i].label == 1) { // blue
-      x2 = x; y2 = y; foundBlue = true;
+      x1 = x; y1 = y; foundBlue = true;
     } else if (det[i].label == 2) { // yellow
-      x1 = x; y1 = y; foundYellow = true;
+      x2 = x; y2 = y; foundYellow = true;
     }
   }
 
@@ -191,20 +191,19 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
     const float dy = y2 - y1;
     const float h = atan2f(dy, dx);
     heading = h * 180.0f / std::numbers::pi;
-    Serial.println(heading);
 
     const float mx = (x1 + x2) * 0.5f;
     const float my = (y1 + y2) * 0.5f;
 
-    const float c = cosf(-h);
-    const float s = sinf(-h);
+    const float c = cosf(h);
+    const float s = sinf(h);
 
-    float x = -(mx * s + my * c);
-    float y = -(mx * c - my * s);
+    const float x = mx * c - my * s;
+    float y = mx * s + my * c;
     //x = static_cast<float>(correction(x));
-    //y = static_cast<float>(correction(y));
-    g_x = x;
-    g_y = y;
+    y = static_cast<float>(correction(y));
+    g_x = -x;
+    g_y = -y;
   }
 }
 
