@@ -30,11 +30,11 @@ Bot::Bot() {
 
 Vector2 degreeToVector(const float degrees) {
   const float radians = degrees * (PI / 180.0f);
-  return Vector2(sinf(radians), cosf(radians));
+  return Vector2(cosf(radians), sinf(radians));
 }
 
 void Bot::update() {
-  int speed = 35;
+  int speed = 40;
 
   _cm5->update();
   _sensors->update();
@@ -94,47 +94,55 @@ void Bot::update() {
     pushData(_sensors->getEna(), false, vx_c, vy_c, rot, 0);
     return;
   }
+  pushData(_sensors->getEna(), false, 0, 0, rot, 0);
 
   // --- get Sensor Data ---
-  int16_t ballDist = _cm5->getBallDist();
-  const int16_t ballRot = _cm5->getBallRot();
-  const int16_t yellow_rot = _cm5->getYellowRot();
+  double ballDist = _cm5->getBallDist();
+  double ballRot = _cm5->getBallRot();
+  ballRot = ballRot * (std::numbers::pi / 180.0); // to rad
 
   if (ballDist > 100) {
     ballDist = 100;
   }
-  // --- Movement Logic ---
-  Vector2 botPos = _positioning->getMiddlePointVector();
-  botPos.rotate(std::numbers::pi);
 
-  const Vector2 goalVec = degreeToVector(yellow_rot);
-  // auto ballVec = Vector2(sinf(ballRot) * ballDist, cosf(ballRot) * ballDist);
+  // --- movement Logic ---
+  const auto ballVec = Vector2(cosf(ballRot) * ballDist, sinf(ballRot) * ballDist);
 
-  float shiftFactor = 25 / static_cast<float>(ballDist);
-  shiftFactor = constrain(shiftFactor, 1.0f, 3.0f);
+  Vector2 offsetVec = degreeToVector(heading);
+  const double a = ballVec.getAngle() * 0.5;
+  offsetVec.rotate(a);
 
-  float shift = ballRot * shiftFactor;
-  shift = constrain(shift, -220.0f, 220.0f);
-  Serial.println(shift);
-  Vector2 shiftVec = degreeToVector(shift);
-  shiftVec.normalize();
+  const double ballAngle = std::abs(ballVec.getAngle());
+  const double ballAngleNorm = std::clamp(ballAngle / (std::numbers::pi / 2), 0.0, 1.0);
 
-  shiftVec *= ballDist;
+  const double smoothBallAngleNorm = ballAngleNorm * ballAngleNorm * (3.0 - 2.0 * ballAngleNorm);
 
-  Vector2 target = shiftVec;
+  constexpr double minFactor = 0.65;
+  constexpr double maxFactor = 1.0;
+  const double factorBallAngle = minFactor + ((maxFactor-minFactor) * smoothBallAngleNorm);
+
+  offsetVec *= factorBallAngle * 25;
+
+  Vector2 target = ballVec - offsetVec;
+  const int magnitude = target.getMagnitude();
+  const double c_magnitude = std::clamp(magnitude, 30, speed);
   target.normalize();
+  target *= c_magnitude;
 
-  // If ball is roughly in front, align with the yellow goal
-  if (abs(ballRot) < 10.0f) {
-    target = degreeToVector(yellow_rot);
-     rot = 0 - yellow_rot / 2;
-  }
+  /*
+  Serial.print(target.getX());
+  Serial.print(" | ");
+  Serial.print(target.getY());
+  Serial.print(" | ");
+  Serial.print(target.getAngle());
+  Serial.print(" | ");
+  Serial.println(target.getMagnitude());
+  */
 
   // speed = _positioning->speedLimit(target, speed);
 
-  // Convert target vector to motor velocities (swap X/Y for omni kinematics)
-  const int vx = static_cast<int>(roundf(target.getX() * speed));
-  const int vy = static_cast<int>(roundf(target.getY() * speed));
+  const int vx = static_cast<int>(roundf(target.getX()));
+  const int vy = static_cast<int>(roundf(target.getY()));
 
   pushData(_sensors->getEna(), false, static_cast<int>(roundf(vx)), static_cast<int>(roundf(vy)), rot, 0);
 }

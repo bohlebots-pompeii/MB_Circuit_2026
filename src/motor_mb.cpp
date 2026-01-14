@@ -11,7 +11,6 @@ void pushData(const bool enable, const bool kick, int vx, int vy, int rot, int d
   MotorCmd cmd{};
 
   vx *= -1;
-  vy *= -1;
   rot *= -1;
 
   vx = constrain(vx, -100, 100);
@@ -23,8 +22,8 @@ void pushData(const bool enable, const bool kick, int vx, int vy, int rot, int d
   if (enable) cmd.flags |= 0x01;
   if (kick)   cmd.flags |= 0x02;
 
-  cmd.vx   = static_cast<int8_t>(vx);
-  cmd.vy   = static_cast<int8_t>(vy);
+  cmd.vx   = static_cast<int8_t>(vy); // swapped for normal math
+  cmd.vy   = static_cast<int8_t>(vx);
   cmd.rot  = static_cast<int8_t>(rot);
   cmd.drib = static_cast<int8_t>(dribbler);
 

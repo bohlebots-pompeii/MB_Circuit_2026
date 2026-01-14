@@ -44,7 +44,7 @@ void Positioning::updateMiddlePointVector() {
   const int y = _cm5->getGlobalY();
 
   // Vector from current pos to origin (0,0)
-  Vector2 toMiddle(y, x);
+  Vector2 toMiddle(x, y);
   toMiddle.rotate(M_PI);
   _middlePointVector = toMiddle;
 }

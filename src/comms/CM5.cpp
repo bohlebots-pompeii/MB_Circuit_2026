@@ -60,7 +60,7 @@ void CM5::calibMirror(const Detection* det, const int num_det) {
   for (int i = 0; i < num_det; ++i) {
     if (det[i].label == 1 || det[i].label == 2) {
       const float dx = det[i].center[0] - cx;
-      const float dy = det[i].center[1] - cy;
+      const float dy = cy - det[i].center[1];
 
       const float r = sqrtf(dx * dx + dy * dy);
       Serial.println(r);
@@ -115,7 +115,7 @@ void CM5::computeRotations(const Detection* det, const int num_det) {
   constexpr float cy = 320.0f;
   for (int i = 0; i < num_det; ++i) {
     const float dx = det[i].center[1] - cx; // swap x and y to match ai output
-    const float dy = det[i].center[0] - cy;
+    const float dy = cy - det[i].center[0];
     const float angle_rad = atan2f(dy, dx);
     objects[i].rotation_deg = angle_rad * 180.0f / std::numbers::pi;
 
@@ -142,7 +142,7 @@ void CM5::computeDistances(const Detection* det, const int num_det) {
 
   for (int i = 0; i < num_det; ++i) {
     const float dx = det[i].center[1] - cx;
-    const float dy = det[i].center[0] - cy;
+    const float dy = cy - det[i].center[0];
 
     const float r = sqrtf(dx * dx + dy * dy);
     const float dist = pixelToCm(r);
@@ -174,7 +174,7 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
   bool foundBlue = false, foundYellow = false;
 
   for (int i = 0; i < num_det; i++) {
-    const float theta = objects[i].rotation_deg * std::numbers::pi / 180.0f;
+    const float theta = objects[i].rotation_deg * (std::numbers::pi / 180.0f);
     const float d = objects[i].dist_cm;
     const float x = d * cosf(theta);
     const float y = d * sinf(theta);
@@ -189,7 +189,7 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
   if (foundBlue && foundYellow) {
     const float dx = x2 - x1;
     const float dy = y2 - y1;
-    const float h = atan2f(dy, dx);
+    const float h = -atan2f(dy, dx);
     heading = h * 180.0f / std::numbers::pi;
 
     const float mx = (x1 + x2) * 0.5f;
@@ -199,9 +199,9 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
     const float s = sinf(h);
 
     const float x = mx * c - my * s;
-    float y = mx * s + my * c;
+    const float y = mx * s + my * c;
     //x = static_cast<float>(correction(x));
-    y = static_cast<float>(correction(y));
+    //y = static_cast<float>(correction(y));
     g_x = -x;
     g_y = -y;
   }
