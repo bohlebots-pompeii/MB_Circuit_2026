@@ -34,7 +34,7 @@ Vector2 degreeToVector(const float degrees) {
 }
 
 void Bot::update() {
-  int speed = 40;
+  constexpr int speed = 50;
 
   _cm5->update();
   _sensors->update();
@@ -42,7 +42,7 @@ void Bot::update() {
 
   // rotation motion control
   const float heading = _cm5->getHeading();
-  int rot = 0 - static_cast<int>(heading) / 4;
+  int rot = 0 - static_cast<int>(heading) / 3;
 
   // --- Line Sensor Override Logic ---
   // If the line sensor detects the boundary, prioritize moving away
@@ -97,17 +97,40 @@ void Bot::update() {
   pushData(_sensors->getEna(), false, 0, 0, rot, 0);
 
   // --- get Sensor Data ---
-  double ballDist = _cm5->getBallDist();
-  double ballRot = _cm5->getBallRot();
-  ballRot = ballRot * (std::numbers::pi / 180.0); // to rad
+  const double ballDist = _cm5->getBallDist();
+  const double ballRot = _cm5->getBallRot() * (std::numbers::pi / 180.0);
 
-  if (ballDist > 100) {
-    ballDist = 100;
-  }
+  const double yellowDist = _cm5->getYellowDist();
+  const double yellowRot = _cm5->getYellowRot();
 
   // --- movement Logic ---
   const auto ballVec = Vector2(cosf(ballRot) * ballDist, sinf(ballRot) * ballDist);
+  const auto yellowVec = Vector2(cosf(yellowRot) * yellowDist, sinf(yellowRot) * yellowDist);
 
+  if (abs(ballRot) < std::numbers::pi / 4) {
+    Vector2 target = degreeToVector(ballRot * (180.0 / std::numbers::pi));
+    target.normalize();
+
+    const int vx = static_cast<int>(roundf(target.getX() * speed));
+    const int vy = static_cast<int>(roundf(target.getY() * speed));
+
+    pushData(_sensors->getEna(), false, vx, vy, rot, 0);
+    return;
+  }
+
+  if (abs(ballRot) < std::numbers::pi / 8) {
+    Vector2 goal = degreeToVector(yellowRot);
+    goal.normalize();
+    rot = yellowVec.getAngle() * (std::numbers::pi / 180.0) / 2;
+
+    const int vx = static_cast<int>(roundf(goal.getX() * speed));
+    const int vy = static_cast<int>(roundf(goal.getY() * speed));
+
+    pushData(_sensors->getEna(), false, vx, vy, rot, 0);
+    return;
+  }
+
+  // drive behind ball
   Vector2 offsetVec = degreeToVector(heading);
   const double a = ballVec.getAngle() * 0.5;
   offsetVec.rotate(a);
@@ -115,36 +138,29 @@ void Bot::update() {
   const double ballAngle = std::abs(ballVec.getAngle());
   const double ballAngleNorm = std::clamp(ballAngle / (std::numbers::pi / 2), 0.0, 1.0);
 
-  const double smoothBallAngleNorm = ballAngleNorm * ballAngleNorm * (3.0 - 2.0 * ballAngleNorm);
+  //const double smoothBallAngleNorm = ballAngleNorm * ballAngleNorm * (3.0 - 2.0 * ballAngleNorm);
+  constexpr double k = 0.9;          // >1 softer, <1 sharper
+  const double smoothBallAngleNorm = std::pow(ballAngleNorm, k);
 
-  constexpr double minFactor = 0.65;
-  constexpr double maxFactor = 1.0;
-  const double factorBallAngle = minFactor + ((maxFactor-minFactor) * smoothBallAngleNorm);
+  constexpr double min = 0.80;
+  constexpr double max = 1.0;
+  const double factor = min + ((max-min) * smoothBallAngleNorm);
 
-  offsetVec *= factorBallAngle * 25;
+  offsetVec *= factor * 15;
 
   Vector2 target = ballVec - offsetVec;
-  const int magnitude = target.getMagnitude();
-  const double c_magnitude = std::clamp(magnitude, 30, speed);
-  target.normalize();
-  target *= c_magnitude;
 
-  /*
-  Serial.print(target.getX());
-  Serial.print(" | ");
-  Serial.print(target.getY());
-  Serial.print(" | ");
-  Serial.print(target.getAngle());
-  Serial.print(" | ");
-  Serial.println(target.getMagnitude());
-  */
+  const double magnitude = target.getMagnitude();
+  const double clamped = std::clamp(magnitude, 30.0, static_cast<double>(speed));
 
-  // speed = _positioning->speedLimit(target, speed);
+  if (magnitude > 1e-6) {
+    target *= clamped / magnitude;
+  }
 
   const int vx = static_cast<int>(roundf(target.getX()));
   const int vy = static_cast<int>(roundf(target.getY()));
 
-  pushData(_sensors->getEna(), false, static_cast<int>(roundf(vx)), static_cast<int>(roundf(vy)), rot, 0);
+  pushData(_sensors->getEna(), false, vx, vy, rot, 0);
 }
 
 void Bot::overrideControl() {

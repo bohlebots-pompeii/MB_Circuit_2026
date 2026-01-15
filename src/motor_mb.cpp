@@ -15,7 +15,7 @@ void pushData(const bool enable, const bool kick, int vx, int vy, int rot, int d
 
   vx = constrain(vx, -100, 100);
   vy = constrain(vy, -100, 100);
-  rot = constrain(rot, -100, 100);
+  rot = constrain(rot, -30, 30);
   dribbler = constrain(dribbler, -100, 100);
 
   cmd.flags = 0;
