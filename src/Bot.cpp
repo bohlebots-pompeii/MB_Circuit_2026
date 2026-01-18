@@ -107,7 +107,19 @@ void Bot::update() {
   const auto ballVec = Vector2(cosf(ballRot) * ballDist, sinf(ballRot) * ballDist);
   const auto yellowVec = Vector2(cosf(yellowRot) * yellowDist, sinf(yellowRot) * yellowDist);
 
-  if (abs(ballRot) < std::numbers::pi / 4) {
+  if (abs(ballRot) < std::numbers::pi / 18.0 && ballDist < 20) {
+    Vector2 goal = degreeToVector(yellowRot);
+    goal.normalize();
+    rot = yellowRot / 2;
+
+    const int vx = static_cast<int>(roundf(goal.getX() * speed));
+    const int vy = static_cast<int>(roundf(goal.getY() * speed));
+
+    pushData(_sensors->getEna(), false, vx, vy, rot, 0);
+    return;
+  }
+
+  if (abs(ballRot) < std::numbers::pi / 4.0) {
     Vector2 target = degreeToVector(ballRot * (180.0 / std::numbers::pi));
     target.normalize();
 
@@ -115,18 +127,9 @@ void Bot::update() {
     const int vy = static_cast<int>(roundf(target.getY() * speed));
 
     pushData(_sensors->getEna(), false, vx, vy, rot, 0);
-    return;
-  }
-
-  if (abs(ballRot) < std::numbers::pi / 8) {
-    Vector2 goal = degreeToVector(yellowRot);
-    goal.normalize();
-    rot = yellowVec.getAngle() * (std::numbers::pi / 180.0) / 2;
-
-    const int vx = static_cast<int>(roundf(goal.getX() * speed));
-    const int vy = static_cast<int>(roundf(goal.getY() * speed));
-
-    pushData(_sensors->getEna(), false, vx, vy, rot, 0);
+    Serial.print(vx);
+    Serial.print(" | ");
+    Serial.println(vy);
     return;
   }
 
