@@ -17,6 +17,7 @@
 #include <elapsedMillis.h>
 
 elapsedMillis lineLastSeen;
+elapsedMillis yellowAligned;
 
 Bot::Bot() {
   Wire.begin();
@@ -58,8 +59,8 @@ void Bot::update() {
     line = line * 0.3f + middlePointVector * 0.7f;
     line.normalize();
 
-    const int vx_l = static_cast<int>(roundf(line.getX() * 20));
-    const int vy_l = static_cast<int>(roundf(line.getY() * 20));
+    const int vx_l = static_cast<int>(roundf(line.getX() * 30));
+    const int vy_l = static_cast<int>(roundf(line.getY() * 30));
 
     lineLastSeen = 0;
     lastLine = line;
@@ -68,6 +69,7 @@ void Bot::update() {
     return;
   }
 
+  /*
   if (lineLastSeen < 100) {
     const int vy_l = static_cast<int>(roundf(lastLine.getX() * 20));
     const int vx_l = static_cast<int>(roundf(lastLine.getY() * 20));
@@ -75,6 +77,7 @@ void Bot::update() {
     pushData(_sensors->getEna(), false, vx_l, vy_l, rot, 0);
     return;
   }
+  */
 
   if (!_cm5->getBallExists()) {
     // No ball detected, move towards the center
@@ -94,42 +97,48 @@ void Bot::update() {
     pushData(_sensors->getEna(), false, vx_c, vy_c, rot, 0);
     return;
   }
-  pushData(_sensors->getEna(), false, 0, 0, rot, 0);
 
   // --- get Sensor Data ---
   const double ballDist = _cm5->getBallDist();
-  const double ballRot = _cm5->getBallRot() * (std::numbers::pi / 180.0);
+  const double ballRot = _cm5->getBallRot();
 
   const double yellowDist = _cm5->getYellowDist();
   const double yellowRot = _cm5->getYellowRot();
 
   // --- movement Logic ---
-  const auto ballVec = Vector2(cosf(ballRot) * ballDist, sinf(ballRot) * ballDist);
-  const auto yellowVec = Vector2(cosf(yellowRot) * yellowDist, sinf(yellowRot) * yellowDist);
+  const auto ballVec = Vector2(cosf(ballRot * (std::numbers::pi / 180.0f)) * ballDist, sinf(ballRot * (std::numbers::pi / 180.0f)) * ballDist);
+  const auto yellowVec = Vector2(cosf(yellowRot * (std::numbers::pi / 180.0f)) * yellowDist, sinf(yellowRot * (std::numbers::pi / 180.0f)) * yellowDist);
 
-  if (abs(ballRot) < std::numbers::pi / 18.0 && ballDist < 20) {
+  if (abs(ballRot) < 10) {
     Vector2 goal = degreeToVector(yellowRot);
+    if (abs(yellowRot) > 10) {
+      yellowAligned = 0;
+    }
     goal.normalize();
     rot = yellowRot / 2;
 
-    const int vx = static_cast<int>(roundf(goal.getX() * speed));
-    const int vy = static_cast<int>(roundf(goal.getY() * speed));
+    int vx = 0;
+    int vy = 0;
+    if (yellowAligned > 200) {
+      vx = static_cast<int>(roundf(goal.getX() * speed));
+      vy = static_cast<int>(roundf(goal.getY() * speed));
+    }
 
     pushData(_sensors->getEna(), false, vx, vy, rot, 0);
     return;
   }
 
-  if (abs(ballRot) < std::numbers::pi / 4.0) {
-    Vector2 target = degreeToVector(ballRot * (180.0 / std::numbers::pi));
+  if (abs(ballRot) < 30) {
+    Vector2 target = degreeToVector(ballRot);
     target.normalize();
+
+    const double ballLimit = constrain(yellowRot, -30, 30);
+    // rot = ballLimit / 2;
 
     const int vx = static_cast<int>(roundf(target.getX() * speed));
     const int vy = static_cast<int>(roundf(target.getY() * speed));
 
     pushData(_sensors->getEna(), false, vx, vy, rot, 0);
-    Serial.print(vx);
-    Serial.print(" | ");
-    Serial.println(vy);
     return;
   }
 

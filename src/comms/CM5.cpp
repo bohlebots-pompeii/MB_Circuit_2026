@@ -190,7 +190,7 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
     const float dx = x2 - x1;
     const float dy = y2 - y1;
     const float h = -atan2f(dy, dx);
-    heading = h * 180.0f / std::numbers::pi;
+    heading = h * (180.0f / std::numbers::pi);
 
     const float mx = (x1 + x2) * 0.5f;
     const float my = (y1 + y2) * 0.5f;
@@ -199,9 +199,9 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
     const float s = sinf(h);
 
     const float x = mx * c - my * s;
-    const float y = mx * s + my * c;
+    float y = mx * s + my * c;
     //x = static_cast<float>(correction(x));
-    //y = static_cast<float>(correction(y));
+    y = static_cast<float>(correction(y));
     g_x = -x;
     g_y = -y;
   }
