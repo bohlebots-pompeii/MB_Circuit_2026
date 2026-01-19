@@ -108,27 +108,37 @@ void Bot::update() {
   // --- movement Logic ---
   const auto ballVec = Vector2(cosf(ballRot * (std::numbers::pi / 180.0f)) * ballDist, sinf(ballRot * (std::numbers::pi / 180.0f)) * ballDist);
   const auto yellowVec = Vector2(cosf(yellowRot * (std::numbers::pi / 180.0f)) * yellowDist, sinf(yellowRot * (std::numbers::pi / 180.0f)) * yellowDist);
+  const Vector2 goalVec = yellowVec;
 
-  if (abs(ballRot) < 10) {
-    Vector2 goal = degreeToVector(yellowRot);
+  // --- compute decider ---
+  Vector2 ballDir = ballVec;
+  ballDir.normalize();
+  Vector2 goalDir = goalVec;
+  goalDir.normalize();
+
+  const double dot = ballDir.getX() * goalDir.getX() + ballDir.getY() * goalDir.getY();
+  Serial.println(dot);
+
+  if (abs(dot) >= 0.96 && abs(ballRot) < 90) {
+    Vector2 target = degreeToVector(yellowRot);
     if (abs(yellowRot) > 10) {
       yellowAligned = 0;
     }
-    goal.normalize();
+    target.normalize();
     rot = yellowRot / 2;
 
     int vx = 0;
     int vy = 0;
     if (yellowAligned > 200) {
-      vx = static_cast<int>(roundf(goal.getX() * speed));
-      vy = static_cast<int>(roundf(goal.getY() * speed));
+      vx = static_cast<int>(roundf(target.getX() * speed));
+      vy = static_cast<int>(roundf(target.getY() * speed));
     }
 
     pushData(_sensors->getEna(), false, vx, vy, rot, 0);
     return;
   }
 
-  if (abs(ballRot) < 30) {
+  if (abs(dot) > 0.75 && abs(ballRot) < 90) {
     Vector2 target = degreeToVector(ballRot);
     target.normalize();
 
@@ -142,35 +152,71 @@ void Bot::update() {
     return;
   }
 
-  // drive behind ball
-  Vector2 offsetVec = degreeToVector(heading);
-  const double a = ballVec.getAngle() * 0.5;
-  offsetVec.rotate(a);
+  //
+  // ball pursiut
+  //
+  constexpr double angleNormMax = std::numbers::pi / 2;
+  int vx = 0;
+  int vy = 0;
 
-  const double ballAngle = std::abs(ballVec.getAngle());
-  const double ballAngleNorm = std::clamp(ballAngle / (std::numbers::pi / 2), 0.0, 1.0);
+  // when behind ball
+  if (abs(ballRot) < 80) {
+    constexpr double minBehindDist = 15.0;
+    constexpr double maxBehindDist = 30.0;
+    constexpr double smoothK = 1.4;
 
-  //const double smoothBallAngleNorm = ballAngleNorm * ballAngleNorm * (3.0 - 2.0 * ballAngleNorm);
-  constexpr double k = 0.9;          // >1 softer, <1 sharper
-  const double smoothBallAngleNorm = std::pow(ballAngleNorm, k);
+    Vector2 ballToGoal = goalVec - ballVec;
+    ballToGoal.normalize();
 
-  constexpr double min = 0.80;
-  constexpr double max = 1.0;
-  const double factor = min + ((max-min) * smoothBallAngleNorm);
+    const double angle = std::acos(std::clamp(dot, -1.0, 1.0));
 
-  offsetVec *= factor * 15;
+    const double angleNorm = std::clamp(angle / angleNormMax, 0.0, 1.0);
+    const double smoothAngleNorm = std::pow(angleNorm, smoothK);
 
-  Vector2 target = ballVec - offsetVec;
+    const double behindDist = minBehindDist + (maxBehindDist - minBehindDist) * smoothAngleNorm;
+    ballToGoal *= behindDist;
 
-  const double magnitude = target.getMagnitude();
-  const double clamped = std::clamp(magnitude, 30.0, static_cast<double>(speed));
+    Vector2 target = ballVec - ballToGoal;
 
-  if (magnitude > 1e-6) {
-    target *= clamped / magnitude;
+    const double magnitude = target.getMagnitude();
+    const double clamped = std::clamp(magnitude, 30.0, static_cast<double>(speed));
+
+    if (magnitude > 1e-6) {
+      target *= clamped / magnitude;
+    }
+
+    vx = static_cast<int>(std::round(target.getX()));
+    vy = static_cast<int>(std::round(target.getY()));
+  } else {
+    Vector2 offsetVec = degreeToVector(heading);
+    const double a = ballVec.getAngle() * 0.5;
+    offsetVec.rotate(a);
+
+    const double ballAngle = std::abs(ballVec.getAngle());
+    const double ballAngleNorm = std::clamp(ballAngle / (std::numbers::pi / 2), 0.0, 1.0);
+
+    //const double smoothBallAngleNorm = ballAngleNorm * ballAngleNorm * (3.0 - 2.0 * ballAngleNorm);
+    constexpr double k = 1.12;
+    const double smoothBallAngleNorm = std::pow(ballAngleNorm, k);
+
+    constexpr double min = 0.70;
+    constexpr double max = 1.0;
+    const double factor = min + ((max-min) * smoothBallAngleNorm);
+
+    offsetVec *= factor * 17;
+
+    Vector2 target = ballVec - offsetVec;
+
+    const double magnitude = target.getMagnitude();
+    const double clamped = std::clamp(magnitude, 30.0, static_cast<double>(speed));
+
+    if (magnitude > 1e-6) {
+      target *= clamped / magnitude;
+    }
+
+    vx = static_cast<int>(roundf(target.getX()));
+    vy = static_cast<int>(roundf(target.getY()));
   }
-
-  const int vx = static_cast<int>(roundf(target.getX()));
-  const int vy = static_cast<int>(roundf(target.getY()));
 
   pushData(_sensors->getEna(), false, vx, vy, rot, 0);
 }
