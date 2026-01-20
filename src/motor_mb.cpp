@@ -13,8 +13,8 @@ void pushData(const bool enable, const bool kick, int vx, int vy, int rot, int d
   vx *= -1;
   rot *= -1;
 
-  vx = constrain(vx, -100, 100);
-  vy = constrain(vy, -100, 100);
+  vx = constrain(vx, -70, 70);
+  vy = constrain(vy, -70, 70);
   rot = constrain(rot, -30, 30);
   dribbler = constrain(dribbler, -100, 100);
 

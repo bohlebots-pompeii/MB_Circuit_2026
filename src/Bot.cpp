@@ -45,6 +45,10 @@ void Bot::update() {
   const float heading = _cm5->getHeading();
   int rot = 0 - static_cast<int>(heading) / 3;
 
+  pushData(_sensors->getEna(), false, 0, 0, rot, 100);
+
+  /*
+
   // --- Line Sensor Override Logic ---
   // If the line sensor detects the boundary, prioritize moving away
   if (_sensors->getLineSeen()) {
@@ -77,7 +81,6 @@ void Bot::update() {
     pushData(_sensors->getEna(), false, vx_l, vy_l, rot, 0);
     return;
   }
-  */
 
   if (!_cm5->getBallExists()) {
     // No ball detected, move towards the center
@@ -94,7 +97,7 @@ void Bot::update() {
     const int vx_c = static_cast<int>(roundf(middlePointVector.getX() * dynamicSpeed));
     const int vy_c = static_cast<int>(roundf(middlePointVector.getY() * dynamicSpeed));
 
-    pushData(_sensors->getEna(), false, vx_c, vy_c, rot, 0);
+    pushData(_sensors->getEna(), false, vx_c, vy_c, rot, 100);
     return;
   }
 
@@ -117,7 +120,6 @@ void Bot::update() {
   goalDir.normalize();
 
   const double dot = ballDir.getX() * goalDir.getX() + ballDir.getY() * goalDir.getY();
-  Serial.println(dot);
 
   if (abs(dot) >= 0.96 && abs(ballRot) < 90) {
     Vector2 target = degreeToVector(yellowRot);
@@ -134,7 +136,7 @@ void Bot::update() {
       vy = static_cast<int>(roundf(target.getY() * speed));
     }
 
-    pushData(_sensors->getEna(), false, vx, vy, rot, 0);
+    pushData(_sensors->getEna(), false, vx, vy, rot, 100);
     return;
   }
 
@@ -148,7 +150,7 @@ void Bot::update() {
     const int vx = static_cast<int>(roundf(target.getX() * speed));
     const int vy = static_cast<int>(roundf(target.getY() * speed));
 
-    pushData(_sensors->getEna(), false, vx, vy, rot, 0);
+    pushData(_sensors->getEna(), false, vx, vy, rot, 100);
     return;
   }
 
@@ -160,6 +162,7 @@ void Bot::update() {
   int vy = 0;
 
   // when behind ball
+  /*
   if (abs(ballRot) < 80) {
     constexpr double minBehindDist = 15.0;
     constexpr double maxBehindDist = 30.0;
@@ -187,7 +190,7 @@ void Bot::update() {
 
     vx = static_cast<int>(std::round(target.getX()));
     vy = static_cast<int>(std::round(target.getY()));
-  } else {
+  } else
     Vector2 offsetVec = degreeToVector(heading);
     const double a = ballVec.getAngle() * 0.5;
     offsetVec.rotate(a);
@@ -216,9 +219,9 @@ void Bot::update() {
 
     vx = static_cast<int>(roundf(target.getX()));
     vy = static_cast<int>(roundf(target.getY()));
-  }
 
-  pushData(_sensors->getEna(), false, vx, vy, rot, 0);
+  pushData(_sensors->getEna(), false, vx, vy, rot, 100);
+  */
 }
 
 void Bot::overrideControl() {

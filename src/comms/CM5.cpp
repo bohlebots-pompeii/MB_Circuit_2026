@@ -205,6 +205,14 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
     g_x = -x;
     g_y = -y;
   }
+  else if (!foundBlue && foundYellow) {
+    heading = yellowRot * -1.0f;
+  }
+  else {
+    heading = (blueRot + 180) * -1.0f;
+    if (heading > 180) heading -= 360;
+    if (heading < -180) heading += 360;
+  }
 }
 
 void CM5::update() {

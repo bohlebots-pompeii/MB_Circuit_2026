@@ -22,7 +22,7 @@ Sensors::Sensors(const std::shared_ptr<CM5> &cm5) {
 
 void Sensors::update() {
   updateLineSensor();
-  updateUS();
+  // updateUS();
   updateButton();
 }
 
