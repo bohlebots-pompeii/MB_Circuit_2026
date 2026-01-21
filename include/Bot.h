@@ -32,8 +32,9 @@ private:
     [[nodiscard]] int getRotationControl() const;
     [[nodiscard]] Vector2 getAwayFromLineVec();
     [[nodiscard]] Vector2 getMoveToCenterVec(int speed) const;
-    [[nodiscard]] Vector2 getBallAlignedVec(int speed, int& rot) const;
+    [[nodiscard]] Vector2 getBallAlignedVec(int speed) const;
     [[nodiscard]] Vector2 getBallApproachVec(int speed) const;
     [[nodiscard]] Vector2 getBallPursuitVec(int speed) const;
+    void updateYMotion() const;
 };
 #endif //BOT_2026_BOT_H
