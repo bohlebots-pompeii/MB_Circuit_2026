@@ -29,12 +29,11 @@ private:
     Vector2 lastLine;
 
     // Helper functions
-    int getRotationControl() const;
-    Vector2 getAwayFromLineVec();
-    Vector2 getMoveToCenterVec(int speed) const;
-    Vector2 getBallAlignedVec(int speed, int& rot);
-    Vector2 getBallApproachVec(int speed) const;
-    Vector2 getBallPursuitVec(int speed) const;
+    [[nodiscard]] int getRotationControl() const;
+    [[nodiscard]] Vector2 getAwayFromLineVec();
+    [[nodiscard]] Vector2 getMoveToCenterVec(int speed) const;
+    [[nodiscard]] Vector2 getBallAlignedVec(int speed, int& rot) const;
+    [[nodiscard]] Vector2 getBallApproachVec(int speed) const;
+    [[nodiscard]] Vector2 getBallPursuitVec(int speed) const;
 };
 #endif //BOT_2026_BOT_H
-

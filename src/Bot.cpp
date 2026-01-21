@@ -59,7 +59,7 @@ Vector2 Bot::getAwayFromLineVec() {
   return line;
 }
 
-Vector2 Bot::getMoveToCenterVec(int speed) const {
+Vector2 Bot::getMoveToCenterVec(const int speed) const {
   Vector2 middlePointVector = _positioning->getMiddlePointVector();
   const double distance = middlePointVector.getMagnitude();
   middlePointVector.normalize();
@@ -72,7 +72,7 @@ Vector2 Bot::getMoveToCenterVec(int speed) const {
   return middlePointVector * dynamicSpeed;
 }
 
-Vector2 Bot::getBallAlignedVec(int speed, int& rot) {
+Vector2 Bot::getBallAlignedVec(const int speed, int& rot) const {
   const double yellowRot = _cm5->getYellowRot();
   Vector2 target = degreeToVector(yellowRot);
 
@@ -88,14 +88,14 @@ Vector2 Bot::getBallAlignedVec(int speed, int& rot) {
   return Vector2(0, 0);
 }
 
-Vector2 Bot::getBallApproachVec(int speed) const {
+Vector2 Bot::getBallApproachVec(const int speed) const {
   const double ballRot = _cm5->getBallRot();
   Vector2 target = degreeToVector(ballRot);
   target.normalize();
   return target * speed;
 }
 
-Vector2 Bot::getBallPursuitVec(int speed) const {
+Vector2 Bot::getBallPursuitVec(const int speed) const {
   const float heading = _cm5->getHeading();
   const double ballDist = _cm5->getBallDist();
   const double ballRot = _cm5->getBallRot();
@@ -139,14 +139,14 @@ void Bot::update() {
 
   // Line avoidance
   if (_sensors->getLineSeen()) {
-    Vector2 line = getAwayFromLineVec();
+    const Vector2 line = getAwayFromLineVec();
     pushData(_sensors->getEna(), false, static_cast<int>(line.getX()), static_cast<int>(line.getY()), rot, 0);
     return;
   }
 
   // No ball - move to center
   if (!_cm5->getBallExists()) {
-    Vector2 center = getMoveToCenterVec(speed);
+    const Vector2 center = getMoveToCenterVec(speed);
     pushData(_sensors->getEna(), false, static_cast<int>(center.getX()), static_cast<int>(center.getY()), rot, 100);
     return;
   }
@@ -155,20 +155,20 @@ void Bot::update() {
 
   // Ball aligned - aim at goal
   if (abs(ballRot) < 10) {
-    Vector2 target = getBallAlignedVec(speed, rot);
+    const Vector2 target = getBallAlignedVec(speed, rot);
     pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
     return;
   }
 
   // Ball in front - approach directly
   if (abs(ballRot) < 80) {
-    Vector2 target = getBallApproachVec(speed);
+    const Vector2 target = getBallApproachVec(speed);
     pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
     return;
   }
 
   // Ball behind - pursuit maneuver
-  Vector2 target = getBallPursuitVec(speed);
+  const Vector2 target = getBallPursuitVec(speed);
   pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
 }
 
