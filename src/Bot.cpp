@@ -4,7 +4,6 @@
 
 #include <Bot.h>
 #include <Arduino.h>
-#include <chrono>
 #include <Vector2.hpp>
 #include <comms/CM5.h>
 #include <Sensors.h>
@@ -15,6 +14,7 @@
 #include <numbers>
 #include <iostream>
 #include <elapsedMillis.h>
+#include <PID_v1.h>
 
 elapsedMillis lineLastSeen;
 elapsedMillis yellowAligned;
@@ -27,11 +27,105 @@ Bot::Bot() {
   _cm5 = std::make_shared<CM5>();
   _sensors = std::make_shared<Sensors>(_cm5);
   _positioning = std::make_shared<Positioning>(_cm5);
+
+  double x_Setpoint, x_Input, x_Output;
+  constexpr double Kp=0.0, Ki=0.0, Kd=0.0;
+  PID x_motion(&x_Input, &x_Output, &x_Setpoint, Kp, Ki, Kd, DIRECT);
 }
 
-Vector2 degreeToVector(const float degrees) {
-  const float radians = degrees * (PI / 180.0f);
-  return Vector2(cosf(radians), sinf(radians));
+Vector2 degreeToVector(const double degrees) {
+  const double radians = degrees * (PI / 180.0f);
+  return Vector2(cos(radians), sin(radians));
+}
+
+int Bot::getRotationControl() const {
+  const float heading = _cm5->getHeading();
+  return 0 - static_cast<int>(heading) / 3;
+}
+
+Vector2 Bot::getAwayFromLineVec() {
+  Vector2 line = degreeToVector(_sensors->getLineRot());
+  line.rotate(std::numbers::pi);
+
+  Vector2 middlePointVector = _positioning->getMiddlePointVector();
+  middlePointVector.normalize();
+
+  line = line * 0.3f + middlePointVector * 0.7f;
+  line.normalize();
+  line *= 30;
+
+  lineLastSeen = 0;
+  lastLine = line;
+  return line;
+}
+
+Vector2 Bot::getMoveToCenterVec(int speed) const {
+  Vector2 middlePointVector = _positioning->getMiddlePointVector();
+  const double distance = middlePointVector.getMagnitude();
+  middlePointVector.normalize();
+
+  constexpr double MAX_DISTANCE = 30.0f;
+  const double ratio = std::min(distance / MAX_DISTANCE, 1.0);
+  const double speedFactor = ratio * ratio;
+  const int dynamicSpeed = static_cast<int>(speed * speedFactor);
+
+  return middlePointVector * dynamicSpeed;
+}
+
+Vector2 Bot::getBallAlignedVec(int speed, int& rot) {
+  const double yellowRot = _cm5->getYellowRot();
+  Vector2 target = degreeToVector(yellowRot);
+
+  if (abs(yellowRot) > 10) {
+    yellowAligned = 0;
+  }
+  target.normalize();
+  rot = static_cast<int>(yellowRot / 2);
+
+  if (yellowAligned > 200) {
+    return target * speed;
+  }
+  return Vector2(0, 0);
+}
+
+Vector2 Bot::getBallApproachVec(int speed) const {
+  const double ballRot = _cm5->getBallRot();
+  Vector2 target = degreeToVector(ballRot);
+  target.normalize();
+  return target * speed;
+}
+
+Vector2 Bot::getBallPursuitVec(int speed) const {
+  const float heading = _cm5->getHeading();
+  const double ballDist = _cm5->getBallDist();
+  const double ballRot = _cm5->getBallRot();
+
+  const auto ballVec = Vector2(
+    cos(ballRot * (std::numbers::pi / 180.0f)) * ballDist,
+    sin(ballRot * (std::numbers::pi / 180.0f)) * ballDist
+  );
+
+  Vector2 offsetVec = degreeToVector(heading);
+  offsetVec.rotate(ballVec.getAngle() * 0.5);
+
+  const double ballAngle = std::abs(ballVec.getAngle());
+  const double ballAngleNorm = std::clamp(ballAngle / (std::numbers::pi / 2), 0.0, 1.0);
+
+  constexpr double k = 1.12;
+  const double smoothBallAngleNorm = std::pow(ballAngleNorm, k);
+
+  constexpr double min = 0.70, max = 1.0;
+  const double factor = min + ((max - min) * smoothBallAngleNorm);
+  offsetVec *= factor * 17;
+
+  Vector2 target = ballVec - offsetVec;
+  const double magnitude = target.getMagnitude();
+  const double clamped = std::clamp(magnitude, 30.0, static_cast<double>(speed));
+
+  if (magnitude > 1e-6) {
+    target *= clamped / magnitude;
+  }
+  return target;
 }
 
 void Bot::update() {
@@ -41,187 +135,41 @@ void Bot::update() {
   _sensors->update();
   _positioning->update();
 
-  // rotation motion control
-  const float heading = _cm5->getHeading();
-  int rot = 0 - static_cast<int>(heading) / 3;
+  int rot = getRotationControl();
 
-  pushData(_sensors->getEna(), false, 0, 0, rot, 100);
-
-  /*
-
-  // --- Line Sensor Override Logic ---
-  // If the line sensor detects the boundary, prioritize moving away
+  // Line avoidance
   if (_sensors->getLineSeen()) {
-    // Calculate vector away from the line
-    Vector2 line = degreeToVector(_sensors->getLineRot());
-    line.rotate(std::numbers::pi);
-
-    Vector2 middlePointVector = _positioning->getMiddlePointVector();
-    middlePointVector.normalize();
-
-    // Blend line avoidance with movement towards the center
-    line = line * 0.3f + middlePointVector * 0.7f;
-    line.normalize();
-
-    const int vx_l = static_cast<int>(roundf(line.getX() * 30));
-    const int vy_l = static_cast<int>(roundf(line.getY() * 30));
-
-    lineLastSeen = 0;
-    lastLine = line;
-
-    pushData(_sensors->getEna(), false, vx_l, vy_l, rot, 0);
+    Vector2 line = getAwayFromLineVec();
+    pushData(_sensors->getEna(), false, static_cast<int>(line.getX()), static_cast<int>(line.getY()), rot, 0);
     return;
   }
 
-  /*
-  if (lineLastSeen < 100) {
-    const int vy_l = static_cast<int>(roundf(lastLine.getX() * 20));
-    const int vx_l = static_cast<int>(roundf(lastLine.getY() * 20));
-
-    pushData(_sensors->getEna(), false, vx_l, vy_l, rot, 0);
-    return;
-  }
-
+  // No ball - move to center
   if (!_cm5->getBallExists()) {
-    // No ball detected, move towards the center
-    Vector2 middlePointVector = _positioning->getMiddlePointVector();
-    const float distance = middlePointVector.getMagnitude();
-    middlePointVector.normalize();
-
-    constexpr float MAX_DISTANCE = 30.0f;
-    const float ratio = std::min(distance / MAX_DISTANCE, 1.0f);
-    const float speedFactor = ratio * ratio;
-
-    const int dynamicSpeed = static_cast<int>(speed * speedFactor);
-
-    const int vx_c = static_cast<int>(roundf(middlePointVector.getX() * dynamicSpeed));
-    const int vy_c = static_cast<int>(roundf(middlePointVector.getY() * dynamicSpeed));
-
-    pushData(_sensors->getEna(), false, vx_c, vy_c, rot, 100);
+    Vector2 center = getMoveToCenterVec(speed);
+    pushData(_sensors->getEna(), false, static_cast<int>(center.getX()), static_cast<int>(center.getY()), rot, 100);
     return;
   }
 
-  // --- get Sensor Data ---
-  const double ballDist = _cm5->getBallDist();
   const double ballRot = _cm5->getBallRot();
 
-  const double yellowDist = _cm5->getYellowDist();
-  const double yellowRot = _cm5->getYellowRot();
-
-  // --- movement Logic ---
-  const auto ballVec = Vector2(cosf(ballRot * (std::numbers::pi / 180.0f)) * ballDist, sinf(ballRot * (std::numbers::pi / 180.0f)) * ballDist);
-  const auto yellowVec = Vector2(cosf(yellowRot * (std::numbers::pi / 180.0f)) * yellowDist, sinf(yellowRot * (std::numbers::pi / 180.0f)) * yellowDist);
-  const Vector2 goalVec = yellowVec;
-
-  // --- compute decider ---
-  Vector2 ballDir = ballVec;
-  ballDir.normalize();
-  Vector2 goalDir = goalVec;
-  goalDir.normalize();
-
-  const double dot = ballDir.getX() * goalDir.getX() + ballDir.getY() * goalDir.getY();
-
-  if (abs(dot) >= 0.96 && abs(ballRot) < 90) {
-    Vector2 target = degreeToVector(yellowRot);
-    if (abs(yellowRot) > 10) {
-      yellowAligned = 0;
-    }
-    target.normalize();
-    rot = yellowRot / 2;
-
-    int vx = 0;
-    int vy = 0;
-    if (yellowAligned > 200) {
-      vx = static_cast<int>(roundf(target.getX() * speed));
-      vy = static_cast<int>(roundf(target.getY() * speed));
-    }
-
-    pushData(_sensors->getEna(), false, vx, vy, rot, 100);
+  // Ball aligned - aim at goal
+  if (abs(ballRot) < 10) {
+    Vector2 target = getBallAlignedVec(speed, rot);
+    pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
     return;
   }
 
-  if (abs(dot) > 0.75 && abs(ballRot) < 90) {
-    Vector2 target = degreeToVector(ballRot);
-    target.normalize();
-
-    const double ballLimit = constrain(yellowRot, -30, 30);
-    // rot = ballLimit / 2;
-
-    const int vx = static_cast<int>(roundf(target.getX() * speed));
-    const int vy = static_cast<int>(roundf(target.getY() * speed));
-
-    pushData(_sensors->getEna(), false, vx, vy, rot, 100);
-    return;
-  }
-
-  //
-  // ball pursiut
-  //
-  constexpr double angleNormMax = std::numbers::pi / 2;
-  int vx = 0;
-  int vy = 0;
-
-  // when behind ball
-  /*
+  // Ball in front - approach directly
   if (abs(ballRot) < 80) {
-    constexpr double minBehindDist = 15.0;
-    constexpr double maxBehindDist = 30.0;
-    constexpr double smoothK = 1.4;
+    Vector2 target = getBallApproachVec(speed);
+    pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
+    return;
+  }
 
-    Vector2 ballToGoal = goalVec - ballVec;
-    ballToGoal.normalize();
-
-    const double angle = std::acos(std::clamp(dot, -1.0, 1.0));
-
-    const double angleNorm = std::clamp(angle / angleNormMax, 0.0, 1.0);
-    const double smoothAngleNorm = std::pow(angleNorm, smoothK);
-
-    const double behindDist = minBehindDist + (maxBehindDist - minBehindDist) * smoothAngleNorm;
-    ballToGoal *= behindDist;
-
-    Vector2 target = ballVec - ballToGoal;
-
-    const double magnitude = target.getMagnitude();
-    const double clamped = std::clamp(magnitude, 30.0, static_cast<double>(speed));
-
-    if (magnitude > 1e-6) {
-      target *= clamped / magnitude;
-    }
-
-    vx = static_cast<int>(std::round(target.getX()));
-    vy = static_cast<int>(std::round(target.getY()));
-  } else
-    Vector2 offsetVec = degreeToVector(heading);
-    const double a = ballVec.getAngle() * 0.5;
-    offsetVec.rotate(a);
-
-    const double ballAngle = std::abs(ballVec.getAngle());
-    const double ballAngleNorm = std::clamp(ballAngle / (std::numbers::pi / 2), 0.0, 1.0);
-
-    //const double smoothBallAngleNorm = ballAngleNorm * ballAngleNorm * (3.0 - 2.0 * ballAngleNorm);
-    constexpr double k = 1.12;
-    const double smoothBallAngleNorm = std::pow(ballAngleNorm, k);
-
-    constexpr double min = 0.70;
-    constexpr double max = 1.0;
-    const double factor = min + ((max-min) * smoothBallAngleNorm);
-
-    offsetVec *= factor * 17;
-
-    Vector2 target = ballVec - offsetVec;
-
-    const double magnitude = target.getMagnitude();
-    const double clamped = std::clamp(magnitude, 30.0, static_cast<double>(speed));
-
-    if (magnitude > 1e-6) {
-      target *= clamped / magnitude;
-    }
-
-    vx = static_cast<int>(roundf(target.getX()));
-    vy = static_cast<int>(roundf(target.getY()));
-
-  pushData(_sensors->getEna(), false, vx, vy, rot, 100);
-  */
+  // Ball behind - pursuit maneuver
+  Vector2 target = getBallPursuitVec(speed);
+  pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
 }
 
 void Bot::overrideControl() {

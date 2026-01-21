@@ -20,12 +20,21 @@ public:
 
     void update();
 
-    void overrideControl();
+    static void overrideControl();
 private:
     std::shared_ptr<CM5> _cm5;
     std::shared_ptr<Sensors> _sensors;
     std::shared_ptr<Positioning> _positioning;
 
     Vector2 lastLine;
+
+    // Helper functions
+    int getRotationControl() const;
+    Vector2 getAwayFromLineVec();
+    Vector2 getMoveToCenterVec(int speed) const;
+    Vector2 getBallAlignedVec(int speed, int& rot);
+    Vector2 getBallApproachVec(int speed) const;
+    Vector2 getBallPursuitVec(int speed) const;
 };
 #endif //BOT_2026_BOT_H
+
