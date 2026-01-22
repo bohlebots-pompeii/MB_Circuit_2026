@@ -195,8 +195,8 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
     const float mx = (x1 + x2) * 0.5f;
     const float my = (y1 + y2) * 0.5f;
 
-    const float c = cosf(h);
-    const float s = sinf(h);
+    const float c = cosf(-h);
+    const float s = sinf(-h);
 
     const float x = mx * c - my * s;
     float y = mx * s + my * c;
@@ -206,10 +206,10 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
     g_y = -y;
   }
   else if (!foundBlue && foundYellow) {
-    heading = yellowRot * -1.0f;
+    heading = static_cast<float>(yellowRot) * -1.0f;
   }
   else {
-    heading = (blueRot + 180) * -1.0f;
+    heading = (static_cast<float>(blueRot) + 180) * -1.0f;
     if (heading > 180) heading -= 360;
     if (heading < -180) heading += 360;
   }

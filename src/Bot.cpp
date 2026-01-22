@@ -18,15 +18,21 @@
 
 elapsedMillis lineLastSeen;
 elapsedMillis yellowAligned;
+elapsedMillis ballLastSeen;
+
+// y axis
+double y_Setpoint, y_Input, y_Output;
+constexpr double y_Kp=0.7, y_Ki=0.00, y_Kd=0.06;
+PID y_motion(&y_Input, &y_Output, &y_Setpoint, y_Kp, y_Ki, y_Kd, DIRECT);
 
 // x axis
-double y_Setpoint, y_Input, y_Output;
-constexpr double x_Kp=1.0, x_Ki=0.0, x_Kd=1.0;
-PID y_motion(&y_Input, &y_Output, &y_Setpoint, x_Kp, x_Ki, x_Kd, DIRECT);
+double x_Setpoint, x_Input, x_Output;
+constexpr double x_Kp=1.0, x_Ki=0.00, x_Kd=0.05;
+PID x_motion(&x_Input, &x_Output, &x_Setpoint, x_Kp, x_Ki, x_Kd, DIRECT);
 
 // rotation
 double rot_Setpoint, rot_Input, rot_Output;
-constexpr double rot_Kp=0.6, rot_Ki=0.1, rot_Kd=2.1;
+constexpr double rot_Kp=0.5, rot_Ki=0.0, rot_Kd=0.05;
 PID rot_motion(&rot_Input, &rot_Output, &rot_Setpoint, rot_Kp, rot_Ki, rot_Kd, DIRECT);
 
 Bot::Bot() {
@@ -39,21 +45,20 @@ Bot::Bot() {
   _positioning = std::make_shared<Positioning>(_cm5);
 
   y_Setpoint = 0.0;
+  x_Setpoint = 20.0;
   rot_Setpoint = 0.0;
 
   rot_motion.SetMode(AUTOMATIC);
   rot_motion.SetOutputLimits(-50, 50);
-  rot_motion.SetSampleTime(10);
+  rot_motion.SetSampleTime(30);
 
   y_motion.SetMode(AUTOMATIC);
   y_motion.SetOutputLimits(-50, 50);
-  y_motion.SetSampleTime(10);
+  y_motion.SetSampleTime(30);
 
-  // lightgate
-  pinMode(35, INPUT);
-  pinMode(34, INPUT);
-  pinMode(39, INPUT);
-  pinMode(36, INPUT);
+  x_motion.SetMode(AUTOMATIC);
+  x_motion.SetOutputLimits(-50, 50);
+  x_motion.SetSampleTime(30);
 }
 
 Vector2 degreeToVector(const double degrees) {
@@ -103,6 +108,7 @@ Vector2 Bot::getBallAlignedVec(const int speed) const {
   const double yellowRot = _cm5->getYellowRot();
   Vector2 target = degreeToVector(yellowRot);
   target *= speed;
+  rot_Setpoint = yellowRot * 2;
   return target;
 }
 
@@ -110,7 +116,9 @@ Vector2 Bot::getBallApproachVec(const int speed) const {
   const double ballRot = _cm5->getBallRot();
   Vector2 target = degreeToVector(ballRot);
   target.normalize();
-  return target * speed;
+  target *= speed;
+  target.setY(-y_Output);
+  return target;
 }
 
 Vector2 Bot::getBallPursuitVec(const int speed) const {
@@ -132,7 +140,7 @@ Vector2 Bot::getBallPursuitVec(const int speed) const {
   constexpr double k = 0.9;
   const double smoothBallAngleNorm = std::pow(ballAngleNorm, k);
 
-  constexpr double min = 0.70, max = 1.0;
+  constexpr double min = 0.75, max = 1.0;
   const double factor = min + ((max - min) * smoothBallAngleNorm);
   offsetVec *= factor * 20;
 
@@ -144,34 +152,49 @@ Vector2 Bot::getBallPursuitVec(const int speed) const {
     target *= clamped / magnitude;
   }
 
-  if (std::abs(ballRot) < 100) {
+  if (std::abs(ballRot) < 70) {
     target.setY(-y_Output);
   }
   return target;
 }
 
-void Bot::updateYMotion() const {
+void Bot::updateYMotion(const double y) const {
   const double ballRot = _cm5->getBallRot();
   y_Input = ballRot;
   y_motion.Compute();
 }
 
+void Bot::updateXMotion(const double x) const {
+  const double ballDist = _cm5->getBallDist();
+  x_Input = ballDist;
+  x_motion.Compute();
+}
+
 void Bot::update() {
-  constexpr int speed = 50;
+  constexpr int speed = 40;
 
   _cm5->update();
   _sensors->update();
   _positioning->update();
-  updateYMotion();
+
+  // updateXMotion(0);
+  updateYMotion(0);
 
   const int rot = getRotationControl();
 
   // Line avoidance
   if (_sensors->getLineSeen()) {
     const Vector2 line = getAwayFromLineVec();
-    pushData(_sensors->getEna(), false, static_cast<int>(line.getX()), static_cast<int>(line.getY()), rot, 0);
+    pushData(_sensors->getEna(), false, static_cast<int>(line.getX()), static_cast<int>(line.getY()), rot, 100);
     return;
   }
+
+  if (_sensors->getHasBall()) {
+    const Vector2 target = getBallAlignedVec(speed);
+    pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
+    return;
+  }
+  rot_Setpoint = 0.0;
 
   // No ball - move to center
   if (!_cm5->getBallExists()) {
@@ -180,23 +203,12 @@ void Bot::update() {
     return;
   }
 
-  const double ballRot = _cm5->getBallRot();
-
-  // Ball aligned - aim at goal
-  if (abs(ballRot) < 10) {
-    const Vector2 target = getBallAlignedVec(speed);
-    pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
-    return;
-  }
-
-  /*
   // Ball in front - approach directly
-  if (abs(ballRot) < 40) {
+  if (const double ballRot = _cm5->getBallRot(); abs(ballRot) < 35) {
     const Vector2 target = getBallApproachVec(speed);
     pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
     return;
   }
-  */
 
   // Ball behind - pursuit maneuver
   const Vector2 target = getBallPursuitVec(speed);

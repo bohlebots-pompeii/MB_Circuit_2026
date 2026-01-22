@@ -8,6 +8,7 @@
 #include <Vector2.hpp>
 #include <memory>
 #include <comms/CM5.h>
+#include <Arduino.h>
 
 class Sensors {
 public:
@@ -20,6 +21,7 @@ public:
   [[nodiscard]] bool getLineSeen() const { return progress != -1 && line_rot != -1; }
   [[nodiscard]] Vector2 getPosition() const { return position; }
   [[nodiscard]] bool getEna() const { return ena; }
+  [[nodiscard]] bool getHasBall() { return analogRead(39) > 1000;}
 
 private:
   bool ena = false;

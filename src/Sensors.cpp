@@ -18,6 +18,8 @@ Sensors::Sensors(const std::shared_ptr<CM5> &cm5) {
 
   // Initialize the button pin as input
   pinMode(buttonPIN, INPUT);
+  // lightgate
+  pinMode(39, INPUT);
 }
 
 void Sensors::update() {

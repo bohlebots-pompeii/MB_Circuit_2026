@@ -35,6 +35,7 @@ private:
     [[nodiscard]] Vector2 getBallAlignedVec(int speed) const;
     [[nodiscard]] Vector2 getBallApproachVec(int speed) const;
     [[nodiscard]] Vector2 getBallPursuitVec(int speed) const;
-    void updateYMotion() const;
+    void updateYMotion(double y) const;
+    void updateXMotion(double x) const;
 };
 #endif //BOT_2026_BOT_H
