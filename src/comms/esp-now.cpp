@@ -27,9 +27,13 @@ void onDataRecv(const esp_now_recv_info *info, const uint8_t *incomingData, cons
 }
 
 void initEspNow() {
-    WiFi.mode(WIFI_STA);
+    // Nicht WiFi.mode setzen wenn bereits verbunden (z.B. mit WebDebugger)
+    if (WiFi.status() != WL_CONNECTED) {
+        WiFi.mode(WIFI_STA);
+    }
 
     if (esp_now_init() != ESP_OK) {
+        Serial.println("ESP-NOW init failed");
         return;
     }
 
@@ -37,11 +41,13 @@ void initEspNow() {
 
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, senderMacAddress, 6);
-    peerInfo.channel = 0;
+    peerInfo.channel = WiFi.channel();  // Gleichen Kanal wie WiFi verwenden
     peerInfo.encrypt = false;
 
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {
         Serial.println("Failed to add peer");
         return;
     }
+
+    Serial.println("ESP-NOW initialized");
 }

@@ -15,23 +15,20 @@
 #include <iostream>
 #include <elapsedMillis.h>
 #include <PID_v1.h>
-
-elapsedMillis lineLastSeen;
-elapsedMillis yellowAligned;
-elapsedMillis ballLastSeen;
+#include <util/WebDebugger.h>
 
 // y axis
-double y_Setpoint, y_Input, y_Output;
-constexpr double y_Kp=1.0, y_Ki=0.00, y_Kd=0.03;
+double y_Setpoint = 0, y_Input = 0, y_Output = 0;
+constexpr double y_Kp=1.4, y_Ki=0.00, y_Kd=0.03;
 PID y_motion(&y_Input, &y_Output, &y_Setpoint, y_Kp, y_Ki, y_Kd, DIRECT);
 
 // x axis
-double x_Setpoint, x_Input, x_Output;
-constexpr double x_Kp=1.0, x_Ki=0.00, x_Kd=0.03;
+double x_Setpoint = 0, x_Input = 0, x_Output = 0;
+constexpr double x_Kp=1.2, x_Ki=0.00, x_Kd=0.03;
 PID x_motion(&x_Input, &x_Output, &x_Setpoint, x_Kp, x_Ki, x_Kd, DIRECT);
 
 // rotation
-double rot_Setpoint, rot_Input, rot_Output;
+double rot_Setpoint = 0, rot_Input = 0, rot_Output = 0;
 constexpr double rot_Kp=0.5, rot_Ki=0.0, rot_Kd=0.05;
 PID rot_motion(&rot_Input, &rot_Output, &rot_Setpoint, rot_Kp, rot_Ki, rot_Kd, DIRECT);
 
@@ -66,7 +63,7 @@ Vector2 degreeToVector(const double degrees) {
   return Vector2(cos(radians), sin(radians));
 }
 
-int Bot::getRotationControl(const float input) const {
+int Bot::getRotationControl(const float input) {
   rot_Input = input;
   if (std::abs(rot_Input) < 5) {
     rot_Input = 0;
@@ -86,7 +83,6 @@ Vector2 Bot::getAwayFromLineVec() {
   line.normalize();
   line *= 30;
 
-  lineLastSeen = 0;
   lastLine = line;
   return line;
 }
@@ -116,7 +112,6 @@ Vector2 Bot::getBallApproachVec(const int speed) const {
   Vector2 target = degreeToVector(ballRot);
   target.normalize();
   target *= speed;
-  target.setY(-y_Output);
   return target;
 }
 
@@ -152,7 +147,7 @@ Vector2 Bot::getBallPursuitVec(const int speed) const {
 
   const double dot = robotToIdeal.getX() * robotToBall.getX() + robotToIdeal.getY() * robotToBall.getY();
 
-  if (std::abs(dot) > 0.7 && std::abs(ballRot) > 75.0) {
+  if (std::abs(ballRot) > 70.0 || std::abs(dot) > 0.6) {
     const Vector2 perpendicular(-ballToGoal.getY(), ballToGoal.getX());
 
     const double cross = ballVec.getX() * yellowVec.getY() - ballVec.getY() * yellowVec.getX();
@@ -165,48 +160,23 @@ Vector2 Bot::getBallPursuitVec(const int speed) const {
   }
 
   const Vector2 target = idealPos;
-
-  /*
-  Vector2 offsetVec = degreeToVector(heading);
-  offsetVec.rotate(ballVec.getAngle() * 0.5);
-
-  const double ballAngle = std::abs(ballVec.getAngle());
-  const double ballAngleNorm = std::clamp(ballAngle / (std::numbers::pi / 2), 0.0, 1.0);
-
-  constexpr double k = 0.9;
-  const double smoothBallAngleNorm = std::pow(ballAngleNorm, k);
-
-  constexpr double min = 0.75, max = 1.0;
-  const double factor = min + ((max - min) * smoothBallAngleNorm);
-  offsetVec *= factor * 20;
-
-  Vector2 target = ballVec - offsetVec;
-  const double magnitude = target.getMagnitude();
-  const double clamped = std::clamp(magnitude, 30.0, static_cast<double>(speed));
-
-  if (magnitude > 1e-6) {
-    target *= clamped / magnitude;
-  }
-
-  if (std::abs(ballRot) < 70) {
-    target.setY(-y_Output);
-  }
-  */
   return target;
 }
 
 void Bot::updateYMotion(const double y) const {
   y_Input = y;
+  if (isnan(y_Input)) y_Input = 0;
   y_motion.Compute();
 }
 
 void Bot::updateXMotion(const double x) const {
   x_Input = x;
+  if (isnan(x_Input)) x_Input = 0;
   x_motion.Compute();
 }
 
 void Bot::update() {
-  constexpr int speed = 40.0f;
+  constexpr int speed = 50.0f;
 
   _cm5->update();
   _sensors->update();
@@ -216,6 +186,7 @@ void Bot::update() {
   Vector2 target;
   double rotInput = 0;
   bool usePID = true;
+  bool kick = false;
 
   if (_sensors->getLineSeen()) {
     target = getAwayFromLineVec();
@@ -223,20 +194,28 @@ void Bot::update() {
     usePID = false;
   }
   else if (_sensors->getHasBall()) {
+    if (std::abs(_cm5->getYellowRot()) < 5) {
+      kick = true;
+    }
     target = getBallAlignedVec(speed);
-    rotInput = _cm5->getYellowRot();
+    rotInput = _cm5->getYellowRot() / 1.5;
   }
   else if (!_cm5->getBallExists()) {
     target = getMoveToCenterVec(speed);
     rotInput = _cm5->getHeading();
+    usePID = false;
   }
   else {
     const double ballRot = _cm5->getBallRot();
 
-    if (std::abs(ballRot) < 15) {
-      target = getBallApproachVec(speed);
+    if (std::abs(ballRot) < 10 && _cm5->getBallDist() < 30) {
+      Serial.println("Approachng ball");
+      target = getBallApproachVec(20);
+      rotInput = _cm5->getBallRot();
+      usePID = false;
     }
     else {
+      Serial.println("Pursuit");
       target = getBallPursuitVec(speed);
       rotInput = _cm5->getYellowRot();
     }
@@ -248,14 +227,76 @@ void Bot::update() {
   updateXMotion(target.getX());
   updateYMotion(target.getY());
 
+
   if (usePID) {
-    pushData(_sensors->getEna(), false, static_cast<int>(-x_Output), static_cast<int>(-y_Output), rot, 100);
+    pushData(_sensors->getEna(), kick, static_cast<int>(-x_Output), static_cast<int>(-y_Output), rot, 100);
   } else {
-    pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
+    pushData(_sensors->getEna(), kick, target.getX(), target.getY(), rot, 100);
   }
 }
 
 
 void Bot::overrideControl() {
   pushData(false, false, 0, 0, 0, 0);
+}
+
+void Bot::initDebugger(const char* ssid, const char* password) {
+  webDebugger.begin(ssid, password);
+}
+
+void Bot::initDebuggerAP(const char* ssid, const char* password) {
+  webDebugger.beginAP(ssid, password);
+}
+
+void Bot::sendDebugData(const Vector2& target) const {
+  DebugData data;
+
+  // Target vector
+  data.target = target;
+
+  // Ball vector
+  const double ballRot = _cm5->getBallRot();
+  const double ballDist = _cm5->getBallDist();
+  data.ballVec = Vector2(
+    cos(ballRot * (std::numbers::pi / 180.0)) * ballDist,
+    sin(ballRot * (std::numbers::pi / 180.0)) * ballDist
+  );
+
+  // Goal vector
+  const double yellowRot = _cm5->getYellowRot();
+  const double yellowDist = _cm5->getYellowDist();
+  data.goalVec = Vector2(
+    cos(yellowRot * (std::numbers::pi / 180.0)) * yellowDist,
+    sin(yellowRot * (std::numbers::pi / 180.0)) * yellowDist
+  );
+
+  // Middle point vector
+  data.middlePointVec = _positioning->getMiddlePointVector();
+
+  // Line vector
+  data.lineVec = lastLine;
+
+  // Scalars
+  data.heading = _cm5->getHeading();
+  data.ballRot = static_cast<float>(ballRot);
+  data.ballDist = static_cast<float>(ballDist);
+  data.yellowRot = static_cast<float>(yellowRot);
+  data.yellowDist = static_cast<float>(yellowDist);
+  data.blueRot = _cm5->getBlueRot();
+  data.blueDist = _cm5->getBlueDist();
+  data.globalX = _cm5->getGlobalX();
+  data.globalY = _cm5->getGlobalY();
+
+  // States
+  data.hasBall = _sensors->getHasBall();
+  data.lineSeen = _sensors->getLineSeen();
+  data.ballExists = _cm5->getBallExists();
+
+  // PID outputs
+  data.xOutput = static_cast<float>(-x_Output);
+  data.yOutput = static_cast<float>(-y_Output);
+  data.rotOutput = static_cast<float>(rot_Output);
+
+  webDebugger.setData(data);
+  webDebugger.update();
 }
