@@ -22,15 +22,13 @@ struct Object {
   uint8_t label;
   float rotation_deg;
   float dist_cm;
-  float rel_x;
-  float rel_y;
 };
 
 class CM5 {
 public:
   void update();
 
-  [[nodiscard]] float getHeading() const;
+  [[nodiscard]] float getHeading() const { return heading; }
 
   [[nodiscard]] float getYellowRot() const { return yellowRot; }
   [[nodiscard]] float getYellowDist() const { return yellowDist; }
@@ -54,14 +52,14 @@ private:
   Object objects[6] = {};
   float heading = 0;
 
-  int16_t yellowRot = 0;
-  int16_t yellowDist = 0;
+  float yellowRot = 0;
+  float yellowDist = 0;
 
-  int16_t blueRot = 0;
-  int16_t blueDist = 0;
+  float blueRot = 0;
+  float blueDist = 0;
 
-  int16_t ballRot = 0;
-  int16_t ballDist = 0;
+  float ballRot = 0;
+  float ballDist = 0;
 
   float g_x = 0;
   float g_y = 0;
@@ -74,11 +72,9 @@ private:
 
   void computeCenters(Detection* det, int num_det);
 
-  void computeRotations(const Detection* det, int num_det);
+  void computeRotationsAndDistances(const Detection* det, int num_det);
 
-  void computeDistances(const Detection* det, int num_det);
-
-  void computeHeadingFromPolar(const Detection* det, int num_det);
+  void computeHeadingAndPosition(const Detection* det, int num_det);
 };
 
 #endif //BOHLEBOTS_2026_SERIAL_H

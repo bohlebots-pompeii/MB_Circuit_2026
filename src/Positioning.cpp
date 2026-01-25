@@ -8,6 +8,9 @@
 #include "Vector2.hpp"
 #include <cmath>
 #include <algorithm>
+#include <elapsedMillis.h>
+
+elapsedMillis rotationDeltaTimer;
 
 std::vector<Vector2> Field = {
   Vector2(-70, -90),
@@ -37,16 +40,27 @@ Positioning::Positioning(const std::shared_ptr<CM5> &cm5) {
 
 void Positioning::update() {
   updateMiddlePointVector();
+  updateRotationDelta();
 }
 
 void Positioning::updateMiddlePointVector() {
-  const int x = _cm5->getGlobalX();
-  const int y = _cm5->getGlobalY();
+  const float x = _cm5->getGlobalX();
+  const float y = _cm5->getGlobalY();
 
   // Vector from current pos to origin (0,0)
   Vector2 toMiddle(x, y);
   toMiddle.rotate(M_PI);
   _middlePointVector = toMiddle;
+}
+
+void Positioning::updateRotationDelta() {
+  if (rotationDeltaTimer < 30) {
+    return;
+  }
+  rotationDeltaTimer = 0;
+  const double rot = _cm5->getHeading();
+  rotationDelta = rot - lastHeading;
+  lastHeading = rot;
 }
 
 static bool isPointInPolygon(const Vector2& point, const std::vector<Vector2>& polygon) {

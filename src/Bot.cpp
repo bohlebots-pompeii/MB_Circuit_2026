@@ -22,12 +22,12 @@ elapsedMillis ballLastSeen;
 
 // y axis
 double y_Setpoint, y_Input, y_Output;
-constexpr double y_Kp=0.7, y_Ki=0.00, y_Kd=0.06;
+constexpr double y_Kp=1.0, y_Ki=0.00, y_Kd=0.03;
 PID y_motion(&y_Input, &y_Output, &y_Setpoint, y_Kp, y_Ki, y_Kd, DIRECT);
 
 // x axis
 double x_Setpoint, x_Input, x_Output;
-constexpr double x_Kp=1.0, x_Ki=0.00, x_Kd=0.05;
+constexpr double x_Kp=1.0, x_Ki=0.00, x_Kd=0.03;
 PID x_motion(&x_Input, &x_Output, &x_Setpoint, x_Kp, x_Ki, x_Kd, DIRECT);
 
 // rotation
@@ -45,7 +45,7 @@ Bot::Bot() {
   _positioning = std::make_shared<Positioning>(_cm5);
 
   y_Setpoint = 0.0;
-  x_Setpoint = 20.0;
+  x_Setpoint = 0.0;
   rot_Setpoint = 0.0;
 
   rot_motion.SetMode(AUTOMATIC);
@@ -66,9 +66,9 @@ Vector2 degreeToVector(const double degrees) {
   return Vector2(cos(radians), sin(radians));
 }
 
-int Bot::getRotationControl() const {
-  rot_Input = _cm5->getHeading();
-  if (abs(rot_Input) < 5) {
+int Bot::getRotationControl(const float input) const {
+  rot_Input = input;
+  if (std::abs(rot_Input) < 5) {
     rot_Input = 0;
   }
   rot_motion.Compute();
@@ -108,7 +108,6 @@ Vector2 Bot::getBallAlignedVec(const int speed) const {
   const double yellowRot = _cm5->getYellowRot();
   Vector2 target = degreeToVector(yellowRot);
   target *= speed;
-  rot_Setpoint = yellowRot * 2;
   return target;
 }
 
@@ -125,12 +124,49 @@ Vector2 Bot::getBallPursuitVec(const int speed) const {
   const float heading = _cm5->getHeading();
   const double ballDist = _cm5->getBallDist();
   const double ballRot = _cm5->getBallRot();
+  const double yellowRot = _cm5->getYellowRot();
+  const double yellowDist = _cm5->getYellowDist();
 
   const auto ballVec = Vector2(
     cos(ballRot * (std::numbers::pi / 180.0f)) * ballDist,
     sin(ballRot * (std::numbers::pi / 180.0f)) * ballDist
   );
 
+  const auto yellowVec = Vector2(
+    cos(yellowRot * (std::numbers::pi / 180.0f)) * yellowDist,
+    sin(yellowRot * (std::numbers::pi / 180.0f)) * yellowDist
+  );
+
+  // ball pursuit on straight between ball and goal
+  Vector2 ballToGoal = yellowVec - ballVec;
+  ballToGoal.normalize();
+
+  constexpr double offsetDist = 20.0;
+  Vector2 idealPos = ballVec - ballToGoal * offsetDist;
+
+  Vector2 robotToIdeal = idealPos;
+  robotToIdeal.normalize();
+
+  Vector2 robotToBall = ballVec;;
+  robotToBall.normalize();
+
+  const double dot = robotToIdeal.getX() * robotToBall.getX() + robotToIdeal.getY() * robotToBall.getY();
+
+  if (std::abs(dot) > 0.7 && std::abs(ballRot) > 75.0) {
+    const Vector2 perpendicular(-ballToGoal.getY(), ballToGoal.getX());
+
+    const double cross = ballVec.getX() * yellowVec.getY() - ballVec.getY() * yellowVec.getX();
+    const double side = (cross > 0) ? 1.0 : -1.0;
+
+    const double shiftStrength = std::clamp((dot - 0.5) * 2.0, 0.0, 1.0);
+    constexpr double maxShift = 30.0;
+
+    idealPos = idealPos + perpendicular * (side * maxShift * shiftStrength);
+  }
+
+  const Vector2 target = idealPos;
+
+  /*
   Vector2 offsetVec = degreeToVector(heading);
   offsetVec.rotate(ballVec.getAngle() * 0.5);
 
@@ -155,65 +191,70 @@ Vector2 Bot::getBallPursuitVec(const int speed) const {
   if (std::abs(ballRot) < 70) {
     target.setY(-y_Output);
   }
+  */
   return target;
 }
 
 void Bot::updateYMotion(const double y) const {
-  const double ballRot = _cm5->getBallRot();
-  y_Input = ballRot;
+  y_Input = y;
   y_motion.Compute();
 }
 
 void Bot::updateXMotion(const double x) const {
-  const double ballDist = _cm5->getBallDist();
-  x_Input = ballDist;
+  x_Input = x;
   x_motion.Compute();
 }
 
 void Bot::update() {
-  constexpr int speed = 40;
+  constexpr int speed = 40.0f;
 
   _cm5->update();
   _sensors->update();
   _positioning->update();
+  setRotDelta(_positioning->getRotationDelta());
 
-  // updateXMotion(0);
-  updateYMotion(0);
+  Vector2 target;
+  double rotInput = 0;
+  bool usePID = true;
 
-  const int rot = getRotationControl();
-
-  // Line avoidance
   if (_sensors->getLineSeen()) {
-    const Vector2 line = getAwayFromLineVec();
-    pushData(_sensors->getEna(), false, static_cast<int>(line.getX()), static_cast<int>(line.getY()), rot, 100);
-    return;
+    target = getAwayFromLineVec();
+    rotInput = _cm5->getHeading();
+    usePID = false;
+  }
+  else if (_sensors->getHasBall()) {
+    target = getBallAlignedVec(speed);
+    rotInput = _cm5->getYellowRot();
+  }
+  else if (!_cm5->getBallExists()) {
+    target = getMoveToCenterVec(speed);
+    rotInput = _cm5->getHeading();
+  }
+  else {
+    const double ballRot = _cm5->getBallRot();
+
+    if (std::abs(ballRot) < 15) {
+      target = getBallApproachVec(speed);
+    }
+    else {
+      target = getBallPursuitVec(speed);
+      rotInput = _cm5->getYellowRot();
+    }
   }
 
-  if (_sensors->getHasBall()) {
-    const Vector2 target = getBallAlignedVec(speed);
+  // update pids
+  const int rot = getRotationControl(static_cast<float>(rotInput));
+
+  updateXMotion(target.getX());
+  updateYMotion(target.getY());
+
+  if (usePID) {
+    pushData(_sensors->getEna(), false, static_cast<int>(-x_Output), static_cast<int>(-y_Output), rot, 100);
+  } else {
     pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
-    return;
   }
-  rot_Setpoint = 0.0;
-
-  // No ball - move to center
-  if (!_cm5->getBallExists()) {
-    const Vector2 center = getMoveToCenterVec(speed);
-    pushData(_sensors->getEna(), false, static_cast<int>(center.getX()), static_cast<int>(center.getY()), rot, 100);
-    return;
-  }
-
-  // Ball in front - approach directly
-  if (const double ballRot = _cm5->getBallRot(); abs(ballRot) < 35) {
-    const Vector2 target = getBallApproachVec(speed);
-    pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
-    return;
-  }
-
-  // Ball behind - pursuit maneuver
-  const Vector2 target = getBallPursuitVec(speed);
-  pushData(_sensors->getEna(), false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100);
 }
+
 
 void Bot::overrideControl() {
   pushData(false, false, 0, 0, 0, 0);

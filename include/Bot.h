@@ -29,7 +29,7 @@ private:
     Vector2 lastLine;
 
     // Helper functions
-    [[nodiscard]] int getRotationControl() const;
+    [[nodiscard]] int getRotationControl(float input) const;
     [[nodiscard]] Vector2 getAwayFromLineVec();
     [[nodiscard]] Vector2 getMoveToCenterVec(int speed) const;
     [[nodiscard]] Vector2 getBallAlignedVec(int speed) const;

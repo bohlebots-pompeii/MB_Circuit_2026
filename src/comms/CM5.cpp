@@ -12,6 +12,9 @@ Object objects[6] = {};
 int num_detections = 0;
 float heading = 0.0f;
 
+constexpr float mirror_cx = 320.0f;
+constexpr float mirror_cy = 320.0f;
+
 static CalibPoint calib[] = {
   {  75.0f,  10.0f },
   { 100.0f,  20.0f },
@@ -54,13 +57,12 @@ float CM5::pixelToCm(const float pixel) {
   return 0.0f;
 }
 
+// function to calibrate mirror
 void CM5::calibMirror(const Detection* det, const int num_det) {
-  constexpr float cx = 320.0f; // screen center
-  constexpr float cy = 320.0f;
   for (int i = 0; i < num_det; ++i) {
     if (det[i].label == 1 || det[i].label == 2) {
-      const float dx = det[i].center[0] - cx;
-      const float dy = cy - det[i].center[1];
+      const float dx = det[i].center[0] - mirror_cx;
+      const float dy = mirror_cy - det[i].center[1];
 
       const float r = sqrtf(dx * dx + dy * dy);
       Serial.println(r);
@@ -68,6 +70,7 @@ void CM5::calibMirror(const Detection* det, const int num_det) {
   }
 }
 
+// convert from half-float to float32 (wikipedia)
 float CM5::halfToFloat(const uint16_t h) {
   uint16_t h_exp = (h & 0x7C00) >> 10;
   uint16_t h_sig = h & 0x03FF;
@@ -103,78 +106,80 @@ float CM5::halfToFloat(const uint16_t h) {
   return result;
 }
 
+// helper
+float toRad(const double degrees) {
+  return static_cast<float>(degrees * (std::numbers::pi / 180.0f));
+}
+
+float toDeg(const double radians) {
+  return static_cast<float>(radians * (180.0f / std::numbers::pi));
+}
+
+float pythagorean(const float a, const float b) {
+  return sqrtf(a * a + b * b);
+}
+
 void CM5::computeCenters(Detection* det, const int num_det) {
   for (int i = 0; i < num_det; ++i) {
-    det[i].center[0] = (det[i].bbox[0] + det[i].bbox[2]) * 0.5f;
-    det[i].center[1] = (det[i].bbox[1] + det[i].bbox[3]) * 0.5f;
+    // swapped to match my coordinate system
+    det[i].center[1] = (det[i].bbox[0] + det[i].bbox[2]) * 0.5f;
+    det[i].center[0] = (det[i].bbox[1] + det[i].bbox[3]) * 0.5f;
   }
 }
 
-void CM5::computeRotations(const Detection* det, const int num_det) {
-  constexpr float cx = 320.0f; // screen center
-  constexpr float cy = 320.0f;
+// compute rotation of object relative to image center
+void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) {
+  // reset
+  blueDist = 0;
+  blueRot = 0;
+  yellowDist = 0;
+  yellowRot = 0;
+  ballDist = 0;
+  ballRot = 0;
+
   for (int i = 0; i < num_det; ++i) {
-    const float dx = det[i].center[1] - cx; // swap x and y to match ai output
-    const float dy = cy - det[i].center[0];
+    // difference between img center and obj center
+    const float dx = det[i].center[0] - mirror_cx;
+    const float dy = det[i].center[1] - mirror_cy;
+
+    // compute rotation of object to img center
     const float angle_rad = atan2f(dy, dx);
-    objects[i].rotation_deg = angle_rad * 180.0f / std::numbers::pi;
+    const float angle_deg = toDeg(angle_rad);
+    objects[i].rotation_deg = angle_deg;
+
+    // compute distances of object from image center and estimate cm
+    const float dist_px = pythagorean(dx, dy);
+    const float dist_cm = pixelToCm(dist_px);
+    objects[i].dist_cm = dist_cm;
 
     objects[i].label = det[i].label;
     if (det[i].label == 1) {
-      blueRot = objects[i].rotation_deg;
+      blueRot = angle_deg;
+      blueDist = dist_cm;
     }
     else if (det[i].label == 2) {
-      yellowRot = objects[i].rotation_deg;
+      yellowRot = angle_deg;
+      yellowDist = dist_cm;
     }
     else if (det[i].label == 3) {
-      ballRot = objects[i].rotation_deg;
+      ballRot = angle_deg;
+      ballDist = dist_cm;
     }
   }
 }
 
-void CM5::computeDistances(const Detection* det, const int num_det) {
-  constexpr float cx = 320.0f; // mirror center
-  constexpr float cy = 320.0f;
-
-  blueDist = 0;
-  yellowDist = 0;
-  ballDist = 0;
-
-  for (int i = 0; i < num_det; ++i) {
-    const float dx = det[i].center[1] - cx;
-    const float dy = cy - det[i].center[0];
-
-    const float r = sqrtf(dx * dx + dy * dy);
-    const float dist = pixelToCm(r);
-
-    objects[i].dist_cm = dist;
-
-    if (objects[i].label == 1) {
-      blueDist = dist;
-      //Serial.print("blueDist: ");
-      //Serial.print(blueDist);
-    }
-    else if (objects[i].label == 2) {
-      yellowDist = dist;
-      //Serial.print(" yellowDist: ");
-      //Serial.println(yellowDist);
-    }
-    else if (objects[i].label == 3) {
-      ballDist = dist;
-    }
-  }
+// corecction estimate for y axis pos
+float correction(const float x) {
+  return static_cast<float>(7.59502963e-06 * pow(x, 3) - 1.82918911e-03 * pow(x, 2) + 8.87600747e-01 * x - 4.79815488e-02);
 }
 
-double correction(const double x) {
-  return 7.59502963e-06 * pow(x, 3) - 1.82918911e-03 * pow(x, 2) + 8.87600747e-01 * x - 4.79815488e-02;
-}
-
-void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
+void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
   float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
   bool foundBlue = false, foundYellow = false;
 
-  for (int i = 0; i < num_det; i++) {
-    const float theta = objects[i].rotation_deg * (std::numbers::pi / 180.0f);
+  for (int i = 0; i < num_det; ++i) {
+    float theta = objects[i].rotation_deg; // deg
+    theta = toRad(theta); // rad
     const float d = objects[i].dist_cm;
     const float x = d * cosf(theta);
     const float y = d * sinf(theta);
@@ -189,29 +194,24 @@ void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
   if (foundBlue && foundYellow) {
     const float dx = x2 - x1;
     const float dy = y2 - y1;
-    const float h = -atan2f(dy, dx);
-    heading = h * (180.0f / std::numbers::pi);
+    const float h = atan2f(dy, dx);
+    heading = toDeg(h);
 
     const float mx = (x1 + x2) * 0.5f;
     const float my = (y1 + y2) * 0.5f;
 
-    const float c = cosf(-h);
-    const float s = sinf(-h);
-
-    const float x = mx * c - my * s;
-    float y = mx * s + my * c;
-    //x = static_cast<float>(correction(x));
-    y = static_cast<float>(correction(y));
+    const float x = mx * cosf(-h) - my * sinf(-h);
+    const float y = mx * sinf(-h) + my * cosf(-h);
     g_x = -x;
     g_y = -y;
   }
   else if (!foundBlue && foundYellow) {
-    heading = static_cast<float>(yellowRot) * -1.0f;
+    heading = yellowRot;
   }
   else {
-    heading = (static_cast<float>(blueRot) + 180) * -1.0f;
-    if (heading > 180) heading -= 360;
-    if (heading < -180) heading += 360;
+    heading = blueRot + 180.0f;
+    if (heading > 180.0f) heading -= 360.0f;
+    if (heading < -180.0f) heading += 360.0f;
   }
 }
 
@@ -254,16 +254,9 @@ void CM5::update() {
       }
     }
 
-    computeCenters(detections, stored_detections);
-    computeRotations(detections, stored_detections);
-    computeDistances(detections, stored_detections);
-
     // calibMirror(detections, stored_detections);
-
-    computeHeadingFromPolar(detections, stored_detections);
+    computeCenters(detections, stored_detections);
+    computeRotationsAndDistances(detections, stored_detections);
+    computeHeadingAndPosition(detections, stored_detections);
   }
-}
-
-float CM5::getHeading() const {
-  return heading;
 }
