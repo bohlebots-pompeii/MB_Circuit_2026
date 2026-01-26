@@ -30,8 +30,6 @@ private:
     std::shared_ptr<Sensors> _sensors;
     std::shared_ptr<Positioning> _positioning;
 
-    Vector2 lastLine;
-
     // Helper functions
     [[nodiscard]] int getRotationControl(float input) ;
     [[nodiscard]] Vector2 getAwayFromLineVec();

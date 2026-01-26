@@ -26,6 +26,7 @@ void Sensors::update() {
   updateLineSensor();
   // updateUS();
   updateButton();
+  updateButtons();
 }
 
 void Sensors::updateLineSensor() {
@@ -91,8 +92,8 @@ void Sensors::updateUS() {
     const uint16_t x_u = (static_cast<uint16_t>(xHigh) << 8) | static_cast<uint16_t>(xLow);
     const uint16_t y_u = (static_cast<uint16_t>(yHigh) << 8) | static_cast<uint16_t>(yLow);
 
-    const int16_t x = static_cast<int16_t>(x_u);
-    const int16_t y = static_cast<int16_t>(y_u);
+    const auto x = static_cast<int16_t>(x_u);
+    const auto y = static_cast<int16_t>(y_u);
 
     constexpr float scale = 100.0f;
     const float local_x = static_cast<float>(x) / scale;
@@ -110,8 +111,8 @@ void Sensors::updateUS() {
 }
 
 void Sensors::updateButton() {
-  const bool currentButtonState = digitalRead(buttonPIN);
-  if (currentButtonState == HIGH && !lastButtonState) {
+  const bool currentButtonState = getTasterState(0, 1);
+  if (currentButtonState && !lastButtonState) {
     ena = !ena;
   }
   lastButtonState = currentButtonState;
@@ -119,8 +120,66 @@ void Sensors::updateButton() {
 
 void Sensors::localToWorld(const float lx, const float ly,const float heading_deg, float &gx, float &gy) {
   // Convert heading to radians for trigonometric functions
-  const float theta = heading_deg * (PI / 180.0f);
+  const auto theta = static_cast<float>(heading_deg * (PI / 180.0f));
   // Apply rotation matrix to convert local point (lx, ly) to global point (gx, gy)
   gx = cosf(theta) * lx - sinf(theta) * ly;
   gy = sinf(theta) * lx + cosf(theta) * ly;
+}
+
+bool Sensors::getTasterState(const int device, const int nr) const {
+  if (device < 0 || device > 7) {
+    return false;
+  }
+  if (nr == 1) {
+    return button1Array[device];
+  }
+  if (nr == 2) {
+    return button2Array[device];
+  }
+  return false;
+}
+
+void Sensors::setLED(const int device, const int nr, int color) {
+  if (color < 0 || color > 7 || device < 0 || device > 7) {
+    return;
+  }
+  if (nr == 1) {
+    led1Array[device] = color * 2;
+  } else if (nr == 2) {
+    color *= 16;
+    if (color > 63) {
+      color += 64;
+    }
+    led2Array[device] = color;
+  }
+  Serial.println("update led");
+}
+
+void Sensors::updateButtons() {
+  Serial.println("updated Buttons");
+  // from BohleBots header - Roland Stiebel
+  for (int lauf = 0; lauf < 8; lauf++) {
+    if (portena[lauf]) {
+      int ledwert = 255 - led1Array[lauf] - led2Array[lauf];
+      Wire.beginTransmission(buttonLedID[lauf]);
+      Wire.write(ledwert);
+
+      Wire.endTransmission();
+
+      Wire.requestFrom(buttonLedID[lauf], 1);
+      if (Wire.available()) {
+        int tread = 255 - Wire.read();
+        tread = tread % 128;
+        if (tread > 63)
+          button2Array[lauf] = true;
+        else
+          button2Array[lauf] = false;
+        tread = tread % 2;
+        if (tread > 0)
+          button1Array[lauf] = true;
+        else
+          button1Array[lauf] = false;
+      }
+    }
+  }
 }

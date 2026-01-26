@@ -16,14 +16,26 @@ public:
 
   void update();
 
+  bool getTasterState(int device, int nr) const;
+  void setLED(int device, int nr, int color);
+
   [[nodiscard]] int16_t getLineRot() const { return line_rot; }
   [[nodiscard]] int16_t getProgress() const { return progress; }
   [[nodiscard]] bool getLineSeen() const { return progress != -1 && line_rot != -1; }
   [[nodiscard]] Vector2 getPosition() const { return position; }
   [[nodiscard]] bool getEna() const { return ena; }
-  [[nodiscard]] bool getHasBall() { return analogRead(39) > 1000;}
+  [[nodiscard]] bool getHasBall() { return analogRead(39) > 3000;}
 
 private:
+  std::array<bool, 8> portena = { true, false, false, false, false, false, false, false };
+
+  std::array<int, 8> buttonLedID = { 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27 };
+  std::array<bool, 8> button1Array = { false, false, false, false, false, false, false, false };
+  std::array<bool, 8> button2Array = { false, false, false, false, false, false, false, false };
+
+  std::array<int, 8> led1Array = { 0, 0, 0, 0, 0, 0, 0, 0 };
+  std::array<int, 8> led2Array = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
   bool ena = false;
   bool lastButtonState = false;
 
@@ -37,6 +49,7 @@ private:
   void updateLineSensor();
   void updateUS();
   void updateButton();
+  void updateButtons();
 
   void localToWorld(float lx, float ly, float heading_deg, float &gx, float &gy);
 };

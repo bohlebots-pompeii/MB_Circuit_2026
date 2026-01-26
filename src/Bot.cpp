@@ -17,6 +17,9 @@
 #include <PID_v1.h>
 #include <util/WebDebugger.h>
 
+elapsedMillis hasBallTimer;
+elapsedMillis lastLineTimer;
+
 // y axis
 double y_Setpoint = 0, y_Input = 0, y_Output = 0;
 constexpr double y_Kp=1.4, y_Ki=0.00, y_Kd=0.03;
@@ -24,7 +27,7 @@ PID y_motion(&y_Input, &y_Output, &y_Setpoint, y_Kp, y_Ki, y_Kd, DIRECT);
 
 // x axis
 double x_Setpoint = 0, x_Input = 0, x_Output = 0;
-constexpr double x_Kp=1.2, x_Ki=0.00, x_Kd=0.03;
+constexpr double x_Kp=1.3, x_Ki=0.00, x_Kd=0.03;
 PID x_motion(&x_Input, &x_Output, &x_Setpoint, x_Kp, x_Ki, x_Kd, DIRECT);
 
 // rotation
@@ -83,7 +86,7 @@ Vector2 Bot::getAwayFromLineVec() {
   line.normalize();
   line *= 30;
 
-  lastLine = line;
+  lastLineTimer = 0;
   return line;
 }
 
@@ -147,7 +150,7 @@ Vector2 Bot::getBallPursuitVec(const int speed) const {
 
   const double dot = robotToIdeal.getX() * robotToBall.getX() + robotToIdeal.getY() * robotToBall.getY();
 
-  if (std::abs(ballRot) > 70.0 || std::abs(dot) > 0.6) {
+  if (std::abs(ballRot) > 70.0 && std::abs(dot) > 0.6) {
     const Vector2 perpendicular(-ballToGoal.getY(), ballToGoal.getX());
 
     const double cross = ballVec.getX() * yellowVec.getY() - ballVec.getY() * yellowVec.getX();
@@ -183,41 +186,58 @@ void Bot::update() {
   _positioning->update();
   setRotDelta(_positioning->getRotationDelta());
 
+  if (_sensors->getEna()) {
+    _sensors->setLED(0, 1, 1);
+  }
+  else {
+    _sensors->setLED(0, 1, 2);
+  }
+
   Vector2 target;
   double rotInput = 0;
   bool usePID = true;
   bool kick = false;
 
+  if (!_sensors->getHasBall()) {
+    hasBallTimer = 0;
+  }
+  // drive away from line
   if (_sensors->getLineSeen()) {
     target = getAwayFromLineVec();
     rotInput = _cm5->getHeading();
     usePID = false;
   }
+
+  // drive to goal if has ball
   else if (_sensors->getHasBall()) {
-    if (std::abs(_cm5->getYellowRot()) < 5) {
-      kick = true;
+    if (std::abs(_cm5->getYellowRot()) < 20) {
+      if (hasBallTimer > 50) { kick = true; }
     }
     target = getBallAlignedVec(speed);
     rotInput = _cm5->getYellowRot() / 1.5;
   }
+
+  // drive to midPoint if ball not seen
   else if (!_cm5->getBallExists()) {
     target = getMoveToCenterVec(speed);
     rotInput = _cm5->getHeading();
     usePID = false;
   }
-  else {
-    const double ballRot = _cm5->getBallRot();
 
-    if (std::abs(ballRot) < 10 && _cm5->getBallDist() < 30) {
-      Serial.println("Approachng ball");
+  // else pursue ball
+  else {
+    if (std::abs(_cm5->getBallRot()) < 10 && _cm5->getBallDist() < 30) {
       target = getBallApproachVec(20);
-      rotInput = _cm5->getBallRot();
       usePID = false;
     }
     else {
-      Serial.println("Pursuit");
-      target = getBallPursuitVec(speed);
-      rotInput = _cm5->getYellowRot();
+      if (lastLineTimer < 100) {
+        rotInput = _cm5->getBallRot();
+      }
+      else {
+        target = getBallPursuitVec(speed);
+        rotInput = _cm5->getYellowRot();
+      }
     }
   }
 
@@ -226,7 +246,6 @@ void Bot::update() {
 
   updateXMotion(target.getX());
   updateYMotion(target.getY());
-
 
   if (usePID) {
     pushData(_sensors->getEna(), kick, static_cast<int>(-x_Output), static_cast<int>(-y_Output), rot, 100);
@@ -272,9 +291,6 @@ void Bot::sendDebugData(const Vector2& target) const {
 
   // Middle point vector
   data.middlePointVec = _positioning->getMiddlePointVector();
-
-  // Line vector
-  data.lineVec = lastLine;
 
   // Scalars
   data.heading = _cm5->getHeading();

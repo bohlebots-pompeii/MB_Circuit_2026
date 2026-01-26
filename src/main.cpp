@@ -10,9 +10,7 @@ std::shared_ptr<Bot> bot;
 void setup() {
   bot = std::make_shared<Bot>();
 
-  //bot->initDebugger("RoboAG", "------");
-
-  //initEspNow();
+  initEspNow();
 
   Log::header();
   Log::info(" Setup Complete; Switching to Loop");
