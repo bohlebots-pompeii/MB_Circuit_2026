@@ -14,8 +14,8 @@
 elapsedMillis rotationDeltaTimer;
 elapsedMillis velocityTimer;
 
-MovingAverage<float, 10> velocityXAvg;
-MovingAverage<float, 10> velocityYAvg;
+MovingAverage<float, 15> velocityXAvg;
+MovingAverage<float, 15> velocityYAvg;
 
 std::vector<Vector2> Field = {
   Vector2(-70, -90),
@@ -135,32 +135,34 @@ void Positioning::speedLimit(float& vx, float& vy) const {
   const float futureY = y + static_cast<float>(_velocity.getY()) * lookAheadFrames;
 
   const double currentDist = std::hypot(x, y);
-  Serial.println(currentDist);
   const double futureDist = std::hypot(futureX, futureY);
-  Serial.println(futureDist);
 
   if (futureDist <= currentDist) {
     return;
   }
 
   constexpr double maxDistance = 100.0;
-  constexpr double slowingDistance = 60.0;
+  constexpr double slowingDistance = 80.0;
+  constexpr float minSpeed = 20.0f;
 
   double factor = 1.0;
 
   if (futureDist > maxDistance) {
-    vx = constrain(vx, -25.0f, 25.0f);
-    vy = constrain(vy, -25.0f, 25.0f);
-    return;
-  }
-
-  if (futureDist > slowingDistance) {
+    factor = 0.0;
+  } else if (futureDist > slowingDistance) {
     const double normalizedDist = (futureDist - slowingDistance) / (maxDistance - slowingDistance);
     factor = 1.0 - (normalizedDist * normalizedDist);
   }
 
-  vx *= static_cast<float>(factor);
-  vy *= static_cast<float>(factor);
+  const float newVx = vx * static_cast<float>(factor);
+  const float newVy = vy * static_cast<float>(factor);
+
+  if (std::abs(vx) >= minSpeed) {
+    vx = (std::abs(newVx) < minSpeed) ? (vx > 0 ? minSpeed : -minSpeed) : newVx;
+  }
+  if (std::abs(vy) >= minSpeed) {
+    vy = (std::abs(newVy) < minSpeed) ? (vy > 0 ? minSpeed : -minSpeed) : newVy;
+  }
 }
 
 

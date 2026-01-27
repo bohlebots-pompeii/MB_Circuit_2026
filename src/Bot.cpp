@@ -25,12 +25,12 @@ MovingAverage<double, 10> positionYAvg;
 
 // y axis
 double y_Setpoint = 0, y_Input = 0, y_Output = 0;
-constexpr double y_Kp=1.4, y_Ki=0.00, y_Kd=0.05;
+constexpr double y_Kp=1.4, y_Ki=0.00, y_Kd=0.03;
 PID y_motion(&y_Input, &y_Output, &y_Setpoint, y_Kp, y_Ki, y_Kd, DIRECT);
 
 // x axis
 double x_Setpoint = 0, x_Input = 0, x_Output = 0;
-constexpr double x_Kp=1.3, x_Ki=0.00, x_Kd=0.05;
+constexpr double x_Kp=1.4, x_Ki=0.00, x_Kd=0.03;
 PID x_motion(&x_Input, &x_Output, &x_Setpoint, x_Kp, x_Ki, x_Kd, DIRECT);
 
 // rotation
@@ -56,11 +56,11 @@ Bot::Bot() {
   rot_motion.SetSampleTime(30);
 
   y_motion.SetMode(AUTOMATIC);
-  y_motion.SetOutputLimits(-50, 50);
+  y_motion.SetOutputLimits(-70, 70);
   y_motion.SetSampleTime(30);
 
   x_motion.SetMode(AUTOMATIC);
-  x_motion.SetOutputLimits(-50, 50);
+  x_motion.SetOutputLimits(-70, 70);
   x_motion.SetSampleTime(30);
 }
 
