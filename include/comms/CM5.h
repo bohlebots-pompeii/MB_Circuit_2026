@@ -5,7 +5,7 @@
 #ifndef BOHLEBOTS_2026_SERIAL_H
 #define BOHLEBOTS_2026_SERIAL_H
 #include <Arduino.h>
-#include <numbers>
+#include <elapsedMillis.h>
 
 struct CalibPoint {
   float pixel;
@@ -30,11 +30,13 @@ public:
 
   [[nodiscard]] float getHeading() const { return heading; }
 
-  [[nodiscard]] float getYellowRot() const { return yellowRot; }
-  [[nodiscard]] float getYellowDist() const { return yellowDist; }
+  // Target goal (goal to attack)
+  [[nodiscard]] float getTargetGoalRot() const { return targetGoalRot; }
+  [[nodiscard]] float getTargetGoalDist() const { return targetGoalDist; }
 
-  [[nodiscard]] float getBlueRot() const { return blueRot; }
-  [[nodiscard]] float getBlueDist() const { return blueDist; }
+  // Own goal (goal to defend)
+  [[nodiscard]] float getOwnGoalRot() const { return ownGoalRot; }
+  [[nodiscard]] float getOwnGoalDist() const { return ownGoalDist; }
 
   [[nodiscard]] float getBallRot() const { return ballRot; }
   [[nodiscard]] float getBallDist() const { return ballDist; }
@@ -46,17 +48,32 @@ public:
   [[nodiscard]] float getGlobalX() const { return g_x; }
   [[nodiscard]] float getGlobalY() const { return g_y; }
 
+  [[nodiscard]] bool getCM5Running() const { return lastUpdateTimer < 50;}
+
+  enum COLOR {
+    BLUE = 1,
+    YELLOW = 2
+  };
+
+  void setTargetGoal(uint8_t goalLabel);
+
 private:
+  elapsedMillis lastUpdateTimer;
+
   Detection detections[6] = {};
   int num_detections = 0;
   Object objects[6] = {};
   float heading = 0;
 
-  float yellowRot = 0;
-  float yellowDist = 0;
+  // Target goal (goal to attack) and own goal (goal to defend)
+  float targetGoalRot = 0;
+  float targetGoalDist = 0;
+  float ownGoalRot = 0;
+  float ownGoalDist = 0;
 
-  float blueRot = 0;
-  float blueDist = 0;
+  // Goal label mapping: 1=blue, 2=yellow
+  uint8_t targetGoalLabel = 2; // default: attack yellow
+  uint8_t ownGoalLabel = 1;    // default: defend blue
 
   float ballRot = 0;
   float ballDist = 0;

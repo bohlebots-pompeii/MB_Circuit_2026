@@ -3,6 +3,7 @@
 //
 #include <comms/CM5.h>
 #include <Arduino.h>
+#include <chrono>
 #include <cmath>
 #include <cstring>
 #include <numbers>
@@ -130,10 +131,10 @@ void CM5::computeCenters(Detection* det, const int num_det) {
 // compute rotation of object relative to image center
 void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) {
   // reset
-  blueDist = 0;
-  blueRot = 0;
-  yellowDist = 0;
-  yellowRot = 0;
+  targetGoalDist = 0;
+  targetGoalRot = 0;
+  ownGoalDist = 0;
+  ownGoalRot = 0;
   ballDist = 0;
   ballRot = 0;
 
@@ -153,13 +154,13 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
     objects[i].dist_cm = dist_cm;
 
     objects[i].label = det[i].label;
-    if (det[i].label == 1) {
-      blueRot = angle_deg;
-      blueDist = dist_cm;
+    if (det[i].label == targetGoalLabel) {
+      targetGoalRot = angle_deg;
+      targetGoalDist = dist_cm;
     }
-    else if (det[i].label == 2) {
-      yellowRot = angle_deg;
-      yellowDist = dist_cm;
+    else if (det[i].label == ownGoalLabel) {
+      ownGoalRot = angle_deg;
+      ownGoalDist = dist_cm;
     }
     else if (det[i].label == 3) {
       ballRot = angle_deg;
@@ -175,7 +176,7 @@ float correction(const float x) {
 
 void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
   float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
-  bool foundBlue = false, foundYellow = false;
+  bool foundOwnGoal = false, foundTargetGoal = false;
 
   for (int i = 0; i < num_det; ++i) {
     float theta = objects[i].rotation_deg; // deg
@@ -184,14 +185,14 @@ void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
     const float x = d * cosf(theta);
     const float y = d * sinf(theta);
 
-    if (det[i].label == 1) { // blue
-      x1 = x; y1 = y; foundBlue = true;
-    } else if (det[i].label == 2) { // yellow
-      x2 = x; y2 = y; foundYellow = true;
+    if (det[i].label == ownGoalLabel) { // own goal
+      x1 = x; y1 = y; foundOwnGoal = true;
+    } else if (det[i].label == targetGoalLabel) { // target goal
+      x2 = x; y2 = y; foundTargetGoal = true;
     }
   }
 
-  if (foundBlue && foundYellow) {
+  if (foundOwnGoal && foundTargetGoal) {
     const float dx = x2 - x1;
     const float dy = y2 - y1;
     const float h = atan2f(dy, dx);
@@ -205,11 +206,11 @@ void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
     g_x = -x;
     g_y = -y;
   }
-  else if (!foundBlue && foundYellow) {
-    heading = yellowRot;
+  else if (!foundOwnGoal && foundTargetGoal) {
+    heading = targetGoalRot;
   }
   else {
-    heading = blueRot + 180.0f;
+    heading = ownGoalRot + 180.0f;
     if (heading > 180.0f) heading -= 360.0f;
     if (heading < -180.0f) heading += 360.0f;
   }
@@ -217,6 +218,7 @@ void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
 
 void CM5::update() {
   if (Serial2.available()) {
+    lastUpdateTimer = 0;
     // read header
     const int num_detections_in = Serial2.read();
 
@@ -258,5 +260,12 @@ void CM5::update() {
     computeCenters(detections, stored_detections);
     computeRotationsAndDistances(detections, stored_detections);
     computeHeadingAndPosition(detections, stored_detections);
+  }
+}
+
+void CM5::setTargetGoal(uint8_t goalLabel) {
+  if (goalLabel == 1 || goalLabel == 2) {
+    targetGoalLabel = goalLabel;
+    ownGoalLabel = (goalLabel == 1) ? 2 : 1;
   }
 }

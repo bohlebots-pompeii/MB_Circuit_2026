@@ -7,6 +7,9 @@
 #include <config.h>
 #include <iostream>
 #include <Wire.h>
+#include <elapsedMillis.h>
+
+elapsedMillis ledBlinkTimer;
 
 Sensors::Sensors(const std::shared_ptr<CM5> &cm5) {
   // Check if the shared pointer for CM5 is valid
@@ -24,9 +27,14 @@ Sensors::Sensors(const std::shared_ptr<CM5> &cm5) {
 
 void Sensors::update() {
   updateLineSensor();
+
   // updateUS();
-  updateButton();
+
+  updateRunning();
+
   updateButtons();
+
+  updateTargetButton();
 }
 
 void Sensors::updateLineSensor() {
@@ -110,12 +118,69 @@ void Sensors::updateUS() {
   }
 }
 
-void Sensors::updateButton() {
-  const bool currentButtonState = getTasterState(0, 1);
-  if (currentButtonState && !lastButtonState) {
+void Sensors::updateRunning() {
+  static bool lastState = false;
+  const bool currentState = getButtonState(0, 1);
+
+  if (currentState && !lastState) {
     ena = !ena;
+    setEna(ena);
   }
-  lastButtonState = currentButtonState;
+
+  lastState = currentState;
+}
+
+void Sensors::updateTargetButton() {
+  static bool lastState = false;
+  const bool currentState = getButtonState(0, 2);
+
+  if (currentState && !lastState) {
+    targetButtonState = !targetButtonState;
+
+    if (targetButtonState) {
+      _cm5->setTargetGoal(CM5::COLOR::YELLOW);
+      setLED(0, 2, YELLOW);
+    } else {
+      _cm5->setTargetGoal(CM5::COLOR::BLUE);
+      setLED(0, 2, BLUE);
+    }
+  }
+
+  lastState = currentState;
+}
+
+void Sensors::setEna(const bool state) {
+  ena = state;
+  if (ena) {
+    setLED(0, 1, GREEN);
+  }
+  else {
+    setLED(0, 1, RED);
+  }
+}
+
+void Sensors::allLEDsOff() {
+  for (int i = 0; i < 8; ++i) {
+    setLED(i, 1, OFF);
+    setLED(i, 2, OFF);
+  }
+}
+
+void Sensors::haltLEDs() {
+  static uint8_t LEDColorCounter = 1;
+  if (ledBlinkTimer < 250) {
+    for (int i = 0; i < 8; ++i) {
+      setLED(i, 1, LEDColorCounter);
+      setLED(i, 2, LEDColorCounter);
+    }
+  }
+  else {
+    ledBlinkTimer = 0;
+    LEDColorCounter++;
+  }
+  if (LEDColorCounter >= 8) {
+    LEDColorCounter = 1;
+  }
 }
 
 void Sensors::localToWorld(const float lx, const float ly,const float heading_deg, float &gx, float &gy) {
@@ -126,7 +191,7 @@ void Sensors::localToWorld(const float lx, const float ly,const float heading_de
   gy = sinf(theta) * lx + cosf(theta) * ly;
 }
 
-bool Sensors::getTasterState(const int device, const int nr) const {
+bool Sensors::getButtonState(const int device, const int nr) const {
   if (device < 0 || device > 7) {
     return false;
   }
@@ -152,14 +217,12 @@ void Sensors::setLED(const int device, const int nr, int color) {
     }
     led2Array[device] = color;
   }
-  Serial.println("update led");
 }
 
 void Sensors::updateButtons() {
-  Serial.println("updated Buttons");
   // from BohleBots header - Roland Stiebel
   for (int lauf = 0; lauf < 8; lauf++) {
-    if (portena[lauf]) {
+    if (portEna[lauf]) {
       int ledwert = 255 - led1Array[lauf] - led2Array[lauf];
       Wire.beginTransmission(buttonLedID[lauf]);
       Wire.write(ledwert);

@@ -9,8 +9,13 @@
 #include <cmath>
 #include <algorithm>
 #include <elapsedMillis.h>
+#include "util/MovingAverage.h"
 
 elapsedMillis rotationDeltaTimer;
+elapsedMillis velocityTimer;
+
+MovingAverage<float, 10> velocityXAvg;
+MovingAverage<float, 10> velocityYAvg;
 
 std::vector<Vector2> Field = {
   Vector2(-70, -90),
@@ -41,6 +46,7 @@ Positioning::Positioning(const std::shared_ptr<CM5> &cm5) {
 void Positioning::update() {
   updateMiddlePointVector();
   updateRotationDelta();
+  updateVelocity();
 }
 
 void Positioning::updateMiddlePointVector() {
@@ -54,13 +60,34 @@ void Positioning::updateMiddlePointVector() {
 }
 
 void Positioning::updateRotationDelta() {
-  if (rotationDeltaTimer < 30) {
+  if (rotationDeltaTimer < 32) {
     return;
   }
   rotationDeltaTimer = 0;
   const double rot = _cm5->getHeading();
   rotationDelta = rot - lastHeading;
   lastHeading = rot;
+}
+
+void Positioning::updateVelocity() {
+  if (velocityTimer < 32) {
+    return;
+  }
+  velocityTimer = 0;
+
+  const float x = _cm5->getGlobalX();
+  const float y = _cm5->getGlobalY();
+
+  const float dx = x - lastX;
+  const float dy = y - lastY;
+
+  velocityXAvg.addValue(dx);
+  velocityYAvg.addValue(dy);
+
+  _velocity = Vector2(velocityXAvg.getAverage(), velocityYAvg.getAverage());
+
+  lastX = x;
+  lastY = y;
 }
 
 static bool isPointInPolygon(const Vector2& point, const std::vector<Vector2>& polygon) {
@@ -98,51 +125,42 @@ static double getDistanceToPolygonEdge(const Vector2& p, const std::vector<Vecto
   return minDistance;
 }
 
-int Positioning::speedLimit(const Vector2& driveVector, const int driveSpeed) const {
-  if (const int heading = _cm5->getHeading(); abs(heading) > 50) {
-    return 0;
+void Positioning::speedLimit(float& vx, float& vy) const {
+
+  const float x = _cm5->getGlobalX();
+  const float y = _cm5->getGlobalY();
+
+  constexpr float lookAheadFrames = 15.0f;
+  const float futureX = x + static_cast<float>(_velocity.getX()) * lookAheadFrames;
+  const float futureY = y + static_cast<float>(_velocity.getY()) * lookAheadFrames;
+
+  const double currentDist = std::hypot(x, y);
+  Serial.println(currentDist);
+  const double futureDist = std::hypot(futureX, futureY);
+  Serial.println(futureDist);
+
+  if (futureDist <= currentDist) {
+    return;
   }
 
-  const int x = _cm5->getGlobalX();
-  const int y = _cm5->getGlobalY();
-  Vector2 currentPos(x, y);
+  constexpr double maxDistance = 100.0;
+  constexpr double slowingDistance = 60.0;
 
-  const double headingRad = _cm5->getHeading() * M_PI / 180.0;
+  double factor = 1.0;
 
-  Vector2 globalDriveVector = driveVector;
-  globalDriveVector.normalize();
-  globalDriveVector.rotate(headingRad);
-
-  const double dotProduct = globalDriveVector.getX() * _middlePointVector.getX() +
-                            globalDriveVector.getY() * _middlePointVector.getY();
-
-  if (dotProduct >= -30.0) {
-    return driveSpeed;
+  if (futureDist > maxDistance) {
+    vx = constrain(vx, -25.0f, 25.0f);
+    vy = constrain(vy, -25.0f, 25.0f);
+    return;
   }
 
-  Vector2 lookAheadVector = driveVector;
-  lookAheadVector.normalize();
-  lookAheadVector *= 30.0;
-  lookAheadVector.rotate(headingRad);
-
-  const Vector2 futurePos = currentPos + lookAheadVector;
-
-  /*
-  if (!isPointInPolygon(futurePos, Field)) {
-    Serial.println("Point is not in Polygon");
-    return 0;
-  }
-  Serial.println("Point is in Polygon");
-  */
-
-  const double distToEdge = getDistanceToPolygonEdge(futurePos, Field);
-
-  if (constexpr double slowingDistance = 20.0; distToEdge < slowingDistance) {
-    const double factor = distToEdge / slowingDistance;
-    return static_cast<int>(driveSpeed * factor);
+  if (futureDist > slowingDistance) {
+    const double normalizedDist = (futureDist - slowingDistance) / (maxDistance - slowingDistance);
+    factor = 1.0 - (normalizedDist * normalizedDist);
   }
 
-  return driveSpeed;
+  vx *= static_cast<float>(factor);
+  vy *= static_cast<float>(factor);
 }
 
 

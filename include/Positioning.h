@@ -16,17 +16,22 @@ public:
   void update();
 
   [[nodiscard]] Vector2 getMiddlePointVector() const { return _middlePointVector; }
-  [[nodiscard]] int speedLimit(const Vector2& driveVector, int driveSpeed) const;
+  void speedLimit(float& vx, float& vy) const;
   [[nodiscard]] double getRotationDelta() const { return rotationDelta; }
+  [[nodiscard]] Vector2 getVelocity() const { return _velocity; }
 private:
   std::shared_ptr<CM5> _cm5;
   Vector2 _middlePointVector;
+  Vector2 _velocity;
 
   double rotationDelta = 0.0f;
   double lastHeading = 0.0f;
+  float lastX = 0.0f;
+  float lastY = 0.0f;
 
   void updateMiddlePointVector();
   void updateRotationDelta();
+  void updateVelocity();
 };
 
 

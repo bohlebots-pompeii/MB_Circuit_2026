@@ -15,19 +15,22 @@
 #include <iostream>
 #include <elapsedMillis.h>
 #include <PID_v1.h>
-#include <util/WebDebugger.h>
+#include <util/MovingAverage.h>
 
 elapsedMillis hasBallTimer;
-elapsedMillis lastLineTimer;
+elapsedMillis ledTimer;
+elapsedMillis positionYAvgTimer;
+
+MovingAverage<double, 10> positionYAvg;
 
 // y axis
 double y_Setpoint = 0, y_Input = 0, y_Output = 0;
-constexpr double y_Kp=1.4, y_Ki=0.00, y_Kd=0.03;
+constexpr double y_Kp=1.4, y_Ki=0.00, y_Kd=0.05;
 PID y_motion(&y_Input, &y_Output, &y_Setpoint, y_Kp, y_Ki, y_Kd, DIRECT);
 
 // x axis
 double x_Setpoint = 0, x_Input = 0, x_Output = 0;
-constexpr double x_Kp=1.3, x_Ki=0.00, x_Kd=0.03;
+constexpr double x_Kp=1.3, x_Ki=0.00, x_Kd=0.05;
 PID x_motion(&x_Input, &x_Output, &x_Setpoint, x_Kp, x_Ki, x_Kd, DIRECT);
 
 // rotation
@@ -75,7 +78,7 @@ int Bot::getRotationControl(const float input) {
   return static_cast<int>(rot_Output);
 }
 
-Vector2 Bot::getAwayFromLineVec() {
+Vector2 Bot::getAwayFromLineVec(const int speed) {
   Vector2 line = degreeToVector(_sensors->getLineRot());
   line.rotate(std::numbers::pi);
 
@@ -84,9 +87,8 @@ Vector2 Bot::getAwayFromLineVec() {
 
   line = line * 0.3f + middlePointVector * 0.7f;
   line.normalize();
-  line *= 30;
+  line *= speed;
 
-  lastLineTimer = 0;
   return line;
 }
 
@@ -104,8 +106,8 @@ Vector2 Bot::getMoveToCenterVec(const int speed) const {
 }
 
 Vector2 Bot::getBallAlignedVec(const int speed) const {
-  const double yellowRot = _cm5->getYellowRot();
-  Vector2 target = degreeToVector(yellowRot);
+  const double targetGoalRot = _cm5->getTargetGoalRot();
+  Vector2 target = degreeToVector(targetGoalRot);
   target *= speed;
   return target;
 }
@@ -118,25 +120,24 @@ Vector2 Bot::getBallApproachVec(const int speed) const {
   return target;
 }
 
-Vector2 Bot::getBallPursuitVec(const int speed) const {
-  const float heading = _cm5->getHeading();
+Vector2 Bot::getBallPursuitVec() const {
   const double ballDist = _cm5->getBallDist();
   const double ballRot = _cm5->getBallRot();
-  const double yellowRot = _cm5->getYellowRot();
-  const double yellowDist = _cm5->getYellowDist();
+  const double targetGoalRot = _cm5->getTargetGoalRot();
+  const double targetGoalDist = _cm5->getTargetGoalDist();
 
   const auto ballVec = Vector2(
     cos(ballRot * (std::numbers::pi / 180.0f)) * ballDist,
     sin(ballRot * (std::numbers::pi / 180.0f)) * ballDist
   );
 
-  const auto yellowVec = Vector2(
-    cos(yellowRot * (std::numbers::pi / 180.0f)) * yellowDist,
-    sin(yellowRot * (std::numbers::pi / 180.0f)) * yellowDist
+  const auto targetGoalVec = Vector2(
+    cos(targetGoalRot * (std::numbers::pi / 180.0f)) * targetGoalDist,
+    sin(targetGoalRot * (std::numbers::pi / 180.0f)) * targetGoalDist
   );
 
   // ball pursuit on straight between ball and goal
-  Vector2 ballToGoal = yellowVec - ballVec;
+  Vector2 ballToGoal = targetGoalVec - ballVec;
   ballToGoal.normalize();
 
   constexpr double offsetDist = 20.0;
@@ -153,7 +154,7 @@ Vector2 Bot::getBallPursuitVec(const int speed) const {
   if (std::abs(ballRot) > 70.0 && std::abs(dot) > 0.6) {
     const Vector2 perpendicular(-ballToGoal.getY(), ballToGoal.getX());
 
-    const double cross = ballVec.getX() * yellowVec.getY() - ballVec.getY() * yellowVec.getX();
+    const double cross = ballVec.getX() * targetGoalVec.getY() - ballVec.getY() * targetGoalVec.getX();
     const double side = (cross > 0) ? 1.0 : -1.0;
 
     const double shiftStrength = std::clamp((dot - 0.5) * 2.0, 0.0, 1.0);
@@ -178,19 +179,74 @@ void Bot::updateXMotion(const double x) const {
   x_motion.Compute();
 }
 
+void Bot::updatePositionYAvg(const double y) {
+  if (positionYAvgTimer > 32) {
+    positionYAvg.addValue(y);
+    positionYAvgTimer = 0;
+  }
+}
+
+bool Bot::checkBallOnLine() const {
+  const double globalY = _cm5->getGlobalY();
+  const double ballRot = _cm5->getBallRot();
+  const double ballDist = _cm5->getBallDist();
+
+  const double ballRadians = ballRot * (std::numbers::pi / 180.0);
+  const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
+
+  if (globalY > 80.0 && ballGlobalY > globalY) {
+    return true;
+  }
+
+  if (globalY < -80.0 && ballGlobalY < globalY) {
+    return true;
+  }
+
+  return false;
+}
+
+Vector2 Bot::dribbleBackwards(const int speed) const {
+  auto mid = _positioning->getMiddlePointVector();
+  mid.normalize();
+  return mid * speed;
+}
+
 void Bot::update() {
   constexpr int speed = 50.0f;
+  static bool CM5_initialized = false;
+  static bool kickOff = false;
 
   _cm5->update();
+  updatePositionYAvg(_cm5->getGlobalY());
   _sensors->update();
   _positioning->update();
   setRotDelta(_positioning->getRotationDelta());
 
-  if (_sensors->getEna()) {
-    _sensors->setLED(0, 1, 1);
+  if (!kickOff && _sensors->getEna()) {
+    pushData(_sensors->getEna(), false, 50, 0, 0, 0);
+    delay(300);
+    kickOff = true;
+    pushData(_sensors->getEna(), true, 50, 0, 0, 0);
+    delay(100);
   }
-  else {
-    _sensors->setLED(0, 1, 2);
+
+  if (!_cm5->getCM5Running()) {
+    CM5_initialized = false;
+    overrideControl();
+    _sensors->haltLEDs();
+    return;
+  }
+  if (_cm5->getCM5Running() != CM5_initialized) {
+    CM5_initialized = !CM5_initialized;
+    _sensors->allLEDsOff();
+  }
+
+  // toggle all leds off
+  if (!_sensors->getEna()) {
+    ledTimer = 0;
+  }
+  if (ledTimer > 200) {
+    _sensors->allLEDsOff();
   }
 
   Vector2 target;
@@ -198,23 +254,36 @@ void Bot::update() {
   bool usePID = true;
   bool kick = false;
 
-  if (!_sensors->getHasBall()) {
+  if (!Sensors::getHasBall()) {
     hasBallTimer = 0;
   }
   // drive away from line
   if (_sensors->getLineSeen()) {
-    target = getAwayFromLineVec();
-    rotInput = _cm5->getHeading();
+    target = getAwayFromLineVec(30);
+    if (checkBallOnLine() && std::abs(_cm5->getBallRot()) < 90.0) {
+      if (std::abs(_cm5->getHeading()) < 90.0) {
+        rotInput = _cm5->getBallRot();
+      }
+      else {
+        rotInput = _cm5->getHeading();
+      }
+    }
+    else {
+      rotInput = _cm5->getHeading();
+    }
     usePID = false;
   }
 
   // drive to goal if has ball
-  else if (_sensors->getHasBall()) {
-    if (std::abs(_cm5->getYellowRot()) < 20) {
-      if (hasBallTimer > 50) { kick = true; }
+  else if (Sensors::getHasBall()) {
+    if (hasBallTimer > 50) {
+      target = getBallAlignedVec(speed);
+      rotInput = _cm5->getTargetGoalRot();
+
+      if (std::abs(_cm5->getTargetGoalRot()) < 20.0 && _sensors->getEna()) {
+        kick = true;
+      }
     }
-    target = getBallAlignedVec(speed);
-    rotInput = _cm5->getYellowRot() / 1.5;
   }
 
   // drive to midPoint if ball not seen
@@ -226,17 +295,38 @@ void Bot::update() {
 
   // else pursue ball
   else {
-    if (std::abs(_cm5->getBallRot()) < 10 && _cm5->getBallDist() < 30) {
-      target = getBallApproachVec(20);
-      usePID = false;
-    }
-    else {
-      if (lastLineTimer < 100) {
+
+    // approach ball
+    if (std::abs(_cm5->getBallRot()) < 10 && _cm5->getBallDist() < 30.0) {
+      target = getBallApproachVec(30);
+      if (std::abs(_cm5->getHeading()) < 90.0) {
         rotInput = _cm5->getBallRot();
       }
       else {
-        target = getBallPursuitVec(speed);
-        rotInput = _cm5->getYellowRot();
+        rotInput = _cm5->getHeading();
+      }
+      usePID = false;
+    }
+
+    // pursue ball
+    else {
+
+      // rotate to ball
+      if (checkBallOnLine() && std::abs(_cm5->getBallRot()) < 90.0) {
+        if (std::abs(_cm5->getHeading()) < 90.0) {
+          rotInput = _cm5->getBallRot();
+        }
+        else {
+          rotInput = _cm5->getHeading();
+        }
+        target = getBallApproachVec(15);
+        usePID = false;
+      }
+
+      // normal ball pursuit
+      else {
+        rotInput = _cm5->getTargetGoalRot();
+        target = getBallPursuitVec();
       }
     }
   }
@@ -247,72 +337,22 @@ void Bot::update() {
   updateXMotion(target.getX());
   updateYMotion(target.getY());
 
-  if (usePID) {
-    pushData(_sensors->getEna(), kick, static_cast<int>(-x_Output), static_cast<int>(-y_Output), rot, 100);
-  } else {
-    pushData(_sensors->getEna(), kick, target.getX(), target.getY(), rot, 100);
-  }
-}
+  float vx = 0;
+  float vy = 0;
 
+  if (usePID) {
+    vx = static_cast<float>(-x_Output);
+    vy = static_cast<float>(-y_Output);
+  } else {
+    vx = static_cast<float>(target.getX());
+    vy = static_cast<float>(target.getY());
+  }
+
+  _positioning->speedLimit(vx, vy);
+
+  pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, speed);
+}
 
 void Bot::overrideControl() {
   pushData(false, false, 0, 0, 0, 0);
-}
-
-void Bot::initDebugger(const char* ssid, const char* password) {
-  webDebugger.begin(ssid, password);
-}
-
-void Bot::initDebuggerAP(const char* ssid, const char* password) {
-  webDebugger.beginAP(ssid, password);
-}
-
-void Bot::sendDebugData(const Vector2& target) const {
-  DebugData data;
-
-  // Target vector
-  data.target = target;
-
-  // Ball vector
-  const double ballRot = _cm5->getBallRot();
-  const double ballDist = _cm5->getBallDist();
-  data.ballVec = Vector2(
-    cos(ballRot * (std::numbers::pi / 180.0)) * ballDist,
-    sin(ballRot * (std::numbers::pi / 180.0)) * ballDist
-  );
-
-  // Goal vector
-  const double yellowRot = _cm5->getYellowRot();
-  const double yellowDist = _cm5->getYellowDist();
-  data.goalVec = Vector2(
-    cos(yellowRot * (std::numbers::pi / 180.0)) * yellowDist,
-    sin(yellowRot * (std::numbers::pi / 180.0)) * yellowDist
-  );
-
-  // Middle point vector
-  data.middlePointVec = _positioning->getMiddlePointVector();
-
-  // Scalars
-  data.heading = _cm5->getHeading();
-  data.ballRot = static_cast<float>(ballRot);
-  data.ballDist = static_cast<float>(ballDist);
-  data.yellowRot = static_cast<float>(yellowRot);
-  data.yellowDist = static_cast<float>(yellowDist);
-  data.blueRot = _cm5->getBlueRot();
-  data.blueDist = _cm5->getBlueDist();
-  data.globalX = _cm5->getGlobalX();
-  data.globalY = _cm5->getGlobalY();
-
-  // States
-  data.hasBall = _sensors->getHasBall();
-  data.lineSeen = _sensors->getLineSeen();
-  data.ballExists = _cm5->getBallExists();
-
-  // PID outputs
-  data.xOutput = static_cast<float>(-x_Output);
-  data.yOutput = static_cast<float>(-y_Output);
-  data.rotOutput = static_cast<float>(rot_Output);
-
-  webDebugger.setData(data);
-  webDebugger.update();
 }
