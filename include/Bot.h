@@ -18,7 +18,8 @@ class Bot
 public:
     Bot();
 
-    void update();
+    void updateStriker() const;
+    void updateGoalie() const;
 
     static void overrideControl();
 
@@ -31,16 +32,15 @@ private:
     std::shared_ptr<Positioning> _positioning;
 
     // Helper functions
-    [[nodiscard]] int getRotationControl(float input) ;
-    [[nodiscard]] Vector2 getAwayFromLineVec(int speed);
+    static int getRotationControl(float input) ;
+    [[nodiscard]] Vector2 getAwayFromLineVec(int speed) const;
     [[nodiscard]] Vector2 getMoveToCenterVec(int speed) const;
     [[nodiscard]] Vector2 getBallAlignedVec(int speed) const;
     [[nodiscard]] Vector2 getBallApproachVec(int speed) const;
     [[nodiscard]] Vector2 getBallPursuitVec() const;
-    void updateYMotion(double y) const;
-    void updateXMotion(double x) const;
-    void updatePositionYAvg(double y);
+    static void updateYMotion(double y) ;
+    static void updateXMotion(double x) ;
+    static void updatePositionYAvg(double y);
     [[nodiscard]] bool checkBallOnLine() const;
-    [[nodiscard]] Vector2 dribbleBackwards(int speed) const;
 };
 #endif //BOT_2026_BOT_H

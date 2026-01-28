@@ -18,7 +18,7 @@ void setup() {
 
 void loop() {
   if (!overrideActive) {
-    bot->update();
+    bot->updateStriker();
   }
   else {
     bot->overrideControl();

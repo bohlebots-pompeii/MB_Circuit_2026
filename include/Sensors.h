@@ -28,9 +28,10 @@ public:
   [[nodiscard]] bool getLineSeen() const { return progress != -1 && line_rot != -1; }
   [[nodiscard]] Vector2 getPosition() const { return position; }
   [[nodiscard]] bool getEna() const { return ena; }
-  [[nodiscard]] static bool getHasBall() { return analogRead(39) > 3000;}
+  [[nodiscard]] static bool getHasBall() { return analogRead(39) > 4000;}
+  // static bool getHasBall() { return false; }
 
-  enum COLOR { // for the led colors
+  enum COLOR { // for the LED colors
     OFF = 0,
     GREEN = 1,
     RED = 2,

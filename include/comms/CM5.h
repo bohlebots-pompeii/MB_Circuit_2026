@@ -50,6 +50,8 @@ public:
 
   [[nodiscard]] bool getCM5Running() const { return lastUpdateTimer < 50;}
 
+  [[nodiscard]] float getAwayFromOwnGoalAngle() const { return awayFromOwnGoalAngle; }
+
   enum COLOR {
     BLUE = 1,
     YELLOW = 2
@@ -71,6 +73,8 @@ private:
   float ownGoalRot = 0;
   float ownGoalDist = 0;
 
+  float awayFromOwnGoalAngle = 0;
+
   // Goal label mapping: 1=blue, 2=yellow
   uint8_t targetGoalLabel = 2; // default: attack yellow
   uint8_t ownGoalLabel = 1;    // default: defend blue
@@ -90,6 +94,7 @@ private:
   void computeCenters(Detection* det, int num_det);
 
   void computeRotationsAndDistances(const Detection* det, int num_det);
+  void computeAwayFromOwnGoalAngle();
 
   void computeHeadingAndPosition(const Detection* det, int num_det);
 };

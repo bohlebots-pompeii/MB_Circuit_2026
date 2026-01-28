@@ -169,6 +169,13 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
   }
 }
 
+void CM5::computeAwayFromOwnGoalAngle() {
+  float awayAngle = ownGoalRot + 180.0f;
+  if (awayAngle > 180.0f) awayAngle -= 360.0f;
+  if (awayAngle < -180.0f) awayAngle += 360.0f;
+  awayFromOwnGoalAngle = awayAngle;
+}
+
 // corecction estimate for y axis pos
 float correction(const float x) {
   return static_cast<float>(7.59502963e-06 * pow(x, 3) - 1.82918911e-03 * pow(x, 2) + 8.87600747e-01 * x - 4.79815488e-02);
@@ -260,6 +267,7 @@ void CM5::update() {
     computeCenters(detections, stored_detections);
     computeRotationsAndDistances(detections, stored_detections);
     computeHeadingAndPosition(detections, stored_detections);
+    computeAwayFromOwnGoalAngle();
   }
 }
 

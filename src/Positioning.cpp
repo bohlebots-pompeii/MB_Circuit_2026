@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <elapsedMillis.h>
 #include "util/MovingAverage.h"
+#include <config.h>
 
 elapsedMillis rotationDeltaTimer;
 elapsedMillis velocityTimer;
@@ -17,7 +18,7 @@ elapsedMillis velocityTimer;
 MovingAverage<float, 15> velocityXAvg;
 MovingAverage<float, 15> velocityYAvg;
 
-std::vector<Vector2> Field = {
+std::vector Field = {
   Vector2(-70, -90),
   Vector2(65, -100),
   Vector2(67, 110),
@@ -39,6 +40,7 @@ std::vector<Vector2> Field = {
   Vector2(-53, 125),
   Vector2(-75, 125)
  */
+
 Positioning::Positioning(const std::shared_ptr<CM5> &cm5) {
   _cm5 = cm5;
 }
@@ -90,49 +92,17 @@ void Positioning::updateVelocity() {
   lastY = y;
 }
 
-static bool isPointInPolygon(const Vector2& point, const std::vector<Vector2>& polygon) {
-  bool inside = false;
-  size_t j = polygon.size() - 1;
-  for (size_t i = 0; i < polygon.size(); i++) {
-    if ((polygon[i].getY() > point.getY()) != (polygon[j].getY() > point.getY()) &&
-        (point.getX() < (polygon[j].getX() - polygon[i].getX()) * (point.getY() - polygon[i].getY()) / (polygon[j].getY() - polygon[i].getY()) + polygon[i].getX())) {
-      inside = !inside;
-    }
-    j = i;
-  }
-  return inside;
-}
-
-static double getDistanceToPolygonEdge(const Vector2& p, const std::vector<Vector2>& polygon) {
-  double minDistance = 1e9;
-
-  for (size_t i = 0; i < polygon.size(); i++) {
-    Vector2 v = polygon[i];
-    Vector2 w = polygon[(i + 1) % polygon.size()];
-
-    const double l2 = pow(w.getX() - v.getX(), 2) + pow(w.getY() - v.getY(), 2);
-    if (l2 == 0) continue;
-
-    double t = ((p.getX() - v.getX()) * (w.getX() - v.getX()) + (p.getY() - v.getY()) * (w.getY() - v.getY())) / l2;
-    t = std::max(0.0, std::min(1.0, t));
-
-    auto projection = Vector2(v.getX() + t * (w.getX() - v.getX()), v.getY() + t * (w.getY() - v.getY()));
-
-    if (const double dist = std::hypot(p.getX() - projection.getX(), p.getY() - projection.getY()); dist < minDistance) {
-      minDistance = dist;
-    }
-  }
-  return minDistance;
-}
-
-void Positioning::speedLimit(float& vx, float& vy) const {
+void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
 
   const float x = _cm5->getGlobalX();
   const float y = _cm5->getGlobalY();
 
-  constexpr float lookAheadFrames = 15.0f;
-  const float futureX = x + static_cast<float>(_velocity.getX()) * lookAheadFrames;
-  const float futureY = y + static_cast<float>(_velocity.getY()) * lookAheadFrames;
+  constexpr float lookAheadFrames = 20.0f;
+
+  _driveVector.normalize();
+
+  const float futureX = x + static_cast<float>(_driveVector.getX() * lookAheadFrames);
+  const float futureY = y + static_cast<float>(_driveVector.getY() * lookAheadFrames);
 
   const double currentDist = std::hypot(x, y);
   const double futureDist = std::hypot(futureX, futureY);
@@ -141,8 +111,6 @@ void Positioning::speedLimit(float& vx, float& vy) const {
     return;
   }
 
-  constexpr double maxDistance = 100.0;
-  constexpr double slowingDistance = 80.0;
   constexpr float minSpeed = 20.0f;
 
   double factor = 1.0;
@@ -151,17 +119,17 @@ void Positioning::speedLimit(float& vx, float& vy) const {
     factor = 0.0;
   } else if (futureDist > slowingDistance) {
     const double normalizedDist = (futureDist - slowingDistance) / (maxDistance - slowingDistance);
-    factor = 1.0 - (normalizedDist * normalizedDist);
+    factor = 1.0 - normalizedDist * normalizedDist;
   }
 
   const float newVx = vx * static_cast<float>(factor);
   const float newVy = vy * static_cast<float>(factor);
 
   if (std::abs(vx) >= minSpeed) {
-    vx = (std::abs(newVx) < minSpeed) ? (vx > 0 ? minSpeed : -minSpeed) : newVx;
+    vx = std::abs(newVx) < minSpeed ? (vx > 0 ? minSpeed : -minSpeed) : newVx;
   }
   if (std::abs(vy) >= minSpeed) {
-    vy = (std::abs(newVy) < minSpeed) ? (vy > 0 ? minSpeed : -minSpeed) : newVy;
+    vy = std::abs(newVy) < minSpeed ? (vy > 0 ? minSpeed : -minSpeed) : newVy;
   }
 }
 
