@@ -41,7 +41,7 @@ PID rot_motion(&rot_Input, &rot_Output, &rot_Setpoint, rot_Kp, rot_Ki, rot_Kd, D
 Bot::Bot() {
   Wire.begin();
   Serial.begin(115200);
-  Serial2.begin(921600, SERIAL_8N2, 16, 17);
+  Serial2.begin(115200, SERIAL_8N2, 16, 17);
 
   _cm5 = std::make_shared<CM5>();
   _sensors = std::make_shared<Sensors>(_cm5);
