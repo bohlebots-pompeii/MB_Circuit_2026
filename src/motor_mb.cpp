@@ -24,8 +24,8 @@ void pushData(const bool enable, const bool kick, int vx, int vy, int rot, int d
   auto global_drive = Vector2(vx, vy);
   global_drive.rotate(-rotDelta * 2.0f); // compensate for rotation delta
 
-  const int vx_rot = constrain(global_drive.getX(), -70, 70);
-  const int vy_rot = constrain(global_drive.getY(), -70, 70);
+  const int vx_rot = constrain(global_drive.getX(), -40, 40);
+  const int vy_rot = constrain(global_drive.getY(), -40, 40);
   rot = constrain(rot, -50, 50);
   dribbler = constrain(dribbler, -100, 100);
 

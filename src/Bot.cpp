@@ -251,6 +251,7 @@ void Bot::updateStriker() const {
   if (!Sensors::getHasBall()) {
     hasBallTimer = 0;
   }
+
   // drive away from line
   if (_sensors->getLineSeen()) {
     target = getAwayFromLineVec(30);
