@@ -21,7 +21,7 @@ void loop() {
     bot->updateStriker();
   }
   else {
-    bot->overrideControl();
+    Bot::overrideControl();
   }
   delay(1);
 }

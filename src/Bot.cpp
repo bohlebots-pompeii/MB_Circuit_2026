@@ -25,12 +25,12 @@ MovingAverage<double, 10> positionYAvg;
 
 // y axis
 double y_Setpoint = 0, y_Input = 0, y_Output = 0;
-constexpr double y_Kp=1.4, y_Ki=0.00, y_Kd=0.03;
+constexpr double y_Kp=1.6, y_Ki=0.00, y_Kd=0.05;
 PID y_motion(&y_Input, &y_Output, &y_Setpoint, y_Kp, y_Ki, y_Kd, DIRECT);
 
 // x axis
 double x_Setpoint = 0, x_Input = 0, x_Output = 0;
-constexpr double x_Kp=1.4, x_Ki=0.00, x_Kd=0.03;
+constexpr double x_Kp=1.6, x_Ki=0.00, x_Kd=0.05;
 PID x_motion(&x_Input, &x_Output, &x_Setpoint, x_Kp, x_Ki, x_Kd, DIRECT);
 
 // rotation
