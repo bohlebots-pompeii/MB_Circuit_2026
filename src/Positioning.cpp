@@ -5,7 +5,6 @@
 #include "Positioning.h"
 #include <memory>
 #include <Arduino.h>
-#include "Vector2.hpp"
 #include <cmath>
 #include <algorithm>
 #include <elapsedMillis.h>

@@ -6,7 +6,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
-#include <numbers>
+#include <util/helper.h>
 
 Detection detections[6]; // memory because memory issues
 Object objects[6] = {};
@@ -107,19 +107,6 @@ float CM5::halfToFloat(const uint16_t h) {
   return result;
 }
 
-// helper
-float toRad(const double degrees) {
-  return static_cast<float>(degrees * (std::numbers::pi / 180.0f));
-}
-
-float toDeg(const double radians) {
-  return static_cast<float>(radians * (180.0f / std::numbers::pi));
-}
-
-float pythagorean(const float a, const float b) {
-  return sqrtf(a * a + b * b);
-}
-
 void CM5::computeCenters(Detection* det, const int num_det) {
   for (int i = 0; i < num_det; ++i) {
     // swapped to match my coordinate system
@@ -145,11 +132,11 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
 
     // compute rotation of object to img center
     const float angle_rad = atan2f(dy, dx);
-    const float angle_deg = toDeg(angle_rad);
+    const auto angle_deg = static_cast<float>(toDeg(angle_rad));
     objects[i].rotation_deg = angle_deg;
 
     // compute distances of object from image center and estimate cm
-    const float dist_px = pythagorean(dx, dy);
+    const float dist_px = pythagoreanf(dx, dy);
     const float dist_cm = pixelToCm(dist_px);
     objects[i].dist_cm = dist_cm;
 

@@ -7,7 +7,7 @@
 
 #include <memory>
 #include <comms/CM5.h>
-#include <Vector2.hpp>
+#include <util/Vector2.hpp>
 
 class Positioning {
 public:

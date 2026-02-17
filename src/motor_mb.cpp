@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <config.h>
-#include <Vector2.hpp>
+#include <util/Vector2.hpp>
 #include <numbers>
 
 double rotDelta = 0.0;

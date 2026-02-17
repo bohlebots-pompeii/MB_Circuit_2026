@@ -9,7 +9,7 @@
 //////////////////////////////////////////////////////////////////////
 // -------------------------------------------------------------------
 
-#include "Vector2.hpp"
+#include "../../include/util/Vector2.hpp"
 #include <string>
 #include <cmath>
 #include <algorithm>

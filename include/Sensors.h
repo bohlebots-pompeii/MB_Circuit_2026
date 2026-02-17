@@ -5,7 +5,7 @@
 #ifndef BOHLEBOTS_2026_SENSORS_H
 #define BOHLEBOTS_2026_SENSORS_H
 
-#include <Vector2.hpp>
+#include <util/Vector2.hpp>
 #include <memory>
 #include <comms/CM5.h>
 #include <Arduino.h>

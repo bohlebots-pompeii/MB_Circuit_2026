@@ -18,7 +18,7 @@ void setup() {
 
 void loop() {
   if (!overrideActive) {
-    bot->updateStriker();
+    bot->updateGoalie();
   }
   else {
     Bot::overrideControl();

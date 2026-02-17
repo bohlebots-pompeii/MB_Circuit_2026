@@ -9,7 +9,8 @@
 #include "Sensors.h"
 #include <memory>
 #include <Positioning.h>
-#include <Vector2.hpp>
+#include "Striker.h"
+#include "Goalie.h"
 
 extern bool isHoming;
 
@@ -30,17 +31,8 @@ private:
     std::shared_ptr<CM5> _cm5;
     std::shared_ptr<Sensors> _sensors;
     std::shared_ptr<Positioning> _positioning;
-
-    // Helper functions
-    static int getRotationControl(float input) ;
-    [[nodiscard]] Vector2 getAwayFromLineVec(int speed) const;
-    [[nodiscard]] Vector2 getMoveToCenterVec(int speed) const;
-    [[nodiscard]] Vector2 getBallAlignedVec(int speed) const;
-    [[nodiscard]] Vector2 getBallApproachVec(int speed) const;
-    [[nodiscard]] Vector2 getBallPursuitVec() const;
-    static void updateYMotion(double y) ;
-    static void updateXMotion(double x) ;
-    static void updatePositionYAvg(double y);
-    [[nodiscard]] bool checkBallOnLine() const;
+    std::unique_ptr<Striker> _striker;
+    std::unique_ptr<Goalie> _goalie;
 };
 #endif //BOT_2026_BOT_H
+
