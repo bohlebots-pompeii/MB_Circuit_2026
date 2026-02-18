@@ -7,6 +7,8 @@
 
 #include <Arduino.h>
 #include <elapsedMillis.h>
+#include <util/Vector2.hpp>
+#include <util/helper.h>
 
 struct CalibPoint {
   float pixel;
@@ -34,14 +36,29 @@ public:
   // Target goal (goal to attack)
   [[nodiscard]] float getTargetGoalRot() const { return targetGoalRot; }
   [[nodiscard]] float getTargetGoalDist() const { return targetGoalDist; }
+  [[nodiscard]] Vector2 getTargetGoalVec() const {
+    if (targetGoalDist == 0) return {0, 0};
+    const double angle_rad = toRad(targetGoalRot);
+    return {cos(angle_rad) * targetGoalDist, sin(angle_rad) * targetGoalDist};
+  }
 
   // Own goal (goal to defend)
   [[nodiscard]] float getOwnGoalRot() const { return ownGoalRot; }
   [[nodiscard]] float getOwnGoalDist() const { return ownGoalDist; }
+  [[nodiscard]] Vector2 getOwnGoalVec() const {
+    if (ownGoalDist == 0) return {0, 0};
+    const double angle_rad = toRad(ownGoalRot);
+    return {cos(angle_rad) * ownGoalDist, sin(angle_rad) * ownGoalDist};
+  }
 
   [[nodiscard]] float getBallRot() const { return ballRot; }
   [[nodiscard]] float getBallDist() const { return ballDist; }
   [[nodiscard]] bool getBallExists() const { return ballDist != 0; }
+  [[nodiscard]] Vector2 getBallVec() const {
+    if (!getBallExists()) return {0, 0};
+    const double angle_rad = toRad(ballRot);
+    return {cos(angle_rad) * ballDist, sin(angle_rad) * ballDist};
+  }
 
   [[nodiscard]] const Object* getObjects() const { return objects; }
   [[nodiscard]] int getNumDetections() const { return num_detections; }

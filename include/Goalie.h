@@ -22,7 +22,6 @@ private:
     std::shared_ptr<CM5> _cm5;
     std::shared_ptr<Sensors> _sensors;
     std::shared_ptr<Positioning> _positioning;
-    std::unique_ptr<VectorIntersection> _vectorIntersection;
 
     // Helper functions
     [[nodiscard]] Vector2 getAwayFromLineVec(int speed) const;

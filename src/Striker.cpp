@@ -99,9 +99,8 @@ Vector2 Striker::getAwayFromLineVec(const int speed) const {
 
     line = line * 0.3f + middlePointVector * 0.7f;
     line.normalize();
-    line *= speed;
 
-    return line;
+    return line * speed;
 }
 
 Vector2 Striker::getMoveToCenterVec(const int speed) const {
@@ -118,35 +117,21 @@ Vector2 Striker::getMoveToCenterVec(const int speed) const {
 }
 
 Vector2 Striker::getBallAlignedVec(const int speed) const {
-    const double targetGoalRot = _cm5->getTargetGoalRot();
-    Vector2 target = degToVec(targetGoalRot);
-    target *= speed;
-    return target;
+    auto target = _cm5->getTargetGoalVec();
+    target.normalize();
+    return target * speed;
 }
 
 Vector2 Striker::getBallApproachVec(const int speed) const {
-    const double ballRot = _cm5->getBallRot();
-    Vector2 target = degToVec(ballRot);
+    auto target = _cm5->getBallVec();
     target.normalize();
-    target *= speed;
-    return target;
+    return target * speed;
 }
 
 Vector2 Striker::getBallPursuitVec() const {
-    const double ballDist = _cm5->getBallDist();
-    const double ballRot = _cm5->getBallRot();
-    const double targetGoalRot = _cm5->getTargetGoalRot();
-    const double targetGoalDist = _cm5->getTargetGoalDist();
+    const auto ballVec = _cm5->getBallVec();
 
-    const auto ballVec = Vector2(
-        cos(ballRot * (std::numbers::pi / 180.0f)) * ballDist,
-        sin(ballRot * (std::numbers::pi / 180.0f)) * ballDist
-    );
-
-    const auto targetGoalVec = Vector2(
-        cos(targetGoalRot * (std::numbers::pi / 180.0f)) * targetGoalDist,
-        sin(targetGoalRot * (std::numbers::pi / 180.0f)) * targetGoalDist
-    );
+    const auto targetGoalVec = _cm5->getTargetGoalVec();
 
     // ball pursuit on straight between ball and goal
     Vector2 ballToGoal = targetGoalVec - ballVec;
@@ -163,7 +148,7 @@ Vector2 Striker::getBallPursuitVec() const {
 
     const double dot = robotToIdeal.getX() * robotToBall.getX() + robotToIdeal.getY() * robotToBall.getY();
 
-    if (std::abs(ballRot) > 70.0 && std::abs(dot) > 0.6) {
+    if (std::abs(_cm5->getBallRot()) > 70.0 && std::abs(dot) > 0.6) {
         const Vector2 perpendicular(-ballToGoal.getY(), ballToGoal.getX());
 
         const double cross = ballVec.getX() * targetGoalVec.getY() - ballVec.getY() * targetGoalVec.getX();

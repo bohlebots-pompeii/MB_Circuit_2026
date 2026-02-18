@@ -19,15 +19,6 @@ namespace {
 
     MovingAverage<double, 10> positionYAvg;
 
-    // Ball velocity tracking
-    MovingAverage<double, 5> ballVelXAvg;
-    MovingAverage<double, 5> ballVelYAvg;
-    Vector2 lastBallPos{0, 0};
-    bool lastBallValid = false;
-    unsigned long lastBallTime = 0;
-    double lastRobotGlobalX = 0;
-    double lastRobotGlobalY = 0;
-
     // y axis
     double y_Setpoint = 0, y_Input = 0, y_Output = 0;
     PID y_motion(&y_Input, &y_Output, &y_Setpoint, PIDConfig::Y_Kp, 0.05, PIDConfig::Y_Kd, DIRECT);
@@ -94,8 +85,7 @@ namespace {
 }
 
 Goalie::Goalie(std::shared_ptr<CM5> cm5, std::shared_ptr<Sensors> sensors, std::shared_ptr<Positioning> positioning)
-    : _cm5(std::move(cm5)), _sensors(std::move(sensors)), _positioning(std::move(positioning)),
-      _vectorIntersection(std::make_unique<VectorIntersection>()) {
+    : _cm5(std::move(cm5)), _sensors(std::move(sensors)), _positioning(std::move(positioning)) {
     initPID();
 }
 
@@ -159,15 +149,9 @@ Vector2 Goalie::getMoveToCenterVec(const int speed) const {
 Vector2 Goalie::getInterceptPoint() const {
     constexpr double factor = 0.5; // how far along the predicted path to go (0.5 = halfway)
 
-    const auto ballVec = Vector2(
-        cos(toRad(_cm5->getBallRot())) * _cm5->getBallDist(),
-        sin(toRad(_cm5->getBallRot())) * _cm5->getBallDist()
-    );
+    const auto ballVec = _cm5->getBallVec();
 
-    const auto ownGoalVec = Vector2(
-        cos(toRad(_cm5->getOwnGoalRot())) * _cm5->getOwnGoalDist(),
-        sin(toRad(_cm5->getOwnGoalRot())) * _cm5->getOwnGoalDist()
-    );
+    const auto ownGoalVec = _cm5->getOwnGoalVec();
 
     const Vector2 goalToBall = ballVec - ownGoalVec;
 
