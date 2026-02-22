@@ -9,23 +9,19 @@
 #include <numbers>
 #include <elapsedMillis.h>
 #include <PID_v1.h>
-#include <util/MovingAverage.h>
 #include <util/helper.h>
 #include <config.h>
 
 namespace {
     elapsedMillis ledTimer;
-    elapsedMillis positionYAvgTimer;
-
-    MovingAverage<double, 10> positionYAvg;
 
     // y axis
     double y_Setpoint = 0, y_Input = 0, y_Output = 0;
-    PID y_motion(&y_Input, &y_Output, &y_Setpoint, PIDConfig::Y_Kp, 0.05, PIDConfig::Y_Kd, DIRECT);
+    PID y_motion(&y_Input, &y_Output, &y_Setpoint, 3.0, PIDConfig::Y_Ki, PIDConfig::Y_Kd, DIRECT);
 
     // x axis
     double x_Setpoint = 0, x_Input = 0, x_Output = 0;
-    PID x_motion(&x_Input, &x_Output, &x_Setpoint, PIDConfig::X_Kp, PIDConfig::X_Ki, PIDConfig::X_Kd, DIRECT);
+    PID x_motion(&x_Input, &x_Output, &x_Setpoint, 3.0, PIDConfig::X_Ki, PIDConfig::X_Kd, DIRECT);
 
     // rotation
     double rot_Setpoint = 0, rot_Input = 0, rot_Output = 0;
@@ -52,13 +48,6 @@ namespace {
         x_Input = x;
         if (isnan(x_Input)) x_Input = 0;
         x_motion.Compute();
-    }
-
-    void updatePositionYAvg(const double y) {
-        if (positionYAvgTimer > 32) {
-            positionYAvg.addValue(y);
-            positionYAvgTimer = 0;
-        }
     }
 
     void initPID() {
@@ -146,86 +135,48 @@ Vector2 Goalie::getMoveToCenterVec(const int speed) const {
     return middlePointVector * dynamicSpeed;
 }
 
-Vector2 Goalie::getInterceptPoint() const {
-    constexpr double factor = 0.5; // how far along the predicted path to go (0.5 = halfway)
+Vector2 Goalie::getHalfCircleTarget() const {
+    constexpr double HALF_CIRCLE_RADIUS = 60.0;
 
-    const auto ballVec = _cm5->getBallVec();
+    const Vector2 ownGoalVec = _cm5->getOwnGoalVec();
 
-    const auto ownGoalVec = _cm5->getOwnGoalVec();
+    const Vector2 ballVec = _cm5->getBallVec();
 
-    const Vector2 goalToBall = ballVec - ownGoalVec;
+    Vector2 goalToBall = ballVec - ownGoalVec;
 
-    return ownGoalVec + goalToBall * factor;
-}
-
-void Goalie::printDebugInfo() const {
-    // Format: ROBOT_X,ROBOT_Y|BALL_X,BALL_Y|INTERCEPT_X,INTERCEPT_Y|VEL_X,VEL_Y|LINE_SEEN
-
-    // 1. Robot global position
-    const double robotX = _cm5->getGlobalX();
-    const double robotY = _cm5->getGlobalY();
-
-    // 2. Ball position relative to robot
-    double ballX = 0.0;
-    double ballY = 0.0;
-    if (_cm5->getBallExists()) {
-        const double ballAngle = _cm5->getBallRot();
-        const double ballDist = _cm5->getBallDist();
-        ballX = cos(toRad(ballAngle)) * ballDist;
-        ballY = sin(toRad(ballAngle)) * ballDist;
+    if (const double gtbMag = goalToBall.getMagnitude(); gtbMag < 1e-3) {
+        goalToBall = ownGoalVec * -1.0;
     }
 
-    // 3. Calculated intersection point
-    const Vector2 interceptPoint = getInterceptPoint();
+    goalToBall.normalize();
 
-    // 5. Line seen status
-    const bool lineSeen = _sensors->getLineSeen();
+    Vector2 awayFromGoal = ownGoalVec * -1.0;
+    awayFromGoal.normalize();
+    const double dot = goalToBall.getX() * awayFromGoal.getX()
+                     + goalToBall.getY() * awayFromGoal.getY();
+    if (dot < 0) {
+        const Vector2 perp(-awayFromGoal.getY(), awayFromGoal.getX());
+        const double projPerp = goalToBall.getX() * perp.getX()
+                              + goalToBall.getY() * perp.getY();
+        goalToBall = perp * (projPerp >= 0 ? 1.0 : -1.0);
+    }
 
-    // Print in format: ROBOT_X,ROBOT_Y|BALL_X,BALL_Y|INTERCEPT_X,INTERCEPT_Y|VEL_X,VEL_Y|LINE_SEEN
-    Serial.print("DEBUG:");
-    Serial.print(robotX, 2);
-    Serial.print(",");
-    Serial.print(robotY, 2);
-    Serial.print("|");
-    Serial.print(ballX, 2);
-    Serial.print(",");
-    Serial.print(ballY, 2);
-    Serial.print("|");
-    Serial.print(interceptPoint.getX(), 2);
-    Serial.print(",");
-    Serial.print(interceptPoint.getY(), 2);
-    Serial.print("|");
-    Serial.println(lineSeen ? "1" : "0");
+    const Vector2 targetOnCircle = ownGoalVec + goalToBall * HALF_CIRCLE_RADIUS;
+
+    return targetOnCircle;
 }
 
 void Goalie::update() const {
     constexpr int speed = 50.0f;
     static bool CM5_initialized = false;
 
-    _cm5->update();
-    updatePositionYAvg(_cm5->getGlobalY());
-    _sensors->update();
-    _positioning->update();
     setRotDelta(_positioning->getRotationDelta());
 
-    // Print debug info for Python simulator
-    printDebugInfo();
-
-    if (!_cm5->getCM5Running()) {
-        CM5_initialized = false;
-        pushData(false, false, 0, 0, 0, 0);
-        _sensors->haltLEDs();
-        return;
-    }
-    if (_cm5->getCM5Running() != CM5_initialized) {
-        CM5_initialized = !CM5_initialized;
+    if (!_cm5->getCM5Running() != CM5_initialized) {
+        CM5_initialized = _cm5->getCM5Running();
         _sensors->allLEDsOff();
     }
 
-    // toggle all leds off
-    if (!_sensors->getEna()) {
-        ledTimer = 0;
-    }
     if (ledTimer > 200) {
         _sensors->allLEDsOff();
     }
@@ -238,7 +189,7 @@ void Goalie::update() const {
     // drive away from line
     if (_sensors->getLineSeen()) {
         if (_sensors->getProgress() < 16) {
-            const Vector2 desiredTarget = getInterceptPoint();
+            const Vector2 desiredTarget = getHalfCircleTarget();
 
             target = driveOnLine(desiredTarget);
         } else {
@@ -251,12 +202,9 @@ void Goalie::update() const {
 
     else {
         // normal ball pursuit - use intercept point prediction
+        target = getHalfCircleTarget();
+
         rotInput = _cm5->getAwayFromOwnGoalAngle();
-
-        // Get predicted intercept point
-        const Vector2 interceptPoint = getInterceptPoint();
-
-        target = interceptPoint;
         usePID = true;
     }
 

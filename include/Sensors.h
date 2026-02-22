@@ -53,9 +53,6 @@ private:
   std::array<int, 8> led2Array = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
   bool ena = false;
-  bool lastButtonState = false;
-
-  bool targetButtonState = false;
 
   int16_t line_rot = -1;
   int16_t progress = -1;
@@ -65,14 +62,8 @@ private:
   Vector2 position;
 
   void updateLineSensor();
-
   void updateUS();
-
-  void updateRunning();
-
   void updateButtons();
-
-  void updateTargetButton();
 
   static void localToWorld(float lx, float ly, float heading_deg, float &gx, float &gy);
 };

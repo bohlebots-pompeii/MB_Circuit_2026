@@ -258,9 +258,10 @@ void CM5::update() {
   }
 }
 
-void CM5::setTargetGoal(uint8_t goalLabel) {
+void CM5::setTargetGoal(const uint8_t goalLabel) {
+  Serial.println(goalLabel);
   if (goalLabel == 1 || goalLabel == 2) {
     targetGoalLabel = goalLabel;
-    ownGoalLabel = (goalLabel == 1) ? 2 : 1;
+    ownGoalLabel = goalLabel == 1 ? 2 : 1;
   }
 }

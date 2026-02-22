@@ -11,28 +11,27 @@
 #include <Positioning.h>
 #include "Striker.h"
 #include "Goalie.h"
+#include "GameStateHandler.h"
 
 extern bool isHoming;
 
-class Bot
-{
+class Bot {
 public:
     Bot();
 
-    void updateStriker() const;
-    void updateGoalie() const;
+    // Main loop entry point – dispatches to correct role
+    void update() const;
 
     static void overrideControl();
 
-    // Set which goal to attack (1=blue, 2=yellow)
-    void setTargetGoal(const uint8_t goalLabel) const { _cm5->setTargetGoal(goalLabel); }
-
 private:
-    std::shared_ptr<CM5> _cm5;
-    std::shared_ptr<Sensors> _sensors;
-    std::shared_ptr<Positioning> _positioning;
-    std::unique_ptr<Striker> _striker;
-    std::unique_ptr<Goalie> _goalie;
+    std::shared_ptr<CM5>          _cm5;
+    std::shared_ptr<Sensors>      _sensors;
+    std::shared_ptr<Positioning>  _positioning;
+    std::unique_ptr<Striker>      _striker;
+    std::unique_ptr<Goalie>       _goalie;
+    std::unique_ptr<GameStateHandler> _gameState;
 };
+
 #endif //BOT_2026_BOT_H
 

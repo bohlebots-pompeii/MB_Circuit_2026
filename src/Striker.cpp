@@ -188,10 +188,7 @@ void Striker::update() const {
     static bool CM5_initialized = false;
     static bool kickOff = false;
 
-    _cm5->update();
     updatePositionYAvg(_cm5->getGlobalY());
-    _sensors->update();
-    _positioning->update();
     setRotDelta(_positioning->getRotationDelta());
 
     if (!kickOff && _sensors->getEna()) {
@@ -202,21 +199,11 @@ void Striker::update() const {
         delay(100);
     }
 
-    if (!_cm5->getCM5Running()) {
-        CM5_initialized = false;
-        pushData(false, false, 0, 0, 0, 0);
-        _sensors->haltLEDs();
-        return;
-    }
     if (_cm5->getCM5Running() != CM5_initialized) {
-        CM5_initialized = !CM5_initialized;
+        CM5_initialized = _cm5->getCM5Running();
         _sensors->allLEDsOff();
     }
 
-    // toggle all leds off
-    if (!_sensors->getEna()) {
-        ledTimer = 0;
-    }
     if (ledTimer > 200) {
         _sensors->allLEDsOff();
     }

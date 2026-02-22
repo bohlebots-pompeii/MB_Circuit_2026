@@ -27,14 +27,8 @@ Sensors::Sensors(const std::shared_ptr<CM5> &cm5) {
 
 void Sensors::update() {
   updateLineSensor();
-
   // updateUS();
-
-  updateRunning();
-
   updateButtons();
-
-  updateTargetButton();
 }
 
 void Sensors::updateLineSensor() {
@@ -118,36 +112,6 @@ void Sensors::updateUS() {
   }
 }
 
-void Sensors::updateRunning() {
-  static bool lastState = false;
-  const bool currentState = getButtonState(0, 1);
-
-  if (currentState && !lastState) {
-    ena = !ena;
-    setEna(ena);
-  }
-
-  lastState = currentState;
-}
-
-void Sensors::updateTargetButton() {
-  static bool lastState = false;
-  const bool currentState = getButtonState(0, 2);
-
-  if (currentState && !lastState) {
-    targetButtonState = !targetButtonState;
-
-    if (targetButtonState) {
-      _cm5->setTargetGoal(CM5::COLOR::YELLOW);
-      setLED(0, 2, YELLOW);
-    } else {
-      _cm5->setTargetGoal(CM5::COLOR::BLUE);
-      setLED(0, 2, BLUE);
-    }
-  }
-
-  lastState = currentState;
-}
 
 void Sensors::setEna(const bool state) {
   ena = state;

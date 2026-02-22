@@ -9,7 +9,6 @@
 #include "Sensors.h"
 #include "Positioning.h"
 #include "util/Vector2.hpp"
-#include "util/VectorIntersection.h"
 #include <memory>
 
 class Goalie {
@@ -27,8 +26,7 @@ private:
     [[nodiscard]] Vector2 getAwayFromLineVec(int speed) const;
     [[nodiscard]] Vector2 driveOnLine(const Vector2& target) const;
     [[nodiscard]] Vector2 getMoveToCenterVec(int speed) const;
-    [[nodiscard]] Vector2 getInterceptPoint() const;
-    void printDebugInfo() const;
+    [[nodiscard]] Vector2 getHalfCircleTarget() const;
 };
 
 #endif //BOT_2026_GOALIE_H
