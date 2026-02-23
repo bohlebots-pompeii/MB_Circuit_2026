@@ -27,7 +27,6 @@ void onDataRecv(const esp_now_recv_info *info, const uint8_t *incomingData, cons
 }
 
 void initEspNow() {
-    // Nicht WiFi.mode setzen wenn bereits verbunden (z.B. mit WebDebugger)
     if (WiFi.status() != WL_CONNECTED) {
         WiFi.mode(WIFI_STA);
     }
@@ -41,7 +40,7 @@ void initEspNow() {
 
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, senderMacAddress, 6);
-    peerInfo.channel = WiFi.channel();  // Gleichen Kanal wie WiFi verwenden
+    peerInfo.channel = WiFi.channel();
     peerInfo.encrypt = false;
 
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {

@@ -163,7 +163,7 @@ void CM5::computeAwayFromOwnGoalAngle() {
   awayFromOwnGoalAngle = awayAngle;
 }
 
-// corecction estimate for y axis pos
+// correction estimate for y axis pos
 float correction(const float x) {
   return static_cast<float>(7.59502963e-06 * pow(x, 3) - 1.82918911e-03 * pow(x, 2) + 8.87600747e-01 * x - 4.79815488e-02);
 }
@@ -174,7 +174,7 @@ void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
 
   for (int i = 0; i < num_det; ++i) {
     float theta = objects[i].rotation_deg; // deg
-    theta = toRad(theta); // rad
+    theta = static_cast<float>(toRad(theta)); // rad
     const float d = objects[i].dist_cm;
     const float x = d * cosf(theta);
     const float y = d * sinf(theta);
@@ -190,7 +190,7 @@ void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
     const float dx = x2 - x1;
     const float dy = y2 - y1;
     const float h = atan2f(dy, dx);
-    heading = toDeg(h);
+    heading = static_cast<float>(toDeg(h));
 
     const float mx = (x1 + x2) * 0.5f;
     const float my = (y1 + y2) * 0.5f;
@@ -218,6 +218,7 @@ void CM5::update() {
 
     if (num_detections_in == 0) {
       num_detections = 0;
+      Serial.println("WARN: No detections received.");
       return;
     }
 
@@ -259,9 +260,10 @@ void CM5::update() {
 }
 
 void CM5::setTargetGoal(const uint8_t goalLabel) {
-  Serial.println(goalLabel);
-  if (goalLabel == 1 || goalLabel == 2) {
-    targetGoalLabel = goalLabel;
-    ownGoalLabel = goalLabel == 1 ? 2 : 1;
+  if (goalLabel < 1 || goalLabel > 2) {
+    Serial.println("ERROR: Goal label incorrect");
+    return;
   }
+  targetGoalLabel = goalLabel;
+  ownGoalLabel = goalLabel == 1 ? 2 : 1;
 }

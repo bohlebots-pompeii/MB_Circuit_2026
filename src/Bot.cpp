@@ -26,7 +26,6 @@ void Bot::update() const {
     _sensors->update();
     _positioning->update();
 
-    // CM5 disconnected: halt LEDs and send stop every tick regardless of ena
     if (!_cm5->getCM5Running()) {
         _sensors->haltLEDs();
         pushData(false, false, 0, 0, 0, 0);
@@ -36,7 +35,6 @@ void Bot::update() const {
     _gameState->update();
 
     if (!_sensors->getEna()) {
-        // Always send disable so the ground board actually stops
         pushData(false, false, 0, 0, 0, 0);
         return;
     }

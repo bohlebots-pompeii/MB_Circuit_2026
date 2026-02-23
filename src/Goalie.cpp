@@ -14,6 +14,9 @@
 
 namespace {
     elapsedMillis ledTimer;
+    elapsedMillis hasBallTimer;
+    elapsedMillis ballMovementTimer;
+    elapsedMillis drivingToBallTimer;
 
     // y axis
     double y_Setpoint = 0, y_Input = 0, y_Output = 0;
@@ -123,16 +126,20 @@ Vector2 Goalie::driveOnLine(const Vector2& target) const {
 }
 
 Vector2 Goalie::getMoveToCenterVec(const int speed) const {
-    Vector2 middlePointVector = _positioning->getMiddlePointVector();
-    const double distance = middlePointVector.getMagnitude();
-    middlePointVector.normalize();
+    constexpr double HALF_CIRCLE_RADIUS = 60.0;
 
-    constexpr double MAX_DISTANCE = 30.0f;
-    const double ratio = std::min(distance / MAX_DISTANCE, 1.0);
-    const double speedFactor = ratio * ratio;
-    const int dynamicSpeed = static_cast<int>(speed * speedFactor);
+    const Vector2 ownGoalVec = _cm5->getOwnGoalVec();
 
-    return middlePointVector * dynamicSpeed;
+    Vector2 awayFromGoal = ownGoalVec * -1.0;
+    awayFromGoal.normalize();
+
+    // halfCircleCenter is relative to robot (like all CM5 vectors)
+    Vector2 target = ownGoalVec + awayFromGoal * HALF_CIRCLE_RADIUS;
+
+    target.normalize();
+    target *= speed;
+
+    return target;
 }
 
 Vector2 Goalie::getHalfCircleTarget() const {
@@ -167,8 +174,15 @@ Vector2 Goalie::getHalfCircleTarget() const {
 }
 
 void Goalie::update() const {
-    constexpr int speed = 50.0f;
     static bool CM5_initialized = false;
+    static Vector2 lastBallVec(0, 0);
+    static bool drivingToBall = false;
+
+    constexpr unsigned long BALL_STATIONARY_MS = 2000;
+    constexpr unsigned long DRIVE_TO_BALL_MS = 600;
+    constexpr double BALL_MOVED_THRESH = 5.0;
+
+    int dribbler = 0;
 
     setRotDelta(_positioning->getRotationDelta());
 
@@ -181,9 +195,38 @@ void Goalie::update() const {
         _sensors->allLEDsOff();
     }
 
+    if (!_sensors->getHasBall()) { hasBallTimer = 0;}
+
+    if (_cm5->getBallDist() < 40 && _cm5->getBallDist() != 0) { dribbler = 100; }
+
+    if (_cm5->getBallExists()) {
+        const Vector2 currentBallVec = _cm5->getBallVec();
+        const Vector2 diff = currentBallVec - lastBallVec;
+
+        if (diff.getMagnitude() > BALL_MOVED_THRESH) {
+            ballMovementTimer = 0;
+            drivingToBall = false;
+        }
+
+        lastBallVec = currentBallVec;
+
+        if (!drivingToBall && ballMovementTimer > BALL_STATIONARY_MS) {
+            drivingToBall = true;
+            drivingToBallTimer = 0;
+        }
+    } else {
+        ballMovementTimer = 0;
+        drivingToBall = false;
+    }
+
+    if (drivingToBall && drivingToBallTimer >= DRIVE_TO_BALL_MS) {
+        drivingToBall = false;
+        ballMovementTimer = 0;
+    }
+
     Vector2 target;
     double rotInput = 0;
-    bool usePID;
+    bool usePID = false;
     bool kick = false;
 
     // drive away from line
@@ -198,6 +241,26 @@ void Goalie::update() const {
 
         rotInput = _cm5->getAwayFromOwnGoalAngle();
         usePID = true;
+    }
+
+    else if (_sensors->getHasBall()) {
+        if (hasBallTimer > 100) {
+            kick = true;
+            target = Vector2(50, 0);
+        }
+    }
+
+    else if (!_cm5->getBallExists()) {
+        target = getMoveToCenterVec(40);
+        usePID = true;
+    }
+
+    else if (drivingToBall) {
+        Vector2 toBall = _cm5->getBallVec();
+        toBall.normalize();
+        target = toBall * 60.0;
+        rotInput = _cm5->getAwayFromOwnGoalAngle();
+        usePID = false;
     }
 
     else {
@@ -227,5 +290,5 @@ void Goalie::update() const {
 
     _positioning->speedLimit(vx, vy, target);
 
-    pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, 0);
+    pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, dribbler);
 }

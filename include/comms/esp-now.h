@@ -1,8 +1,6 @@
 #ifndef COMMS_ESP_NOW_H
 #define COMMS_ESP_NOW_H
 
-#include <Arduino.h>
-
 typedef struct struct_message {
     bool toggleState;
     bool override;

@@ -103,13 +103,13 @@ private:
   float g_x = 0;
   float g_y = 0;
 
-  float pixelToCm(float pixel);
+  static float pixelToCm(float pixel);
 
-  float halfToFloat(uint16_t h);
+  static float halfToFloat(uint16_t h);
 
-  void calibMirror(const Detection* det, int num_det); // unused
+  static void calibMirror(const Detection* det, int num_det); // unused
 
-  void computeCenters(Detection* det, int num_det);
+  static void computeCenters(Detection* det, int num_det);
 
   void computeRotationsAndDistances(const Detection* det, int num_det);
   void computeAwayFromOwnGoalAngle();
