@@ -17,6 +17,7 @@ public:
 
     void update() const;
 
+    [[nodiscard]] bool getSwitchWanted() const;
 private:
     std::shared_ptr<CM5> _cm5;
     std::shared_ptr<Sensors> _sensors;

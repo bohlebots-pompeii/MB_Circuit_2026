@@ -11,12 +11,14 @@
 #include <PID_v1.h>
 #include <util/helper.h>
 #include <config.h>
+#include <comms/esp-now.h>
 
 namespace {
     elapsedMillis ledTimer;
     elapsedMillis hasBallTimer;
     elapsedMillis ballMovementTimer;
     elapsedMillis drivingToBallTimer;
+    elapsedMillis switchWantedCooldownTimer;
 
     // y axis
     double y_Setpoint = 0, y_Input = 0, y_Output = 0;
@@ -171,6 +173,40 @@ Vector2 Goalie::getHalfCircleTarget() const {
     const Vector2 targetOnCircle = ownGoalVec + goalToBall * HALF_CIRCLE_RADIUS;
 
     return targetOnCircle;
+}
+
+bool Goalie::getSwitchWanted() const {
+    if (switchWantedCooldownTimer < 1000) {
+        return false;
+    }
+
+    if (!_cm5->getBallExists()) {
+        return false;
+    }
+
+    const auto& [globalX, globalY, heading, ballRot, ballDist, flags] = espNowGetPeerData();
+
+    if (!espNowGetFlag(flags, 3)) {
+        return false;
+    }
+
+    const float pBallDist = ballDist;
+    const float pBallRot = ballRot;
+    const float pHeading = heading;
+
+    const float oBallDist = _cm5->getBallDist();
+    const float oBallRot = _cm5->getBallRot();
+    const float oHeading = _cm5->getHeading();
+
+    const double gPBallRot = pBallRot + pHeading;
+    const double gOBallRot = oBallRot + oHeading;
+
+    if (std::abs(gOBallRot) < std::abs(gPBallRot) && oBallDist < pBallDist) {
+        switchWantedCooldownTimer = 0;
+        return true;
+    }
+
+    return false;
 }
 
 void Goalie::update() const {

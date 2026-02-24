@@ -25,12 +25,12 @@ public:
 
     GameStateHandler(std::shared_ptr<Sensors> sensors, std::shared_ptr<CM5> cm5);
 
-    // Call every loop tick – handles all button logic
     void update();
 
-    [[nodiscard]] bool        isRunning()  const { return _state == State::RUNNING; }
-    [[nodiscard]] Role        getRole()    const { return _role; }
-    [[nodiscard]] State       getState()   const { return _state; }
+    [[nodiscard]] bool isRunning() const { return _state == State::RUNNING; }
+    [[nodiscard]] Role getRole() const { return _role; }
+    [[nodiscard]] State getState() const { return _state; }
+    void setRole(const Role role) { _role = role; } // manually override role (in the switching)
 
 private:
     std::shared_ptr<Sensors> _sensors;
@@ -39,17 +39,14 @@ private:
     State _state = State::TARGET_SELECT;
     Role  _role  = Role::GOALIE;
 
-    // target selection
     bool _targetIsYellow = false;   // false = BLUE, true = YELLOW
 
-    // blink state
     uint8_t  _blinkCount    = 0;
     bool     _blinkLedOn    = false;
     uint32_t _blinkLastMs   = 0;
     static constexpr uint32_t BLINK_INTERVAL_MS = 250;
     static constexpr uint8_t  BLINK_TIMES       = 2;   // 2 full on/off cycles
 
-    // edge-detection helpers
     bool _lastLeft  = false;
     bool _lastRight = false;
 

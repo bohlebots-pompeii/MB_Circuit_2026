@@ -6,6 +6,7 @@
 #define BOT_2026_BOT_H
 
 #include "comms/CM5.h"
+#include "comms/esp-now.h"
 #include "Sensors.h"
 #include <memory>
 #include <Positioning.h>
@@ -13,14 +14,13 @@
 #include "Goalie.h"
 #include "GameStateHandler.h"
 
-extern bool isHoming;
-
 class Bot {
 public:
     Bot();
 
-    // Main loop entry point – dispatches to correct role
     void update() const;
+
+    void fillEspNowPacket(EspNowPacket& pkt) const;
 
     static void overrideControl();
 
@@ -31,6 +31,13 @@ private:
     std::unique_ptr<Striker>      _striker;
     std::unique_ptr<Goalie>       _goalie;
     std::unique_ptr<GameStateHandler> _gameState;
+
+    static void printPeerPacket();
+
+    static bool getSwitchWantedFromPeer() {
+        const auto& pkt = espNowGetPeerData();
+        return espNowGetFlag(pkt.flags, 4);
+    }
 };
 
 #endif //BOT_2026_BOT_H
