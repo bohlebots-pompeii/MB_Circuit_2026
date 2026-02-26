@@ -29,6 +29,7 @@ public:
   [[nodiscard]] Vector2 getPosition() const { return position; }
   [[nodiscard]] bool getEna() const { return ena; }
   [[nodiscard]] static bool getHasBall() { return analogRead(39) > 4000;}
+  [[nodiscard]] static int getBallLightGate() { return analogRead(39); }
   // static bool getHasBall() { return false; }
 
   enum COLOR { // for the LED colors

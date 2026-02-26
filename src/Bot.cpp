@@ -44,6 +44,7 @@ void Bot::update() const {
     _sensors->update();
     _positioning->update();
 
+    Serial.println(Sensors::getBallLightGate());
     //printPeerPacket(); // debug
 
     if (!_cm5->getCM5Running()) {
@@ -61,11 +62,8 @@ void Bot::update() const {
 
     if (getSwitchWantedFromPeer()) {
         // toggle role
-        if (_gameState->getRole() == GameStateHandler::Role::GOALIE) {
-            _gameState->setRole(GameStateHandler::Role::STRIKER);
-        } else {
-            _gameState->setRole(GameStateHandler::Role::GOALIE);
-        }
+        _gameState->setRole(GameStateHandler::Role::GOALIE);
+        Serial.println("Switching role due to peer request");
     }
 
     if (_gameState->getRole() == GameStateHandler::Role::GOALIE) {
@@ -91,6 +89,10 @@ void Bot::fillEspNowPacket(EspNowPacket& pkt) const {
     const bool seesLine  = _sensors->getLineSeen();
     const bool ballValid = _cm5->getBallExists();
     const bool switchWanted = _goalie->getSwitchWanted();
+
+    if (switchWanted) {
+        _gameState->setRole(GameStateHandler::Role::STRIKER);
+    }
 
     pkt.flags = 0;
     espNowSetFlag(pkt.flags, 0, running);

@@ -135,7 +135,6 @@ Vector2 Goalie::getMoveToCenterVec(const int speed) const {
     Vector2 awayFromGoal = ownGoalVec * -1.0;
     awayFromGoal.normalize();
 
-    // halfCircleCenter is relative to robot (like all CM5 vectors)
     Vector2 target = ownGoalVec + awayFromGoal * HALF_CIRCLE_RADIUS;
 
     target.normalize();
@@ -161,8 +160,7 @@ Vector2 Goalie::getHalfCircleTarget() const {
 
     Vector2 awayFromGoal = ownGoalVec * -1.0;
     awayFromGoal.normalize();
-    const double dot = goalToBall.getX() * awayFromGoal.getX()
-                     + goalToBall.getY() * awayFromGoal.getY();
+    const double dot = goalToBall.getX() * awayFromGoal.getX() + goalToBall.getY() * awayFromGoal.getY();
     if (dot < 0) {
         const Vector2 perp(-awayFromGoal.getY(), awayFromGoal.getX());
         const double projPerp = goalToBall.getX() * perp.getX()
@@ -176,7 +174,7 @@ Vector2 Goalie::getHalfCircleTarget() const {
 }
 
 bool Goalie::getSwitchWanted() const {
-    if (switchWantedCooldownTimer < 1000) {
+    if (switchWantedCooldownTimer < 2000) {
         return false;
     }
 
@@ -184,15 +182,15 @@ bool Goalie::getSwitchWanted() const {
         return false;
     }
 
-    const auto& [globalX, globalY, heading, ballRot, ballDist, flags] = espNowGetPeerData();
+    const auto& [_globalX, _globalY, _heading, _ballRot, _ballDist, _flags] = espNowGetPeerData();
 
-    if (!espNowGetFlag(flags, 3)) {
+    if (!espNowGetFlag(_flags, 3)) { // check if ball exist on peer
         return false;
     }
 
-    const float pBallDist = ballDist;
-    const float pBallRot = ballRot;
-    const float pHeading = heading;
+    const float pBallDist = _ballDist;
+    const float pBallRot = _ballRot;
+    const float pHeading = _heading;
 
     const float oBallDist = _cm5->getBallDist();
     const float oBallRot = _cm5->getBallRot();
