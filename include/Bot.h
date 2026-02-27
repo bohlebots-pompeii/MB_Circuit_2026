@@ -20,10 +20,6 @@ public:
 
     void update() const;
 
-    void fillEspNowPacket(EspNowPacket& pkt) const;
-
-    static void overrideControl();
-
 private:
     std::shared_ptr<CM5>          _cm5;
     std::shared_ptr<Sensors>      _sensors;
@@ -38,6 +34,8 @@ private:
         const auto& pkt = espNowGetPeerData();
         return espNowGetFlag(pkt.flags, 4);
     }
+
+    void fillEspNowPacket(EspNowPacket& pkt) const;
 };
 
 #endif //BOT_2026_BOT_H

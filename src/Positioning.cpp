@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <elapsedMillis.h>
 #include "util/MovingAverage.h"
-#include <config.h>
+#include <../include/config/config.h>
 
 elapsedMillis rotationDeltaTimer;
 elapsedMillis velocityTimer;

@@ -1,2 +1,4 @@
 .pio
 .idea
+
+config_esp_now.h

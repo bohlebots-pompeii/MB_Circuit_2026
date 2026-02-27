@@ -2,7 +2,6 @@
 #include "Bot.h"
 #include <util/log.h>
 #include <Arduino.h>
-#include <comms/esp-now.h>
 
 std::shared_ptr<Bot> bot;
 
@@ -11,14 +10,10 @@ void setup() {
     espNowInit();
     bot = std::make_shared<Bot>();
     Log::header();
-    Log::info(" Setup Complete; Switching to Loop");
+    Log::info("Setup Complete!");
 }
 
 void loop() {
-    EspNowPacket myPacket = {};
-    bot->fillEspNowPacket(myPacket);
-    espNowUpdate(myPacket);
-
     bot->update();
 
     delay(1);

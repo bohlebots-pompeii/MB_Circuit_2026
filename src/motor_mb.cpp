@@ -5,7 +5,7 @@
 #include "motor_mb.h"
 #include <Arduino.h>
 #include <Wire.h>
-#include <config.h>
+#include <config/config.h>
 #include <util/Vector2.hpp>
 #include <numbers>
 

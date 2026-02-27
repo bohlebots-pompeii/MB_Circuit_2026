@@ -4,6 +4,9 @@
 
 #ifndef BOHLEBOTS_2026_DEBUG_H
 #define BOHLEBOTS_2026_DEBUG_H
+
+using namespace std;
+
 class Log {
 public:
     static void header();

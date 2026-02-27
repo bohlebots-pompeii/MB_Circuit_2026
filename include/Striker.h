@@ -29,6 +29,7 @@ private:
     [[nodiscard]] Vector2 getBallApproachVec(int speed) const;
     [[nodiscard]] Vector2 getBallPursuitVec() const;
     [[nodiscard]] bool checkBallOnLine() const;
+    [[nodiscard]] bool checkBallInPocket() const;
 };
 
 #endif //BOT_2026_STRIKER_H

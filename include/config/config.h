@@ -54,6 +54,8 @@ namespace FieldConfig {
     constexpr double FieldHalfWidth = 100.0;
     constexpr double FieldHalfHeight = 100.0;
     constexpr double GoalHalfWidth = 40.0;
+    constexpr double FieldLinePositionY = 80.0;
+    constexpr double FieldPocketPositionX = 90.0;
 }
 
 

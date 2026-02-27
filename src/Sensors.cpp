@@ -4,7 +4,7 @@
 
 #include "../include/Sensors.h"
 #include <Arduino.h>
-#include <config.h>
+#include <config/config.h>
 #include <iostream>
 #include <Wire.h>
 #include <elapsedMillis.h>

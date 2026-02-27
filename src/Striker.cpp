@@ -11,7 +11,7 @@
 #include <PID_v1.h>
 #include <util/MovingAverage.h>
 #include <util/helper.h>
-#include <config.h>
+#include <config/config.h>
 
 namespace {
     elapsedMillis hasBallTimer;
@@ -172,11 +172,26 @@ bool Striker::checkBallOnLine() const {
     const double ballRadians = ballRot * (std::numbers::pi / 180.0);
     const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
 
-    if (globalY > 80.0 && ballGlobalY > globalY) {
+    if (globalY > FieldConfig::FieldLinePositionY && ballGlobalY > globalY) {
         return true;
     }
 
-    if (globalY < -80.0 && ballGlobalY < globalY) {
+    if (globalY < -FieldConfig::FieldLinePositionY && ballGlobalY < globalY) {
+        return true;
+    }
+
+    return false;
+}
+
+bool Striker::checkBallInPocket() const {
+    const double globalX = _cm5->getGlobalX();
+    const double ballX = _cm5->getBallVec().getX();
+
+    if (globalX > FieldConfig::FieldPocketPositionX && ballX > globalX) {
+        return true;
+    }
+
+    if (globalX < -FieldConfig::FieldPocketPositionX && ballX < globalX) {
         return true;
     }
 
@@ -185,12 +200,12 @@ bool Striker::checkBallOnLine() const {
 
 void Striker::update() const {
     constexpr int speed = 50.0f;
-    static bool CM5_initialized = false;
     static bool kickOff = false;
 
     updatePositionYAvg(_cm5->getGlobalY());
     setRotDelta(_positioning->getRotationDelta());
 
+    /*
     if (!kickOff && _sensors->getEna()) {
         pushData(_sensors->getEna(), false, 50, 0, 0, 0);
         delay(300);
@@ -198,11 +213,7 @@ void Striker::update() const {
         pushData(_sensors->getEna(), true, 50, 0, 0, 0);
         delay(100);
     }
-
-    if (_cm5->getCM5Running() != CM5_initialized) {
-        CM5_initialized = _cm5->getCM5Running();
-        _sensors->allLEDsOff();
-    }
+    */
 
     if (ledTimer > 200) {
         _sensors->allLEDsOff();

@@ -40,17 +40,29 @@ void Bot::printPeerPacket() {
 }
 
 void Bot::update() const {
+    static bool CM5_initialized = false;
+
     _cm5->update();
     _sensors->update();
     _positioning->update();
 
-    Serial.println(Sensors::getBallLightGate());
+    Serial.println(_cm5->getGlobalX());
+
+    EspNowPacket toSend = {};
+    fillEspNowPacket(toSend);
+    espNowUpdate(toSend);
+
     //printPeerPacket(); // debug
 
     if (!_cm5->getCM5Running()) {
         _sensors->haltLEDs();
         pushData(false, false, 0, 0, 0, 0);
         return;
+    }
+
+    if (_cm5->getCM5Running() != CM5_initialized) {
+        CM5_initialized = _cm5->getCM5Running();
+        _sensors->allLEDsOff();
     }
 
     _gameState->update();
@@ -63,7 +75,7 @@ void Bot::update() const {
     if (getSwitchWantedFromPeer()) {
         // toggle role
         _gameState->setRole(GameStateHandler::Role::GOALIE);
-        Serial.println("Switching role due to peer request");
+        Serial.println("[GAMESTATE] Switching role due to peer request");
     }
 
     if (_gameState->getRole() == GameStateHandler::Role::GOALIE) {
@@ -71,10 +83,6 @@ void Bot::update() const {
     } else {
         _striker->update();
     }
-}
-
-void Bot::overrideControl() {
-    pushData(false, false, 0, 0, 0, 0);
 }
 
 void Bot::fillEspNowPacket(EspNowPacket& pkt) const {

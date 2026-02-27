@@ -2,13 +2,6 @@
 
 #include <Arduino.h>
 
-namespace EspNowConfig {
-    constexpr uint8_t MAC_ROBOT_A[6] = {0x88, 0x13, 0xBF, 0xFA, 0x93, 0x68}; // Bot A
-    constexpr uint8_t MAC_ROBOT_B[6] = {0x88, 0x13, 0xBF, 0xFA, 0x93, 0x10}; // Bot B
-
-    constexpr uint32_t TX_INTERVAL_MS = 5;
-}
-
 // Runtime bot ID from mac
 // 0 = A, 1 = B, -1 = mac not found
 extern int8_t espNowBotId;

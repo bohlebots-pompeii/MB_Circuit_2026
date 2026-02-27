@@ -10,7 +10,7 @@
 #include <elapsedMillis.h>
 #include <PID_v1.h>
 #include <util/helper.h>
-#include <config.h>
+#include <config/config.h>
 #include <comms/esp-now.h>
 
 namespace {

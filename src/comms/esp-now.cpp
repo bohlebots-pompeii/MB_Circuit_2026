@@ -5,6 +5,7 @@
 //
 
 #include "comms/esp-now.h"
+#include <config/config_esp_now.h>
 #include <esp_now.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
@@ -12,11 +13,11 @@
 int8_t espNowBotId = -1;
 
 namespace {
-    EspNowPacket  s_peerData    = {};
-    uint32_t      s_lastRxMs    = 0;
-    uint32_t      s_lastTxMs    = 0;
-    bool          s_peerAdded   = false;
-    bool          s_initialized = false;
+    EspNowPacket s_peerData = {};
+    uint32_t s_lastRxMs = 0;
+    uint32_t s_lastTxMs = 0;
+    bool s_peerAdded = false;
+    bool s_initialized = false;
 
     bool isMacAllFF(const uint8_t* mac) {
         if (mac == nullptr) return true; // null = not configured
@@ -98,8 +99,6 @@ void espNowInit() {
     Serial.print("[ESP-NOW] Bot ID : ");
     if (espNowBotId >= 0) {
         Serial.println(espNowBotId);
-    } else {
-        Serial.println("UNKNOWN – fill in MAC_ROBOT_A / MAC_ROBOT_B in esp-now.h");
     }
 
     const uint8_t broadcast[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
@@ -108,7 +107,7 @@ void espNowInit() {
     if (const uint8_t* peerMac = getPeerMac(); peerMac != nullptr && !isMacAllFF(peerMac)) {
         s_peerAdded = addPeer(peerMac);
     } else {
-        Serial.println("[ESP-NOW] Peer MAC not yet configured – using broadcast");
+        Serial.println("[ESP-NOW] Peer MAC not yet configured");
     }
 
     Serial.println("[ESP-NOW] Ready");
