@@ -148,11 +148,11 @@ Vector2 Striker::getBallPursuitVec() const {
 
     const double dot = robotToIdeal.getX() * robotToBall.getX() + robotToIdeal.getY() * robotToBall.getY();
 
-    if (std::abs(_cm5->getBallRot()) > 70.0 && std::abs(dot) > 0.6) {
+    if (std::abs(_cm5->getBallRot()) > 60.0 && std::abs(dot) > 0.6) {
         const Vector2 perpendicular(-ballToGoal.getY(), ballToGoal.getX());
 
         const double cross = ballVec.getX() * targetGoalVec.getY() - ballVec.getY() * targetGoalVec.getX();
-        const double side = (cross > 0) ? 1.0 : -1.0;
+        const double side = cross > 0 ? 1.0 : -1.0;
 
         const double shiftStrength = std::clamp((dot - 0.5) * 2.0, 0.0, 1.0);
         constexpr double maxShift = 30.0;
@@ -162,6 +162,24 @@ Vector2 Striker::getBallPursuitVec() const {
 
     const Vector2 target = idealPos;
     return target;
+}
+
+Vector2 Striker::getToPointVec(const double x, const double y) const {
+    const double globalX = _cm5->getGlobalX();
+    const double globalY = _cm5->getGlobalY();
+
+    const double dx = x - globalX;
+    const double dy = y - globalY;
+
+    return Vector2(dx, dy);
+}
+
+Vector2 Striker::getToNeutralPointVec() const {
+    if (const double globalY = _cm5->getGlobalY(); globalY > 0) {
+        return getToPointVec(FieldConfig::NeutralPointPositionX, FieldConfig::NeutralPointPositionY);
+    }
+
+    return getToPointVec(FieldConfig::NeutralPointPositionX, -FieldConfig::NeutralPointPositionY);
 }
 
 bool Striker::checkBallOnLine() const {
@@ -185,13 +203,14 @@ bool Striker::checkBallOnLine() const {
 
 bool Striker::checkBallInPocket() const {
     const double globalX = _cm5->getGlobalX();
+    const double globalY = _cm5->getGlobalY();
     const double ballX = _cm5->getBallVec().getX();
 
-    if (globalX > FieldConfig::FieldPocketPositionX && ballX > globalX) {
+    if (!_cm5->getBallExists() && globalX > FieldConfig::FieldPocketPositionX) {
         return true;
     }
 
-    if (globalX < -FieldConfig::FieldPocketPositionX && ballX < globalX) {
+    if (globalX > FieldConfig::FieldPocketPositionX && ballX > 0 && (globalY < -FieldConfig::FieldPocketPositionY || globalY > FieldConfig::FieldPocketPositionY)) {
         return true;
     }
 
@@ -250,6 +269,14 @@ void Striker::update() const {
         if (hasBallTimer > 50) {
             target = getBallAlignedVec(speed);
             rotInput = _cm5->getTargetGoalRot();
+
+            if (checkBallInPocket()) {
+                target = getToNeutralPointVec();
+                target.normalize();
+                target *= 30;
+                usePID = false;
+                rotInput = _cm5->getBallRot();
+            }
 
             if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna()) {
                 kick = true;

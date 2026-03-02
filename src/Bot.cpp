@@ -42,11 +42,11 @@ void Bot::printPeerPacket() {
 void Bot::update() const {
     static bool CM5_initialized = false;
 
+    Serial.println(Sensors::getBallLightGate());
+
     _cm5->update();
     _sensors->update();
     _positioning->update();
-
-    Serial.println(_cm5->getGlobalX());
 
     EspNowPacket toSend = {};
     fillEspNowPacket(toSend);

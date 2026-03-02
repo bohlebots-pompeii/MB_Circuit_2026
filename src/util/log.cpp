@@ -10,19 +10,19 @@ void Log::header() {
 }
 
 void Log::debug(const std::string& _i) {
-    std::cout << "[DEBUG]" + _i << std::endl;
+    std::cout << "[DEBUG] " + _i << std::endl;
 }
 
 void Log::info(const std::string& _i) {
-    std::cout << "[INFO]" + _i << std::endl;
+    std::cout << "[INFO] " + _i << std::endl;
 }
 
 void Log::warning(const std::string& _i) {
-    std::cout << "[WARN]" + _i << std::endl;
+    std::cout << "[WARN] " + _i << std::endl;
 
 }
 
 void Log::error(const std::string& _i) {
-    std::cout << "[ERROR]" + _i << std::endl;
+    std::cout << "[ERROR] " + _i << std::endl;
 
 }
