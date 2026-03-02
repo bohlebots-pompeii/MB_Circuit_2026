@@ -164,22 +164,27 @@ Vector2 Striker::getBallPursuitVec() const {
     return target;
 }
 
-Vector2 Striker::getToPointVec(const double x, const double y) const {
+Vector2 Striker::getToNeutralPointVec() const {
     const double globalX = _cm5->getGlobalX();
     const double globalY = _cm5->getGlobalY();
 
-    const double dx = x - globalX;
-    const double dy = y - globalY;
+    Vector2 target;
+    bool targetReached = false;
 
-    return Vector2(dx, dy);
-}
-
-Vector2 Striker::getToNeutralPointVec() const {
-    if (const double globalY = _cm5->getGlobalY(); globalY > 0) {
-        return getToPointVec(FieldConfig::NeutralPointPositionX, FieldConfig::NeutralPointPositionY);
+    if (globalY > 0) {
+        // check which point to drive to
+        target = getToPointVec(globalX, globalY, FieldConfig::NeutralPointPositionX, FieldConfig::NeutralPointPositionY);
+        targetReached = getPointReached(globalX, globalY, FieldConfig::NeutralPointPositionX, FieldConfig::NeutralPointPositionY);
+    } else {
+        target = getToPointVec(globalX, globalY, FieldConfig::NeutralPointPositionX, -FieldConfig::NeutralPointPositionY);
+        targetReached = getPointReached(globalX, globalY, FieldConfig::NeutralPointPositionX, -FieldConfig::NeutralPointPositionY);
     }
 
-    return getToPointVec(FieldConfig::NeutralPointPositionX, -FieldConfig::NeutralPointPositionY);
+    if (targetReached) {
+        target = Vector2(0,0);
+    }
+
+    return target;
 }
 
 bool Striker::checkBallOnLine() const {
@@ -345,6 +350,11 @@ void Striker::update() const {
     }
 
     _positioning->speedLimit(vx, vy, target);
+
+    if (std::abs(_cm5->getHeading()) > 80) {
+        vx = 0;
+        vy = 0;
+    }
 
     pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, 100);
 }

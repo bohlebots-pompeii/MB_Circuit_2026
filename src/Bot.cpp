@@ -14,6 +14,7 @@ Bot::Bot() {
     Serial.begin(115200);
     Serial2.begin(115200, SERIAL_8N2, 16, 17);
 
+    // init pointers to classes
     _cm5         = std::make_shared<CM5>();
     _sensors     = std::make_shared<Sensors>(_cm5);
     _positioning = std::make_shared<Positioning>(_cm5);
@@ -41,8 +42,6 @@ void Bot::printPeerPacket() {
 
 void Bot::update() const {
     static bool CM5_initialized = false;
-
-    Serial.println(Sensors::getBallLightGate());
 
     _cm5->update();
     _sensors->update();

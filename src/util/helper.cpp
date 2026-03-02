@@ -2,10 +2,11 @@
 // Created by julius on 17.02.2026.
 //
 
-#include "../../include/util/helper.h"
+#include <util/helper.h>
 #include <numbers>
 #include <cmath>
 #include <util/Vector2.hpp>
+#include <config/config.h>
 
 // helper
 double toRad(const double degrees) {
@@ -28,4 +29,28 @@ double pythagorean(const double a, const double b) {
 
 float pythagoreanf(const float a, const float b) {
   return sqrtf(a * a + b * b);
+}
+
+// Vector helper
+Vector2 getToPointVec(const double x1, const double y1, const double x2, const double y2) {
+  const double dx = x2 - x1;
+  const double dy = y2 - y1;
+
+  return Vector2(dx, dy);
+}
+
+bool getPointReached(const double x1, const double y1, const double x2, const double y2) {
+  const double dx = x2 - x1;
+  const double dy = y2 - y1;
+
+  const bool x_reached = std::abs(dx) < FieldConfig::PointReachedDistance;
+  const bool y_reached = std::abs(dy) < FieldConfig::PointReachedDistance;
+
+  bool pointReached = false;
+
+  if (x_reached && y_reached) {
+    pointReached = true;
+  }
+
+  return pointReached;
 }

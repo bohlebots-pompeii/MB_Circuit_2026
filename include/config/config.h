@@ -6,9 +6,11 @@
 #define I2C_SDA 21 // I2C
 #define I2C_SCL 22
 
+// pins
 constexpr int buttonPIN = 19;
 constexpr int piezoPIN = 23;
 
+// i²c adresses
 constexpr int motorMBAddress = 0x69;
 
 constexpr int lineSensorAddress = 0x40;
@@ -19,6 +21,11 @@ constexpr int buttonModuleAddress = 0x20;
 
 constexpr double maxDistance = 80.0;
 constexpr double slowingDistance = 60.0;
+
+// Goalie config
+constexpr unsigned long BALL_STATIONARY_MS = 2000;
+constexpr unsigned long DRIVE_TO_BALL_MS = 600;
+constexpr double BALL_MOVED_THRESH = 5.0;
 
 // PID Configuration
 namespace PIDConfig {
@@ -63,6 +70,10 @@ namespace FieldConfig {
 
     constexpr double NeutralPointPositionX = 70.0;
     constexpr double NeutralPointPositionY = 40.0;
+
+    constexpr double GoalNeutralPointPositionX = -80.0;
+
+    constexpr double PointReachedDistance = 10.0;
 }
 
 

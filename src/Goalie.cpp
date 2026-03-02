@@ -174,6 +174,10 @@ Vector2 Goalie::getHalfCircleTarget() const {
 }
 
 bool Goalie::getSwitchWanted() const {
+    if (_sensors->getHasBall()) {
+        return true;
+    }
+
     if (switchWantedCooldownTimer < 2000) {
         return false;
     }
@@ -211,10 +215,6 @@ void Goalie::update() const {
     static bool CM5_initialized = false;
     static Vector2 lastBallVec(0, 0);
     static bool drivingToBall = false;
-
-    constexpr unsigned long BALL_STATIONARY_MS = 2000;
-    constexpr unsigned long DRIVE_TO_BALL_MS = 600;
-    constexpr double BALL_MOVED_THRESH = 5.0;
 
     int dribbler = 0;
 
@@ -277,15 +277,12 @@ void Goalie::update() const {
         usePID = true;
     }
 
-    else if (_sensors->getHasBall()) {
-        if (hasBallTimer > 100) {
-            kick = true;
-            target = Vector2(50, 0);
-        }
-    }
-
     else if (!_cm5->getBallExists()) {
-        target = getMoveToCenterVec(40);
+        const double globalX = _cm5->getGlobalX();
+        const double globalY = _cm5->getGlobalY();
+
+        target = getToPointVec(globalX, globalY, FieldConfig::GoalNeutralPointPositionX, 0);
+        rotInput = _cm5->getHeading();
         usePID = true;
     }
 
@@ -323,6 +320,11 @@ void Goalie::update() const {
     }
 
     _positioning->speedLimit(vx, vy, target);
+
+    if (std::abs(_cm5->getHeading()) > 80) {
+        vx = 0;
+        vy = 0;
+    }
 
     pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, dribbler);
 }

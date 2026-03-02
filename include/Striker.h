@@ -28,7 +28,6 @@ private:
     [[nodiscard]] Vector2 getBallAlignedVec(int speed) const;
     [[nodiscard]] Vector2 getBallApproachVec(int speed) const;
     [[nodiscard]] Vector2 getBallPursuitVec() const;
-    [[nodiscard]] Vector2 getToPointVec(double x, double y) const;
     [[nodiscard]] Vector2 getToNeutralPointVec() const;
     [[nodiscard]] bool checkBallOnLine() const;
     [[nodiscard]] bool checkBallInPocket() const;
