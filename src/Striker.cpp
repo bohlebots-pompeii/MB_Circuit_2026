@@ -90,6 +90,49 @@ Striker::Striker(std::shared_ptr<CM5> cm5, std::shared_ptr<Sensors> sensors, std
     initPID();
 }
 
+void Striker::updateRandomWalk() const {
+    static float currentAngle = 0.0f;
+    static bool wasOnLine = false;
+    static float lastLineRot = 0.0f;
+    const bool lineSeen = _sensors->getLineSeen();
+    const bool ena = _sensors->getEna();
+    constexpr int speed = 30;
+
+    if (lineSeen) {
+        const int lineRot = toRad(_sensors->getLineRot());
+        auto line = Vector2(cos(lineRot), sin(lineRot));
+        line.normalize();
+        line *= 30;
+        line.rotate(std::numbers::pi);
+        const int vx = line.getX();
+        const int vy = line.getY();
+        wasOnLine = true;
+        lastLineRot = _sensors->getLineRot();
+        pushData(ena, false, static_cast<int>(round(vx)), static_cast<int>(round(vy)), 0, 0);
+        return;
+    }
+
+    if (wasOnLine) {
+        int attempts = 0;
+        float newAngle = currentAngle;
+        float diff = 0.0f;
+        do {
+            newAngle = static_cast<float>(random(0, 360));
+            diff = std::abs(newAngle - lastLineRot);
+            if (diff > 180.0f) diff = 360.0f - diff;
+            attempts++;
+        } while (diff < 90.0f && attempts < 20);
+        currentAngle = newAngle;
+        wasOnLine = false;
+    }
+
+    const float rad = currentAngle * static_cast<float>(std::numbers::pi / 180.0);
+    const float vx = std::cos(rad) * static_cast<float>(speed);
+    const float vy = std::sin(rad) * static_cast<float>(speed);
+
+    pushData(ena, false, static_cast<int>(round(vx)), static_cast<int>(round(vy)), 0, 0);
+}
+
 Vector2 Striker::getAwayFromLineVec(const int speed) const {
     Vector2 line = degToVec(_sensors->getLineRot());
     line.rotate(std::numbers::pi);
@@ -223,6 +266,7 @@ bool Striker::checkBallInPocket() const {
 }
 
 void Striker::update() const {
+    //updateRandomWalk(); // ai vid
     constexpr int speed = 50.0f;
     static bool kickOff = false;
 

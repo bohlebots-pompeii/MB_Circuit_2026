@@ -14,6 +14,7 @@
 class Striker {
 public:
     Striker(std::shared_ptr<CM5> cm5, std::shared_ptr<Sensors> sensors, std::shared_ptr<Positioning> positioning);
+    void updateRandomWalk() const;
 
     void update() const;
 

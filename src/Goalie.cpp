@@ -174,7 +174,15 @@ Vector2 Goalie::getHalfCircleTarget() const {
 }
 
 bool Goalie::getSwitchWanted() const {
+    const auto& [_globalX, _globalY, _heading, _ballRot, _ballDist, _flags] = espNowGetPeerData();
+
     if (_sensors->getHasBall()) {
+        switchWantedCooldownTimer = 0;
+        return true;
+    }
+
+    if (!espNowGetFlag(_flags, 0)) {
+        switchWantedCooldownTimer = 0;
         return true;
     }
 
@@ -183,12 +191,6 @@ bool Goalie::getSwitchWanted() const {
     }
 
     if (!_cm5->getBallExists()) {
-        return false;
-    }
-
-    const auto& [_globalX, _globalY, _heading, _ballRot, _ballDist, _flags] = espNowGetPeerData();
-
-    if (!espNowGetFlag(_flags, 3)) { // check if ball exist on peer
         return false;
     }
 

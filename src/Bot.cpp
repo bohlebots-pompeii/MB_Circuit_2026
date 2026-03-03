@@ -53,11 +53,13 @@ void Bot::update() const {
 
     //printPeerPacket(); // debug
 
+    /*
     if (!_cm5->getCM5Running()) {
         _sensors->haltLEDs();
         pushData(false, false, 0, 0, 0, 0);
         return;
     }
+    */
 
     if (_cm5->getCM5Running() != CM5_initialized) {
         CM5_initialized = _cm5->getCM5Running();
