@@ -4,9 +4,12 @@
 
 #include "../include/Sensors.h"
 #include <Arduino.h>
-#include <config.h>
+#include <config/config.h>
 #include <iostream>
 #include <Wire.h>
+#include <elapsedMillis.h>
+
+elapsedMillis ledBlinkTimer;
 
 Sensors::Sensors(const std::shared_ptr<CM5> &cm5) {
   // Check if the shared pointer for CM5 is valid
@@ -18,15 +21,19 @@ Sensors::Sensors(const std::shared_ptr<CM5> &cm5) {
 
   // Initialize the button pin as input
   pinMode(buttonPIN, INPUT);
+  // Light gate
+  pinMode(39, INPUT);
 }
 
 void Sensors::update() {
   updateLineSensor();
-  updateUS();
-  updateButton();
+  // updateUS();
+  updateButtons();
 }
 
 void Sensors::updateLineSensor() {
+  static int16_t lastLineRot = -1;
+  static int16_t lastLineProgress = -1;
   constexpr uint8_t len = 4;
   // Request 4 bytes from the line sensor via I2C
   Wire.requestFrom(lineSensorAddress, len);
@@ -44,15 +51,28 @@ void Sensors::updateLineSensor() {
     line_rot = static_cast<int16_t>(lineRot_u);
     progress = static_cast<int16_t>(progress_u);
 
-    // Adjustment logic for rotation based on progress
-    if (progress >= 16) {
-      line_rot += 180;
+    // Adjust line rotation based on progress and approach direction
+    static bool coming_from_front = false;
+    if (lastLineProgress != 16) {
+      coming_from_front = (lastLineRot < 90 || lastLineRot >= 270);
     }
 
-    // Wrap around rotation if it exceeds 360 degrees
-    if (line_rot > 360) {
+    if (coming_from_front) {
+      if (progress >= 16) {
+        line_rot += 180;
+      }
+    } else {
+      if (progress > 16) {
+        line_rot += 180;
+      }
+    }
+
+    if (line_rot >= 360) {
       line_rot -= 360;
     }
+
+    lastLineRot = line_rot;
+    lastLineProgress = progress;
   } else {
     // Reset values if communication fails preventing stuck values
     line_rot = -1;
@@ -74,36 +94,119 @@ void Sensors::updateUS() {
     const uint16_t x_u = (static_cast<uint16_t>(xHigh) << 8) | static_cast<uint16_t>(xLow);
     const uint16_t y_u = (static_cast<uint16_t>(yHigh) << 8) | static_cast<uint16_t>(yLow);
 
-    const int16_t x = static_cast<int16_t>(x_u);
-    const int16_t y = static_cast<int16_t>(y_u);
+    const auto x = static_cast<int16_t>(x_u);
+    const auto y = static_cast<int16_t>(y_u);
 
     constexpr float scale = 100.0f;
     const float local_x = static_cast<float>(x) / scale;
     const float local_y = static_cast<float>(y) / scale;
 
-    float g_x;
-    float g_y;
-    const float heading = _cm5->getHeading();
+    //float g_x;
+    //float g_y;
+    //const float heading = _cm5->getHeading();
 
-    localToWorld(local_x, local_y, heading, g_x, g_y);
+    //localToWorld(local_x, local_y, heading, g_x, g_y);
 
-    position.setX(g_x);
-    position.setY(g_y);
+    position.setX(local_x);
+    position.setY(local_y);
   }
 }
 
-void Sensors::updateButton() {
-  const bool currentButtonState = digitalRead(buttonPIN);
-  if (currentButtonState == HIGH && !lastButtonState) {
-    ena = !ena;
+
+void Sensors::setEna(const bool state) {
+  ena = state;
+  if (ena) {
+    setLED(0, 1, GREEN);
   }
-  lastButtonState = currentButtonState;
+  else {
+    setLED(0, 1, RED);
+  }
+}
+
+void Sensors::allLEDsOff() {
+  for (int i = 0; i < 8; ++i) {
+    setLED(i, 1, OFF);
+    setLED(i, 2, OFF);
+  }
+}
+
+void Sensors::haltLEDs() {
+  static uint8_t LEDColorCounter = 1;
+  if (ledBlinkTimer < 250) {
+    for (int i = 0; i < 8; ++i) {
+      setLED(i, 1, LEDColorCounter);
+      setLED(i, 2, LEDColorCounter);
+    }
+  }
+  else {
+    ledBlinkTimer = 0;
+    LEDColorCounter++;
+  }
+  if (LEDColorCounter >= 8) {
+    LEDColorCounter = 1;
+  }
 }
 
 void Sensors::localToWorld(const float lx, const float ly,const float heading_deg, float &gx, float &gy) {
   // Convert heading to radians for trigonometric functions
-  const float theta = heading_deg * (PI / 180.0f);
+  const auto theta = static_cast<float>(heading_deg * (PI / 180.0f));
   // Apply rotation matrix to convert local point (lx, ly) to global point (gx, gy)
   gx = cosf(theta) * lx - sinf(theta) * ly;
   gy = sinf(theta) * lx + cosf(theta) * ly;
+}
+
+bool Sensors::getButtonState(const int device, const int nr) const {
+  if (device < 0 || device > 7) {
+    return false;
+  }
+  if (nr == 1) {
+    return button1Array[device];
+  }
+  if (nr == 2) {
+    return button2Array[device];
+  }
+  return false;
+}
+
+void Sensors::setLED(const int device, const int nr, int color) {
+  if (color < 0 || color > 7 || device < 0 || device > 7) {
+    return;
+  }
+  if (nr == 1) {
+    led1Array[device] = color * 2;
+  } else if (nr == 2) {
+    color *= 16;
+    if (color > 63) {
+      color += 64;
+    }
+    led2Array[device] = color;
+  }
+}
+
+void Sensors::updateButtons() {
+  // from BohleBots header - Roland Stiebel
+  for (int lauf = 0; lauf < 8; lauf++) {
+    if (portEna[lauf]) {
+      int ledwert = 255 - led1Array[lauf] - led2Array[lauf];
+      Wire.beginTransmission(buttonLedID[lauf]);
+      Wire.write(ledwert);
+
+      Wire.endTransmission();
+
+      Wire.requestFrom(buttonLedID[lauf], 1);
+      if (Wire.available()) {
+        int tread = 255 - Wire.read();
+        tread = tread % 128;
+        if (tread > 63)
+          button2Array[lauf] = true;
+        else
+          button2Array[lauf] = false;
+        tread = tread % 2;
+        if (tread > 0)
+          button1Array[lauf] = true;
+        else
+          button1Array[lauf] = false;
+      }
+    }
+  }
 }

@@ -2,25 +2,19 @@
 #include "Bot.h"
 #include <util/log.h>
 #include <Arduino.h>
-#include <comms/esp-now.h>
 
 std::shared_ptr<Bot> bot;
 
 void setup() {
-  bot = std::make_shared<Bot>();
-
-  initEspNow();
-
-  Log::header();
-  Log::info(" Setup Complete; Switching to Loop");
+    Serial.begin(115200);
+    espNowInit();
+    bot = std::make_shared<Bot>();
+    Log::header();
+    Log::info("Setup Complete!");
 }
 
 void loop() {
-  if (!overrideActive) {
     bot->update();
-  }
-  else {
-    bot->overrideControl();
-  }
-  delay(1);
+
+    delay(1);
 }

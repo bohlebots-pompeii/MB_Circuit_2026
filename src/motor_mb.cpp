@@ -5,25 +5,36 @@
 #include "motor_mb.h"
 #include <Arduino.h>
 #include <Wire.h>
-#include <config.h>
+#include <config/config.h>
+#include <util/Vector2.hpp>
+#include <numbers>
+
+double rotDelta = 0.0;
+
+void setRotDelta(const double delta) {
+  rotDelta = delta;
+  rotDelta = rotDelta / 180.0f * std::numbers::pi;
+}
 
 void pushData(const bool enable, const bool kick, int vx, int vy, int rot, int dribbler) {
   MotorCmd cmd{};
 
-  vx *= -1;
-  vy *= -1;
+  rot *= -1;
 
-  vx = constrain(vx, -100, 100);
-  vy = constrain(vy, -100, 100);
-  rot = constrain(rot, -100, 100);
+  auto global_drive = Vector2(vx, vy);
+  global_drive.rotate(-rotDelta * 2.0f); // compensate for rotation delta
+
+  const int vx_rot = constrain(global_drive.getX(), -70, 70);
+  const int vy_rot = constrain(global_drive.getY(), -70, 70);
+  rot = constrain(rot, -50, 50);
   dribbler = constrain(dribbler, -100, 100);
 
   cmd.flags = 0;
   if (enable) cmd.flags |= 0x01;
   if (kick)   cmd.flags |= 0x02;
 
-  cmd.vx   = static_cast<int8_t>(vx);
-  cmd.vy   = static_cast<int8_t>(vy);
+  cmd.vx   = static_cast<int8_t>(-vy_rot); // swapped for normal math
+  cmd.vy   = static_cast<int8_t>(-vx_rot);
   cmd.rot  = static_cast<int8_t>(rot);
   cmd.drib = static_cast<int8_t>(dribbler);
 

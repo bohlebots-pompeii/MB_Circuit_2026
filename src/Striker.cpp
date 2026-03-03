@@ -1,0 +1,361 @@
+//
+// Created by julius on 17.02.2026.
+//
+
+#include "Striker.h"
+#include <Arduino.h>
+#include <../include/util/Vector2.hpp>
+#include <motor_mb.h>
+#include <numbers>
+#include <elapsedMillis.h>
+#include <PID_v1.h>
+#include <util/MovingAverage.h>
+#include <util/helper.h>
+#include <config/config.h>
+
+namespace {
+    elapsedMillis hasBallTimer;
+    elapsedMillis ledTimer;
+    elapsedMillis positionYAvgTimer;
+
+    MovingAverage<double, 10> positionYAvg;
+
+    // y axis
+    double y_Setpoint = 0, y_Input = 0, y_Output = 0;
+    PID y_motion(&y_Input, &y_Output, &y_Setpoint, PIDConfig::Y_Kp, PIDConfig::Y_Ki, PIDConfig::Y_Kd, DIRECT);
+
+    // x axis
+    double x_Setpoint = 0, x_Input = 0, x_Output = 0;
+    PID x_motion(&x_Input, &x_Output, &x_Setpoint, PIDConfig::X_Kp, PIDConfig::X_Ki, PIDConfig::X_Kd, DIRECT);
+
+    // rotation
+    double rot_Setpoint = 0, rot_Input = 0, rot_Output = 0;
+    PID rot_motion(&rot_Input, &rot_Output, &rot_Setpoint, PIDConfig::Rot_Kp, PIDConfig::Rot_Ki, PIDConfig::Rot_Kd, DIRECT);
+
+    bool pidInitialized = false;
+
+    int getRotationControl(const float input) {
+        rot_Input = input;
+        if (std::abs(rot_Input) < PIDConfig::Rot_Deadzone) {
+            rot_Input = 0;
+        }
+        rot_motion.Compute();
+        return static_cast<int>(rot_Output);
+    }
+
+    void updateYMotion(const double y) {
+        y_Input = y;
+        if (isnan(y_Input)) y_Input = 0;
+        y_motion.Compute();
+    }
+
+    void updateXMotion(const double x) {
+        x_Input = x;
+        if (isnan(x_Input)) x_Input = 0;
+        x_motion.Compute();
+    }
+
+    void updatePositionYAvg(const double y) {
+        if (positionYAvgTimer > 32) {
+            positionYAvg.addValue(y);
+            positionYAvgTimer = 0;
+        }
+    }
+
+    void initPID() {
+        if (!pidInitialized) {
+            y_Setpoint = 0.0;
+            x_Setpoint = 0.0;
+            rot_Setpoint = 0.0;
+
+            rot_motion.SetMode(AUTOMATIC);
+            rot_motion.SetOutputLimits(PIDConfig::Rot_OutputMin, PIDConfig::Rot_OutputMax);
+            rot_motion.SetSampleTime(PIDConfig::Rot_SampleTime);
+
+            y_motion.SetMode(AUTOMATIC);
+            y_motion.SetOutputLimits(PIDConfig::Y_OutputMin, PIDConfig::Y_OutputMax);
+            y_motion.SetSampleTime(PIDConfig::Y_SampleTime);
+
+            x_motion.SetMode(AUTOMATIC);
+            x_motion.SetOutputLimits(PIDConfig::X_OutputMin, PIDConfig::X_OutputMax);
+            x_motion.SetSampleTime(PIDConfig::X_SampleTime);
+
+            pidInitialized = true;
+        }
+    }
+}
+
+Striker::Striker(std::shared_ptr<CM5> cm5, std::shared_ptr<Sensors> sensors, std::shared_ptr<Positioning> positioning)
+    : _cm5(std::move(cm5)), _sensors(std::move(sensors)), _positioning(std::move(positioning)) {
+    initPID();
+}
+
+Vector2 Striker::getAwayFromLineVec(const int speed) const {
+    Vector2 line = degToVec(_sensors->getLineRot());
+    line.rotate(std::numbers::pi);
+
+    Vector2 middlePointVector = _positioning->getMiddlePointVector();
+    middlePointVector.normalize();
+
+    line = line * 0.3f + middlePointVector * 0.7f;
+    line.normalize();
+
+    return line * speed;
+}
+
+Vector2 Striker::getMoveToCenterVec(const int speed) const {
+    Vector2 middlePointVector = _positioning->getMiddlePointVector();
+    const double distance = middlePointVector.getMagnitude();
+    middlePointVector.normalize();
+
+    constexpr double MAX_DISTANCE = 30.0f;
+    const double ratio = std::min(distance / MAX_DISTANCE, 1.0);
+    const double speedFactor = ratio * ratio;
+    const int dynamicSpeed = static_cast<int>(speed * speedFactor);
+
+    return middlePointVector * dynamicSpeed;
+}
+
+Vector2 Striker::getBallAlignedVec(const int speed) const {
+    auto target = _cm5->getTargetGoalVec();
+    target.normalize();
+    return target * speed;
+}
+
+Vector2 Striker::getBallApproachVec(const int speed) const {
+    auto target = _cm5->getBallVec();
+    target.normalize();
+    return target * speed;
+}
+
+Vector2 Striker::getBallPursuitVec() const {
+    const auto ballVec = _cm5->getBallVec();
+
+    const auto targetGoalVec = _cm5->getTargetGoalVec();
+
+    // ball pursuit on straight between ball and goal
+    Vector2 ballToGoal = targetGoalVec - ballVec;
+    ballToGoal.normalize();
+
+    constexpr double offsetDist = 20.0;
+    Vector2 idealPos = ballVec - ballToGoal * offsetDist;
+
+    Vector2 robotToIdeal = idealPos;
+    robotToIdeal.normalize();
+
+    Vector2 robotToBall = ballVec;
+    robotToBall.normalize();
+
+    const double dot = robotToIdeal.getX() * robotToBall.getX() + robotToIdeal.getY() * robotToBall.getY();
+
+    if (std::abs(_cm5->getBallRot()) > 60.0 && std::abs(dot) > 0.6) {
+        const Vector2 perpendicular(-ballToGoal.getY(), ballToGoal.getX());
+
+        const double cross = ballVec.getX() * targetGoalVec.getY() - ballVec.getY() * targetGoalVec.getX();
+        const double side = cross > 0 ? 1.0 : -1.0;
+
+        const double shiftStrength = std::clamp((dot - 0.5) * 2.0, 0.0, 1.0);
+        constexpr double maxShift = 30.0;
+
+        idealPos = idealPos + perpendicular * (side * maxShift * shiftStrength);
+    }
+
+    const Vector2 target = idealPos;
+    return target;
+}
+
+Vector2 Striker::getToNeutralPointVec() const {
+    const double globalX = _cm5->getGlobalX();
+    const double globalY = _cm5->getGlobalY();
+
+    Vector2 target;
+    bool targetReached = false;
+
+    if (globalY > 0) {
+        // check which point to drive to
+        target = getToPointVec(globalX, globalY, FieldConfig::NeutralPointPositionX, FieldConfig::NeutralPointPositionY);
+        targetReached = getPointReached(globalX, globalY, FieldConfig::NeutralPointPositionX, FieldConfig::NeutralPointPositionY);
+    } else {
+        target = getToPointVec(globalX, globalY, FieldConfig::NeutralPointPositionX, -FieldConfig::NeutralPointPositionY);
+        targetReached = getPointReached(globalX, globalY, FieldConfig::NeutralPointPositionX, -FieldConfig::NeutralPointPositionY);
+    }
+
+    if (targetReached) {
+        target = Vector2(0,0);
+    }
+
+    return target;
+}
+
+bool Striker::checkBallOnLine() const {
+    const double globalY = _cm5->getGlobalY();
+    const double ballRot = _cm5->getBallRot();
+    const double ballDist = _cm5->getBallDist();
+
+    const double ballRadians = ballRot * (std::numbers::pi / 180.0);
+    const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
+
+    if (globalY > FieldConfig::FieldLinePositionY && ballGlobalY > globalY) {
+        return true;
+    }
+
+    if (globalY < -FieldConfig::FieldLinePositionY && ballGlobalY < globalY) {
+        return true;
+    }
+
+    return false;
+}
+
+bool Striker::checkBallInPocket() const {
+    const double globalX = _cm5->getGlobalX();
+    const double globalY = _cm5->getGlobalY();
+    const double ballX = _cm5->getBallVec().getX();
+
+    if (!_cm5->getBallExists() && globalX > FieldConfig::FieldPocketPositionX) {
+        return true;
+    }
+
+    if (globalX > FieldConfig::FieldPocketPositionX && ballX > 0 && (globalY < -FieldConfig::FieldPocketPositionY || globalY > FieldConfig::FieldPocketPositionY)) {
+        return true;
+    }
+
+    return false;
+}
+
+void Striker::update() const {
+    constexpr int speed = 50.0f;
+    static bool kickOff = false;
+
+    updatePositionYAvg(_cm5->getGlobalY());
+    setRotDelta(_positioning->getRotationDelta());
+
+    /*
+    if (!kickOff && _sensors->getEna()) {
+        pushData(_sensors->getEna(), false, 50, 0, 0, 0);
+        delay(300);
+        kickOff = true;
+        pushData(_sensors->getEna(), true, 50, 0, 0, 0);
+        delay(100);
+    }
+    */
+
+    if (ledTimer > 200) {
+        _sensors->allLEDsOff();
+    }
+
+    Vector2 target;
+    double rotInput = 0;
+    bool usePID = true;
+    bool kick = false;
+
+    if (!Sensors::getHasBall()) {
+        hasBallTimer = 0;
+    }
+
+    // drive away from line
+    if (_sensors->getLineSeen()) {
+        target = getAwayFromLineVec(30);
+        if (checkBallOnLine() && std::abs(_cm5->getBallRot()) < 90.0) {
+            if (std::abs(_cm5->getHeading()) < 90.0) {
+                rotInput = _cm5->getBallRot();
+            }
+            else {
+                rotInput = _cm5->getHeading();
+            }
+        }
+        else {
+            rotInput = _cm5->getHeading();
+        }
+        usePID = false;
+    }
+
+    // drive to goal if the bot has the ball
+    else if (Sensors::getHasBall()) {
+        if (hasBallTimer > 50) {
+            target = getBallAlignedVec(speed);
+            rotInput = _cm5->getTargetGoalRot();
+
+            if (checkBallInPocket()) {
+                target = getToNeutralPointVec();
+                target.normalize();
+                target *= 30;
+                usePID = false;
+                rotInput = _cm5->getBallRot();
+            }
+
+            if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna()) {
+                kick = true;
+            }
+        }
+    }
+
+    // drive to midPoint if ball not seen
+    else if (!_cm5->getBallExists()) {
+        target = getMoveToCenterVec(speed);
+        rotInput = _cm5->getHeading();
+        usePID = false;
+    }
+
+    // else pursue ball
+    else {
+        // approach ball
+        if (std::abs(_cm5->getBallRot()) < 10 && _cm5->getBallDist() < 30.0) {
+            target = getBallApproachVec(30);
+            if (std::abs(_cm5->getHeading()) < 90.0) {
+                rotInput = _cm5->getBallRot();
+            }
+            else {
+                rotInput = _cm5->getHeading();
+            }
+            usePID = false;
+        }
+
+        // pursue ball
+        else {
+            // rotate to ball
+            if (checkBallOnLine() && std::abs(_cm5->getBallRot()) < 90.0) {
+                if (std::abs(_cm5->getHeading()) < 90.0) {
+                    rotInput = _cm5->getBallRot();
+                }
+                else {
+                    rotInput = _cm5->getHeading();
+                }
+                target = getBallApproachVec(15);
+                usePID = false;
+            }
+
+            // normal ball pursuit
+            else {
+                rotInput = _cm5->getTargetGoalRot();
+                target = getBallPursuitVec();
+            }
+        }
+    }
+
+    // update pids
+    const int rot = getRotationControl(static_cast<float>(rotInput));
+
+    updateXMotion(target.getX());
+    updateYMotion(target.getY());
+
+    float vx = 0;
+    float vy = 0;
+
+    if (usePID) {
+        vx = static_cast<float>(-x_Output);
+        vy = static_cast<float>(-y_Output);
+    } else {
+        vx = static_cast<float>(target.getX());
+        vy = static_cast<float>(target.getY());
+    }
+
+    _positioning->speedLimit(vx, vy, target);
+
+    if (std::abs(_cm5->getHeading()) > 80) {
+        vx = 0;
+        vy = 0;
+    }
+
+    pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, 100);
+}
+

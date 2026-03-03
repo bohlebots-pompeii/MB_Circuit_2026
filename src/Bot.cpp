@@ -4,143 +4,107 @@
 
 #include <Bot.h>
 #include <Arduino.h>
-#include <Vector2.hpp>
-#include <comms/CM5.h>
-#include <Sensors.h>
 #include <Wire.h>
 #include <memory>
 #include <motor_mb.h>
-#include <numbers>
-#include <iostream>
+#include <comms/esp-now.h>
 
 Bot::Bot() {
-  Wire.begin();
-  Serial.begin(115200);
-  Serial2.begin(115200, SERIAL_8N2, 16, 17);
+    Wire.begin();
+    Serial.begin(115200);
+    Serial2.begin(115200, SERIAL_8N2, 16, 17);
 
-  _cm5 = std::make_shared<CM5>();
-  _sensors = std::make_shared<Sensors>(_cm5);
+    // init pointers to classes
+    _cm5         = std::make_shared<CM5>();
+    _sensors     = std::make_shared<Sensors>(_cm5);
+    _positioning = std::make_shared<Positioning>(_cm5);
+    _striker     = std::make_unique<Striker>(_cm5, _sensors, _positioning);
+    _goalie      = std::make_unique<Goalie>(_cm5, _sensors, _positioning);
+    _gameState   = std::make_unique<GameStateHandler>(_sensors, _cm5);
 }
 
-Vector2 degreeToVector(const float degrees) {
-  const float radians = degrees * (PI / 180.0f);
-  return Vector2(cosf(radians), sinf(radians));
+void Bot::printPeerPacket() {
+    const auto& [globalX, globalY, heading, ballRot, ballDist, flags] = espNowGetPeerData();
+
+    Serial.println("=== Peer Packet ===");
+    Serial.print("globalX:      "); Serial.println(globalX);
+    Serial.print("globalY:      "); Serial.println(globalY);
+    Serial.print("heading:      "); Serial.println(heading);
+    Serial.print("ballRot:      "); Serial.println(ballRot);
+    Serial.print("ballDist:     "); Serial.println(ballDist);
+    Serial.print("running:      "); Serial.println(espNowGetFlag(flags, 0));
+    Serial.print("isGoalie:     "); Serial.println(espNowGetFlag(flags, 1));
+    Serial.print("seesLine:     "); Serial.println(espNowGetFlag(flags, 2));
+    Serial.print("ballValid:    "); Serial.println(espNowGetFlag(flags, 3));
+    Serial.print("switchWanted: "); Serial.println(espNowGetFlag(flags, 4));
+    Serial.println("=== Packet End ===");
 }
 
-void Bot::update() {
-  constexpr int speed = 30;
+void Bot::update() const {
+    static bool CM5_initialized = false;
 
-  _cm5->update();
-  _sensors->update();
+    _cm5->update();
+    _sensors->update();
+    _positioning->update();
 
-  // Check homing state first to override standard gameplay logic
-  if (isHoming) {
-    home();
-    return;
-  }
+    EspNowPacket toSend = {};
+    fillEspNowPacket(toSend);
+    espNowUpdate(toSend);
 
-  int rot = 0 - static_cast<int>(_cm5->getHeading()) / 4;
+    //printPeerPacket(); // debug
 
-  // --- Line Sensor Override Logic ---
-  // If the line sensor detects the boundary, prioritize moving away
-  if (_sensors->getLineSeen()) {
-    int vy_l = 0;
-    int vx_l = 0;
+    if (!_cm5->getCM5Running()) {
+        _sensors->haltLEDs();
+        pushData(false, false, 0, 0, 0, 0);
+        return;
+    }
 
-    // Calculate vector away from the line (rotate 180 degrees from line normal)
-    Vector2 line = degreeToVector(_sensors->getLineRot());
-    line.normalize();
-    line.rotate(std::numbers::pi);
+    if (_cm5->getCM5Running() != CM5_initialized) {
+        CM5_initialized = _cm5->getCM5Running();
+        _sensors->allLEDsOff();
+    }
 
-    vx_l = static_cast<int>(roundf(line.getY() * (speed + 10)));
-    vy_l = static_cast<int>(roundf(line.getX() * (speed + 10)));
+    _gameState->update();
 
-    pushData(_sensors->getEna(), false, vx_l, vy_l, rot, 0);
-    return;
-  }
+    if (!_sensors->getEna()) {
+        pushData(false, false, 0, 0, 0, 0);
+        return;
+    }
 
-  // --- Ball Tracking Logic ---
-  int16_t ballDist = _cm5->getBallDist();
-  const int16_t ballRot = _cm5->getBallRot();
-  const int16_t yellow_rot = _cm5->getYellowRot();
+    if (getSwitchWantedFromPeer()) {
+        // toggle role
+        _gameState->setRole(GameStateHandler::Role::GOALIE);
+        Serial.println("[GAMESTATE] Switching role due to peer request");
+    }
 
-  if (ballDist > 100) {
-    ballDist = 100;
-  }
-
-  // Calculate orbital shift to curve behind the ball
-  float shift;
-  if (ballDist != 0 && abs(ballRot) > 50.0f) {
-    // Avoid integer division by zero when ballDist is 1 (1/2 = 0)
-    shift = 15.0f / (ballDist / 2.0f);
-    shift = constrain(shift, 1.0, 3.0);
-  }
-  else {
-    shift = 1.0f;
-  }
-
-  Vector2 target = degreeToVector(ballRot * shift);
-  target.normalize();
-
-  // If ball is roughly in front, align with the yellow goal
-  if (abs(ballRot) < 15.0f) {
-    target = degreeToVector(yellow_rot);
-     rot = 0 - -yellow_rot / 2;
-  }
-
-  // Convert target vector to motor velocities (swap X/Y for omni kinematics)
-  const int vx = static_cast<int>(roundf(target.getY() * speed));
-  const int vy = static_cast<int>(roundf(target.getX() * speed));
-
-  Serial.print(vx);
-  Serial.print(" | ");
-  Serial.println(vy);
-
-  pushData(_sensors->getEna(), false, static_cast<int>(roundf(vx)), static_cast<int>(roundf(vy)), rot, 0);
+    if (_gameState->getRole() == GameStateHandler::Role::GOALIE) {
+        _goalie->update();
+    } else {
+        _striker->update();
+    }
 }
 
-void Bot::overrideControl() {
-  pushData(false, false, 0, 0, 0, 0);
-}
+void Bot::fillEspNowPacket(EspNowPacket& pkt) const {
+    pkt.globalX  = _cm5->getGlobalX();
+    pkt.globalY  = _cm5->getGlobalY();
+    pkt.heading  = _cm5->getHeading();
+    pkt.ballRot  = _cm5->getBallRot();
+    pkt.ballDist = _cm5->getBallDist();
 
-void Bot::home() {
-  constexpr float TARGET_X = -50.0f;
-  constexpr float TARGET_Y = -90.0f;
-  constexpr float KP_POS = 1.5f;
-  constexpr float KP_ROT = 0.8f;
-  constexpr float MAX_SPEED = 40.0f;
-  constexpr float MAX_ROT_SPEED = 50.0f;
+    const bool running   = _gameState->isRunning();
+    const bool isGoalie  = _gameState->getRole() == GameStateHandler::Role::GOALIE;
+    const bool seesLine  = _sensors->getLineSeen();
+    const bool ballValid = _cm5->getBallExists();
+    const bool switchWanted = _goalie->getSwitchWanted();
 
-  const Vector2 pos = _sensors->getPosition();
-  const float error_x = TARGET_X - pos.getX();
-  const float error_y = TARGET_Y - pos.getY();
-  const float distance = sqrtf(error_x * error_x + error_y * error_y);
+    if (switchWanted) {
+        _gameState->setRole(GameStateHandler::Role::STRIKER);
+    }
 
-  if (constexpr float GOAL_RADIUS = 3.0f; distance < GOAL_RADIUS) {
-    isHoming = false;
-    pushData(false, false, 0, 0, 0, 0);
-    return;
-  }
-
-  float world_vx = error_x * KP_POS;
-  float world_vy = error_y * KP_POS;
-
-  if (const float speed = sqrtf(world_vx * world_vx + world_vy * world_vy); speed > MAX_SPEED) {
-    world_vx = world_vx / speed * MAX_SPEED;
-    world_vy = world_vy / speed * MAX_SPEED;
-  }
-
-  const float heading = _cm5->getHeading();
-  const float theta = heading * (PI / 180.0f);
-  const float cos_theta = cosf(theta);
-  const float sin_theta = sinf(theta);
-
-  const float local_vx = cos_theta * world_vx + sin_theta * world_vy;
-  const float local_vy = -sin_theta * world_vx + cos_theta * world_vy;
-
-  float rot_speed = 0 - heading / 4;
-  rot_speed = constrain(rot_speed, -MAX_ROT_SPEED, MAX_ROT_SPEED);
-
-  // Use sensor enable flag instead of hardcoded true for safety
-  pushData(_sensors->getEna(), false, static_cast<int>(local_vx), static_cast<int>(local_vy), static_cast<int>(rot_speed), 0);
+    pkt.flags = 0;
+    espNowSetFlag(pkt.flags, 0, running);
+    espNowSetFlag(pkt.flags, 1, isGoalie);
+    espNowSetFlag(pkt.flags, 2, seesLine);
+    espNowSetFlag(pkt.flags, 3, ballValid);
+    espNowSetFlag(pkt.flags, 4, switchWanted);
 }

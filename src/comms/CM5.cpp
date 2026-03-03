@@ -3,38 +3,42 @@
 //
 #include <comms/CM5.h>
 #include <Arduino.h>
+#include <chrono>
 #include <cmath>
 #include <cstring>
-#include <numbers>
+#include <util/helper.h>
 
 Detection detections[6]; // memory because memory issues
 Object objects[6] = {};
 int num_detections = 0;
 float heading = 0.0f;
 
+constexpr float mirror_cx = 320.0f;
+constexpr float mirror_cy = 320.0f;
+
 static CalibPoint calib[] = {
-  {  81.0f,  10.0f },
-  { 125.0f,  20.0f },
-  { 147.0f,  30.0f },
-  { 160.0f,  40.0f },
-  { 174.0f,  50.0f },
-  { 181.7f, 60.0f },
-  { 189.9f, 70.0f },
-  { 197.2f, 80.0f },
-  { 201.4f, 90.0f },
-  { 206.0f,100.0f },
-  { 209.0f,110.0f },
-  { 210.0f,120.0f },
-  { 211.5f,130.0f },
-  { 211.0f,140.0f },
-  { 216.5f,150.0f },
-  { 217.0f,160.0f },
-  { 219.5f,170.0f },
-  { 221.0f,180.0f },
-  { 223.0f,190.0f },
-  { 224.0f,200.0f },
-  { 227.15f,210.0f },
-  { 229.0f,220.0f }
+  {  75.0f,  10.0f },
+  { 100.0f,  20.0f },
+  { 130.0f,  30.0f },
+  { 148.0f,  40.0f },
+  { 161.0f,  50.0f },
+  { 169.0f, 60.0f },
+  { 176.9f, 70.0f },
+  { 183.7f, 80.0f },
+  { 188.0f, 90.0f },
+  { 191.6f,100.0f },
+  { 194.5f,110.0f },
+  { 195.8f,120.0f },
+  { 197.2f,130.0f },
+  { 198.7f,140.0f },
+  { 200.8f,150.0f },
+  { 202.7f,160.0f },
+  { 203.9f,170.0f },
+  { 206.4f,180.0f },
+  { 208.35f,190.0f },
+  { 211.4f,200.0f },
+  { 213.8f,210.0f },
+  { 215.8f,220.0f }
 };
 
 static int CALIB_N = std::size(calib);
@@ -54,13 +58,12 @@ float CM5::pixelToCm(const float pixel) {
   return 0.0f;
 }
 
+// function to calibrate mirror
 void CM5::calibMirror(const Detection* det, const int num_det) {
-  constexpr float cx = 320.0f; // screen center
-  constexpr float cy = 320.0f;
   for (int i = 0; i < num_det; ++i) {
     if (det[i].label == 1 || det[i].label == 2) {
-      const float dx = det[i].center[0] - cx;
-      const float dy = det[i].center[1] - cy;
+      const float dx = det[i].center[0] - mirror_cx;
+      const float dy = mirror_cy - det[i].center[1];
 
       const float r = sqrtf(dx * dx + dy * dy);
       Serial.println(r);
@@ -68,13 +71,7 @@ void CM5::calibMirror(const Detection* det, const int num_det) {
   }
 }
 
-void CM5::computeCenters(Detection* det, const int num_det) {
-  for (int i = 0; i < num_det; ++i) {
-    det[i].center[0] = (det[i].bbox[0] + det[i].bbox[2]) * 0.5f;
-    det[i].center[1] = (det[i].bbox[1] + det[i].bbox[3]) * 0.5f;
-  }
-}
-
+// convert from half-float to float32 (wikipedia)
 float CM5::halfToFloat(const uint16_t h) {
   uint16_t h_exp = (h & 0x7C00) >> 10;
   uint16_t h_sig = h & 0x03FF;
@@ -110,91 +107,118 @@ float CM5::halfToFloat(const uint16_t h) {
   return result;
 }
 
-void CM5::computeRotations(const Detection* det, const int num_det) {
-  constexpr float cx = 320.0f; // screen center
-  constexpr float cy = 320.0f;
+void CM5::computeCenters(Detection* det, const int num_det) {
   for (int i = 0; i < num_det; ++i) {
-    const float dx = det[i].center[0] - cx; // position relative to center
-    const float dy = det[i].center[1] - cy;
-    const float angle_rad = atan2f(dx, dy); // rotation relative to center
-    objects[i].rotation_deg = angle_rad * 180.0f / std::numbers::pi; // to deg
+    // swapped to match my coordinate system
+    det[i].center[1] = (det[i].bbox[0] + det[i].bbox[2]) * 0.5f;
+    det[i].center[0] = (det[i].bbox[1] + det[i].bbox[3]) * 0.5f;
+  }
+}
+
+// compute rotation of object relative to image center
+void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) {
+  // reset
+  targetGoalDist = 0;
+  targetGoalRot = 0;
+  ownGoalDist = 0;
+  ownGoalRot = 0;
+  ballDist = 0;
+  ballRot = 0;
+
+  for (int i = 0; i < num_det; ++i) {
+    // difference between img center and obj center
+    const float dx = det[i].center[0] - mirror_cx;
+    const float dy = det[i].center[1] - mirror_cy;
+
+    // compute rotation of object to img center
+    const float angle_rad = atan2f(dy, dx);
+    const auto angle_deg = static_cast<float>(toDeg(angle_rad));
+    objects[i].rotation_deg = angle_deg;
+
+    // compute distances of object from image center and estimate cm
+    const float dist_px = pythagoreanf(dx, dy);
+    const float dist_cm = pixelToCm(dist_px);
+    objects[i].dist_cm = dist_cm;
+
     objects[i].label = det[i].label;
-    if (det[i].label == 1) {
-      blueRot = objects[i].rotation_deg;
+    if (det[i].label == targetGoalLabel) {
+      targetGoalRot = angle_deg;
+      targetGoalDist = dist_cm;
     }
-    else if (det[i].label == 2) {
-      yellowRot = objects[i].rotation_deg;
+    else if (det[i].label == ownGoalLabel) {
+      ownGoalRot = angle_deg;
+      ownGoalDist = dist_cm;
     }
     else if (det[i].label == 3) {
-      ballRot = objects[i].rotation_deg;
+      ballRot = angle_deg;
+      ballDist = dist_cm;
     }
   }
 }
 
-void CM5::computeDistances(const Detection* det, const int num_det) {
-  constexpr float cx = 320.0f; // mirror center
-  constexpr float cy = 320.0f;
+void CM5::computeAwayFromOwnGoalAngle() {
+  float awayAngle = ownGoalRot + 180.0f;
+  if (awayAngle > 180.0f) awayAngle -= 360.0f;
+  if (awayAngle < -180.0f) awayAngle += 360.0f;
+  awayFromOwnGoalAngle = awayAngle;
+}
+
+// correction estimate for y axis pos
+float correction(const float x) {
+  return static_cast<float>(7.59502963e-06 * pow(x, 3) - 1.82918911e-03 * pow(x, 2) + 8.87600747e-01 * x - 4.79815488e-02);
+}
+
+void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
+  float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+  bool foundOwnGoal = false, foundTargetGoal = false;
 
   for (int i = 0; i < num_det; ++i) {
-    const float dx = det[i].center[0] - cx;
-    const float dy = det[i].center[1] - cy;
-
-    const float r = sqrtf(dx * dx + dy * dy);
-
-    const float dist = pixelToCm(r);
-    objects[i].dist_cm = dist;
-
-    const float angle_rad = atan2f(dx, dy);
-
-    // position rel to robot
-    objects[i].rel_x = dist * cosf(angle_rad);
-    objects[i].rel_y = dist * sinf(angle_rad);
-
-    if (objects[i].label == 1) {
-      blueDist = dist;
-    }
-    else if (objects[i].label == 2) {
-      yellowDist = dist;
-    }
-    else if (objects[i].label == 3) {
-      ballDist = dist;
-    }
-  }
-}
-
-void CM5::computeHeadingFromPolar(const Detection* det, const int num_det) {
-  float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
-  bool foundBlue = false, foundYellow = false;
-
-  for (int i = 0; i < num_det; i++) {
-    const float theta = objects[i].rotation_deg * std::numbers::pi / 180.0f;
+    float theta = objects[i].rotation_deg; // deg
+    theta = static_cast<float>(toRad(theta)); // rad
     const float d = objects[i].dist_cm;
-    const float x = d * sinf(theta);
-    const float y = d * cosf(theta);
+    const float x = d * cosf(theta);
+    const float y = d * sinf(theta);
 
-    if (det[i].label == 1) { // blue
-      x1 = x; y1 = y; foundBlue = true;
-    } else if (det[i].label == 2) { // yellow
-      x2 = x; y2 = y; foundYellow = true;
+    if (det[i].label == ownGoalLabel) { // own goal
+      x1 = x; y1 = y; foundOwnGoal = true;
+    } else if (det[i].label == targetGoalLabel) { // target goal
+      x2 = x; y2 = y; foundTargetGoal = true;
     }
   }
 
-  if (foundBlue && foundYellow) {
+  if (foundOwnGoal && foundTargetGoal) {
     const float dx = x2 - x1;
     const float dy = y2 - y1;
-    heading = atan2f(dx, dy) * 180.0f / std::numbers::pi;
-    heading *= -1.0f; // adjust direction
+    const float h = atan2f(dy, dx);
+    heading = static_cast<float>(toDeg(h));
+
+    const float mx = (x1 + x2) * 0.5f;
+    const float my = (y1 + y2) * 0.5f;
+
+    const float x = mx * cosf(-h) - my * sinf(-h);
+    const float y = mx * sinf(-h) + my * cosf(-h);
+    g_x = -x;
+    g_y = -y;
+  }
+  else if (!foundOwnGoal && foundTargetGoal) {
+    heading = targetGoalRot;
+  }
+  else {
+    heading = ownGoalRot + 180.0f;
+    if (heading > 180.0f) heading -= 360.0f;
+    if (heading < -180.0f) heading += 360.0f;
   }
 }
-
 
 void CM5::update() {
   if (Serial2.available()) {
+    lastUpdateTimer = 0;
     // read header
     const int num_detections_in = Serial2.read();
 
     if (num_detections_in == 0) {
       num_detections = 0;
+      Serial.println("WARN: No detections received.");
       return;
     }
 
@@ -227,16 +251,19 @@ void CM5::update() {
       }
     }
 
+    // calibMirror(detections, stored_detections);
     computeCenters(detections, stored_detections);
-    computeRotations(detections, stored_detections);
-    computeDistances(detections, stored_detections);
-
-    //calibMirror(public_detections, stored_detections);
-
-    computeHeadingFromPolar(detections, stored_detections);
+    computeRotationsAndDistances(detections, stored_detections);
+    computeHeadingAndPosition(detections, stored_detections);
+    computeAwayFromOwnGoalAngle();
   }
 }
 
-float CM5::getHeading() const {
-  return heading;
+void CM5::setTargetGoal(const uint8_t goalLabel) {
+  if (goalLabel < 1 || goalLabel > 2) {
+    Serial.println("ERROR: Goal label incorrect");
+    return;
+  }
+  targetGoalLabel = goalLabel;
+  ownGoalLabel = goalLabel == 1 ? 2 : 1;
 }
