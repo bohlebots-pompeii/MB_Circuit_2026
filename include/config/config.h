@@ -35,7 +35,7 @@ namespace PIDConfig {
     constexpr double Y_Kd = 0.05;
     constexpr double Y_OutputMin = -70.0;
     constexpr double Y_OutputMax = 70.0;
-    constexpr int Y_SampleTime = 30;
+    constexpr int Y_SampleTime = 21;
 
     // X axis motion PID
     constexpr double X_Kp = 1.6;
@@ -43,7 +43,7 @@ namespace PIDConfig {
     constexpr double X_Kd = 0.05;
     constexpr double X_OutputMin = -70.0;
     constexpr double X_OutputMax = 70.0;
-    constexpr int X_SampleTime = 30;
+    constexpr int X_SampleTime = 21;
 
     // Rotation PID
     constexpr double Rot_Kp = 0.5;
@@ -51,7 +51,7 @@ namespace PIDConfig {
     constexpr double Rot_Kd = 0.05;
     constexpr double Rot_OutputMin = -50.0;
     constexpr double Rot_OutputMax = 50.0;
-    constexpr int Rot_SampleTime = 30;
+    constexpr int Rot_SampleTime = 21;
 
     // Rotation deadzone
     constexpr double Rot_Deadzone = 5.0;

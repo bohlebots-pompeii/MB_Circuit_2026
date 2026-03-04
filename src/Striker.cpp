@@ -402,4 +402,3 @@ void Striker::update() const {
 
     pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, 100);
 }
-
