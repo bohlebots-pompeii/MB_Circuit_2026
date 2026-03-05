@@ -67,6 +67,7 @@ namespace FieldConfig {
 
     constexpr double FieldPocketPositionX = 60.0;
     constexpr double FieldPocketPositionY = 40.0;
+    constexpr double FieldPocketAngle = 45.0;
 
     constexpr double NeutralPointPositionX = 70.0;
     constexpr double NeutralPointPositionY = 40.0;

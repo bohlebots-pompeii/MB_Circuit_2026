@@ -17,6 +17,7 @@ namespace {
     elapsedMillis hasBallTimer;
     elapsedMillis ledTimer;
     elapsedMillis positionYAvgTimer;
+    elapsedMillis neutralPointTimer;
 
     MovingAverage<double, 10> positionYAvg;
 
@@ -227,6 +228,7 @@ Vector2 Striker::getToNeutralPointVec() const {
         target = Vector2(0,0);
     }
 
+    neutralPointTimer = 0;
     return target;
 }
 
@@ -250,15 +252,20 @@ bool Striker::checkBallOnLine() const {
 }
 
 bool Striker::checkBallInPocket() const {
-    const double globalX = _cm5->getGlobalX();
-    const double globalY = _cm5->getGlobalY();
     const double ballX = _cm5->getBallVec().getX();
 
-    if (!_cm5->getBallExists() && globalX > FieldConfig::FieldPocketPositionX) {
+    float globalGoalDir = _cm5->getTargetGoalRot() - _cm5->getHeading();
+    while (globalGoalDir > 180) globalGoalDir -= 360;
+    while (globalGoalDir < -180) globalGoalDir += 360;
+
+    Serial.println(ballX);
+    Serial.println(globalGoalDir);
+
+    if (!_cm5->getBallExists() && (globalGoalDir > FieldConfig::FieldPocketAngle || globalGoalDir < -FieldConfig::FieldPocketAngle)) {
         return true;
     }
 
-    if (globalX > FieldConfig::FieldPocketPositionX && ballX > 0 && (globalY < -FieldConfig::FieldPocketPositionY || globalY > FieldConfig::FieldPocketPositionY)) {
+    if (ballX > 0 && (globalGoalDir > FieldConfig::FieldPocketAngle || globalGoalDir < -FieldConfig::FieldPocketAngle)) {
         return true;
     }
 
@@ -310,21 +317,30 @@ void Striker::update() const {
         else {
             rotInput = _cm5->getHeading();
         }
+
+        if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna() && _sensors->getHasBall()) {
+            kick = true;
+        }
         usePID = false;
     }
 
     // drive to goal if the bot has the ball
     else if (Sensors::getHasBall()) {
         if (hasBallTimer > 50) {
-            target = getBallAlignedVec(speed);
-            rotInput = _cm5->getTargetGoalRot();
+            if (_cm5->getTargetGoalDist() > 100) {
+                target = getBallAlignedVec(speed);
+            }
+            else {
+                target = getBallAlignedVec(30);
+            }
+            rotInput = _cm5->getTargetGoalRot() / 2;
 
-            if (checkBallInPocket()) {
-                target = getToNeutralPointVec();
+            if (checkBallInPocket() || neutralPointTimer < 1500) {
+                target = _positioning->getMiddlePointVector();
                 target.normalize();
                 target *= 30;
                 usePID = false;
-                rotInput = _cm5->getBallRot();
+                rotInput = _cm5->getAwayFromOwnGoalAngle() / 2;
             }
 
             if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna()) {
@@ -357,7 +373,7 @@ void Striker::update() const {
         // pursue ball
         else {
             // rotate to ball
-            if (checkBallOnLine() && std::abs(_cm5->getBallRot()) < 90.0) {
+            if ((checkBallOnLine() || checkBallInPocket()) && std::abs(_cm5->getBallRot()) < 90.0) {
                 if (std::abs(_cm5->getHeading()) < 90.0) {
                     rotInput = _cm5->getBallRot();
                 }
