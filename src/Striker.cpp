@@ -109,7 +109,7 @@ void Striker::updateRandomWalk() const {
         const int vy = line.getY();
         wasOnLine = true;
         lastLineRot = _sensors->getLineRot();
-        pushData(ena, false, static_cast<int>(round(vx)), static_cast<int>(round(vy)), 0, 0);
+        pushData(ena, false, static_cast<int>(round(vx)), static_cast<int>(round(vy)), 0, 0, true);
         return;
     }
 
@@ -131,7 +131,7 @@ void Striker::updateRandomWalk() const {
     const float vx = std::cos(rad) * static_cast<float>(speed);
     const float vy = std::sin(rad) * static_cast<float>(speed);
 
-    pushData(ena, false, static_cast<int>(round(vx)), static_cast<int>(round(vy)), 0, 0);
+    pushData(ena, false, static_cast<int>(round(vx)), static_cast<int>(round(vy)), 0, 0, true);
 }
 
 Vector2 Striker::getAwayFromLineVec(const int speed) const {
@@ -237,7 +237,7 @@ bool Striker::checkBallOnLine() const {
     const double ballRot = _cm5->getBallRot();
     const double ballDist = _cm5->getBallDist();
 
-    const double ballRadians = ballRot * (std::numbers::pi / 180.0);
+    const double ballRadians = toRad(ballRot);
     const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
 
     if (globalY > FieldConfig::FieldLinePositionY && ballGlobalY > globalY) {
@@ -294,10 +294,16 @@ void Striker::update() const {
         _sensors->allLEDsOff();
     }
 
+    // flags
+    bool usePID = true;
+    bool useRotPID = true;
+    bool kick = false;
+    bool useRotDelta = true;
+
+    // inits
+    int rot = 0;
     Vector2 target;
     double rotInput = 0;
-    bool usePID = true;
-    bool kick = false;
 
     if (!Sensors::getHasBall()) {
         hasBallTimer = 0;
@@ -311,11 +317,11 @@ void Striker::update() const {
                 rotInput = _cm5->getBallRot();
             }
             else {
-                rotInput = _cm5->getHeading();
+                rotInput = 0;
             }
         }
         else {
-            rotInput = _cm5->getHeading();
+            rotInput = 0;
         }
 
         if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna() && _sensors->getHasBall()) {
@@ -326,21 +332,30 @@ void Striker::update() const {
 
     // drive to goal if the bot has the ball
     else if (Sensors::getHasBall()) {
-        if (hasBallTimer > 50) {
-            if (_cm5->getTargetGoalDist() > 100) {
-                target = getBallAlignedVec(speed);
-            }
-            else {
-                target = getBallAlignedVec(30);
-            }
-            rotInput = _cm5->getTargetGoalRot() / 2;
+        if (hasBallTimer > 100) {
 
-            if (checkBallInPocket() || neutralPointTimer < 1500) {
-                target = _positioning->getMiddlePointVector();
+            // get ball out of pocket
+            if (checkBallInPocket() || neutralPointTimer < 2500) {
+                target = Vector2(-10, 0);
                 target.normalize();
-                target *= 30;
+                target *= 20;
+                rotInput = 0;
                 usePID = false;
-                rotInput = _cm5->getAwayFromOwnGoalAngle() / 2;
+            }
+
+            // align with goal and shoot
+            else {
+                const double target_angle = _cm5->getTargetGoalRot();
+                if (std::abs(target_angle) > 10) {
+                    useRotPID = false;
+                    if (target_angle < 0) {
+                        target = Vector2(0,0);
+                        rot = 20;
+                    } else {
+                        target = Vector2(0,0);
+                        rot = -20;
+                    }
+                }
             }
 
             if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna()) {
@@ -393,7 +408,9 @@ void Striker::update() const {
     }
 
     // update pids
-    const int rot = getRotationControl(static_cast<float>(rotInput));
+    if (useRotPID) {
+        rot = getRotationControl(static_cast<float>(rotInput));
+    }
 
     updateXMotion(target.getX());
     updateYMotion(target.getY());
@@ -411,10 +428,17 @@ void Striker::update() const {
 
     _positioning->speedLimit(vx, vy, target);
 
-    if (std::abs(_cm5->getHeading()) > 80) {
-        vx = 0;
-        vy = 0;
+    if (std::abs(_cm5->getHeading()) > 100) {
+        vx *= 0.3;
+        vy *= 0.3;
     }
 
-    pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, 100);
+    int drib;
+    if (target.getX() > 0) {
+        drib = 50;
+    } else {
+        drib = 100;
+    }
+
+    pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, drib, useRotDelta);
 }

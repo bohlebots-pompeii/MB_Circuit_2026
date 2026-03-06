@@ -54,7 +54,7 @@ namespace PIDConfig {
     constexpr int Rot_SampleTime = 21;
 
     // Rotation deadzone
-    constexpr double Rot_Deadzone = 5.0;
+    constexpr double Rot_Deadzone = 1.0;
 }
 
 namespace FieldConfig {
@@ -67,7 +67,7 @@ namespace FieldConfig {
 
     constexpr double FieldPocketPositionX = 60.0;
     constexpr double FieldPocketPositionY = 40.0;
-    constexpr double FieldPocketAngle = 45.0;
+    constexpr double FieldPocketAngle = 40.0;
 
     constexpr double NeutralPointPositionX = 70.0;
     constexpr double NeutralPointPositionY = 40.0;

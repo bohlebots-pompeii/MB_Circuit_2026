@@ -14,7 +14,7 @@ struct __attribute__((packed)) MotorCmd {
   int8_t  drib;    // -100 .. 100
 };
 
-void pushData(bool enable, bool kick, int vx, int vy, int rot, int dribbler);
+void pushData(bool enable, bool kick, int vx, int vy, int rot, int dribbler, bool useRotDelta);
 
 void setRotDelta(double delta);
 #endif //BOHLEBOTS_2026_I2C_H

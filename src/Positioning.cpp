@@ -61,7 +61,7 @@ void Positioning::updateMiddlePointVector() {
 }
 
 void Positioning::updateRotationDelta() {
-  if (rotationDeltaTimer < 32) {
+  if (rotationDeltaTimer < 21) {
     return;
   }
   rotationDeltaTimer = 0;
@@ -71,7 +71,7 @@ void Positioning::updateRotationDelta() {
 }
 
 void Positioning::updateVelocity() {
-  if (velocityTimer < 32) {
+  if (velocityTimer < 21) {
     return;
   }
   velocityTimer = 0;

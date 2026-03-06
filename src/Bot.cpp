@@ -55,7 +55,7 @@ void Bot::update() const {
 
     if (!_cm5->getCM5Running()) {
         _sensors->haltLEDs();
-        pushData(false, false, 0, 0, 0, 0);
+        pushData(false, false, 0, 0, 0, 0, false);
         return;
     }
 
@@ -67,7 +67,7 @@ void Bot::update() const {
     _gameState->update();
 
     if (!_sensors->getEna()) {
-        pushData(false, false, 0, 0, 0, 0);
+        pushData(false, false, 0, 0, 0, 0, false);
         return;
     }
 

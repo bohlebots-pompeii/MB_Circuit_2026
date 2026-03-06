@@ -15,19 +15,24 @@ class Goalie {
 public:
     Goalie(std::shared_ptr<CM5> cm5, std::shared_ptr<Sensors> sensors, std::shared_ptr<Positioning> positioning);
 
-    void update() const;
+    void update();
 
     [[nodiscard]] bool getSwitchWanted() const;
+
 private:
     std::shared_ptr<CM5> _cm5;
     std::shared_ptr<Sensors> _sensors;
     std::shared_ptr<Positioning> _positioning;
 
+    Vector2 _ballVelo;
+
     // Helper functions
+    void updateBallVelo();
     [[nodiscard]] Vector2 getAwayFromLineVec(int speed) const;
     [[nodiscard]] Vector2 driveOnLine(const Vector2& target) const;
     [[nodiscard]] Vector2 getMoveToCenterVec(int speed) const;
     [[nodiscard]] Vector2 getHalfCircleTarget() const;
+    [[nodiscard]] Vector2 getBallVelo() const { return _ballVelo; }
 };
 
 #endif //BOT_2026_GOALIE_H

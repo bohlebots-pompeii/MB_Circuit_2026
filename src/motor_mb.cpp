@@ -16,13 +16,13 @@ void setRotDelta(const double delta) {
   rotDelta = rotDelta / 180.0f * std::numbers::pi;
 }
 
-void pushData(const bool enable, const bool kick, int vx, int vy, int rot, int dribbler) {
+void pushData(const bool enable, const bool kick, const int vx, const int vy, int rot, int dribbler, const bool useRotDelta) {
   MotorCmd cmd{};
 
   rot *= -1;
 
   auto global_drive = Vector2(vx, vy);
-  global_drive.rotate(-rotDelta * 2.0f); // compensate for rotation delta
+  if (useRotDelta) { global_drive.rotate(-rotDelta * 2.0f); } // compensate for rotation delta
 
   const int vx_rot = constrain(global_drive.getX(), -70, 70);
   const int vy_rot = constrain(global_drive.getY(), -70, 70);
