@@ -57,6 +57,9 @@ private:
 
     void applyRoleLED()   const;
     void applyTargetLED() const;
+    void saveToEeprom()   const;
+
+    bool _restoredFromEeprom = false;
 
     [[nodiscard]] int targetColor() const {
         return _targetIsYellow ? Sensors::YELLOW : Sensors::BLUE;

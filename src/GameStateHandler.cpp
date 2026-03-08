@@ -4,10 +4,24 @@
 
 #include "../include/GameStateHandler.h"
 #include <Arduino.h>
+#include "util/GameStateStore.h"
 
 GameStateHandler::GameStateHandler(std::shared_ptr<Sensors> sensors, std::shared_ptr<CM5> cm5)
     : _sensors(std::move(sensors)), _cm5(std::move(cm5)) {
-    _cm5->setTargetGoal(1);
+
+    const auto [valid, role, targetGoal] = GameStateStore::load();
+    if (valid) {
+        _role           = role    ? Role::STRIKER : Role::GOALIE;
+        _targetIsYellow = targetGoal != 0;
+        _cm5->setTargetGoal(_targetIsYellow ? 2 : 1);
+        _sensors->setEna(true);
+        _state              = State::RUNNING;
+        _restoredFromEeprom = true;
+        Serial.println("[GameState] Resumed from EEPROM.");
+    } else {
+        _cm5->setTargetGoal(1);
+    }
+
     applyTargetLED();
 }
 
@@ -74,6 +88,7 @@ void GameStateHandler::handleRoleSelect() {
         _sensors->setEna(true);
         _state = State::RUNNING;
         applyRoleLED();
+        saveToEeprom();  // persist so we survive a power blip
     }
 
     _lastLeft  = left;
@@ -90,6 +105,7 @@ void GameStateHandler::handleRunning() {
         _state = State::ROLE_SELECT;
         _sensors->allLEDsOff();
         applyRoleLED();
+        GameStateStore::clear();  // deliberate stop – don't auto-resume
         _lastLeft  = left;
         _lastRight = right;
         return;
@@ -107,3 +123,10 @@ void GameStateHandler::applyRoleLED() const {
 void GameStateHandler::applyTargetLED() const {
     _sensors->setLED(0, 2, targetColor());
 }
+
+void GameStateHandler::saveToEeprom() const {
+    const uint8_t roleVal   = (_role == Role::STRIKER) ? 1 : 0;
+    const uint8_t targetVal = _targetIsYellow ? 1 : 0;
+    GameStateStore::save(roleVal, targetVal);
+}
+

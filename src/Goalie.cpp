@@ -19,10 +19,6 @@ namespace {
     elapsedMillis ballMovementTimer;
     elapsedMillis drivingToBallTimer;
     elapsedMillis switchWantedCooldownTimer;
-    elapsedMillis ballVelocityTimer;
-
-    Vector2 _lastBallVec(0,0);
-    Vector2 _lastBotVec(0,0);
 
     // y axis
     double y_Setpoint = 0, y_Input = 0, y_Output = 0;
@@ -177,8 +173,9 @@ Vector2 Goalie::getHalfCircleTarget() const {
 }
 
 bool Goalie::getSwitchWanted() const {
-
-    return false; // debug
+    if (!USE_COMMUNICATION) { // if not used
+        return false;
+    }
 
     const auto& [_globalX, _globalY, _heading, _ballRot, _ballDist, _flags] = espNowGetPeerData();
 
@@ -219,37 +216,10 @@ bool Goalie::getSwitchWanted() const {
     return false;
 }
 
-void Goalie::updateBallVelo() {
-    if (ballVelocityTimer < 21) {
-        return;
-    }
-
-    const double dt = static_cast<double>(ballVelocityTimer) / 1000.0;
-
-    const Vector2 _ballVec = _cm5->getBallVec();
-
-    const Vector2 currentBotVec = _positioning->getMiddlePointVector();
-    const Vector2 _botVelo = (currentBotVec - _lastBotVec) * (1.0 / dt);
-    _lastBotVec = currentBotVec;
-
-    const Vector2 _apparentDelta = _ballVec - _lastBallVec;
-
-    const Vector2 trueDelta = _apparentDelta - _botVelo * dt;
-
-    constexpr double alpha = 0.3;
-    _ballVelo = _ballVelo * (1.0 - alpha) + trueDelta * (1.0 / dt) * alpha;
-
-    _lastBallVec = _ballVec;
-    ballVelocityTimer = 0;
-}
-
 void Goalie::update() {
     static bool CM5_initialized = false;
     static Vector2 lastBallVec(0, 0);
     static bool drivingToBall = false;
-
-    Serial.println(getBallVelo().getX());
-    Serial.println(getBallVelo().getY());
 
     int dribbler = 0;
 
@@ -264,12 +234,11 @@ void Goalie::update() {
         _sensors->allLEDsOff();
     }
 
-    if (!_sensors->getHasBall()) { hasBallTimer = 0;}
+    if (!Sensors::getHasBall()) { hasBallTimer = 0;}
 
     if (_cm5->getBallDist() < 40 && _cm5->getBallDist() != 0) { dribbler = 100; }
 
     if (_cm5->getBallExists()) {
-        updateBallVelo();
         const Vector2 currentBallVec = _cm5->getBallVec();
         const Vector2 diff = currentBallVec - lastBallVec;
 
@@ -302,7 +271,16 @@ void Goalie::update() {
     // drive away from line
     if (_sensors->getLineSeen()) {
         if (_sensors->getProgress() < 16) {
-            const Vector2 desiredTarget = getHalfCircleTarget();
+            Vector2 desiredTarget;
+            if (_cm5->getBallExists()) {
+                desiredTarget = getHalfCircleTarget();
+            }
+            else {
+                const double globalX = _cm5->getGlobalX();
+                const double globalY = _cm5->getGlobalY();
+
+                desiredTarget = getToPointVec(globalX, globalY, FieldConfig::GoalNeutralPointPositionX, 0);
+            }
 
             target = driveOnLine(desiredTarget);
         } else {
@@ -311,6 +289,12 @@ void Goalie::update() {
 
         rotInput = _cm5->getAwayFromOwnGoalAngle();
         usePID = true;
+    }
+
+    else if (Sensors::getHasBall()) {
+        if (hasBallTimer > 200) {
+            kick = true;
+        }
     }
 
     else if (!_cm5->getBallExists()) {
@@ -323,9 +307,14 @@ void Goalie::update() {
     }
 
     else if (drivingToBall) {
-        Vector2 toBall = _cm5->getBallVec();
-        toBall.normalize();
-        target = toBall * 60.0;
+        if (std::abs(_cm5->getBallRot()) < 80) {
+            Vector2 toBall = _cm5->getBallVec();
+            toBall.normalize();
+            target = toBall * 60.0;
+        }
+        else {
+            target = Vector2(0,0);
+        }
         rotInput = _cm5->getAwayFromOwnGoalAngle();
         usePID = false;
     }
@@ -357,11 +346,11 @@ void Goalie::update() {
 
     _positioning->speedLimit(vx, vy, target);
 
-    if (std::abs(_cm5->getHeading()) > 80) {
-        vx = 0;
-        vy = 0;
+    if (std::abs(_cm5->getHeading()) > 100) {
+        vx *= 0.3;
+        vy *= 0.3;
     }
 
-    //pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, dribbler, true);
-    pushData(false, false, 0, 0, 0, 0, false);
+    pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, dribbler, true);
+    //pushData(false, false, 0, 0, 0, 0, false);
 }

@@ -9,6 +9,7 @@
 // pins
 constexpr int buttonPIN = 19;
 constexpr int piezoPIN = 23;
+constexpr int communicationModulePIN = 36;
 
 // i²c adresses
 constexpr int motorMBAddress = 0x69;
@@ -26,6 +27,9 @@ constexpr double slowingDistance = 60.0;
 constexpr unsigned long BALL_STATIONARY_MS = 2000;
 constexpr unsigned long DRIVE_TO_BALL_MS = 600;
 constexpr double BALL_MOVED_THRESH = 5.0;
+
+// communication
+constexpr bool USE_COMMUNICATION = true;
 
 // PID Configuration
 namespace PIDConfig {
@@ -75,6 +79,7 @@ namespace FieldConfig {
     constexpr double GoalNeutralPointPositionX = -80.0;
 
     constexpr double PointReachedDistance = 10.0;
+
+    constexpr double kickDistance = 150.0;
+    constexpr double rotateToBallAngle = 45.0;
 }
-
-

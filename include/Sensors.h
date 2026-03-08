@@ -10,6 +10,8 @@
 #include <comms/CM5.h>
 #include <Arduino.h>
 
+#include "config/config.h"
+
 class Sensors {
 public:
   explicit Sensors(const std::shared_ptr<CM5> &cm5);
@@ -30,7 +32,7 @@ public:
   [[nodiscard]] bool getEna() const { return ena; }
   [[nodiscard]] static bool getHasBall() { return analogRead(39) > 4000;}
   [[nodiscard]] static int getBallLightGate() { return analogRead(39); }
-  // static bool getHasBall() { return false; }
+  [[nodiscard]] static bool getForceHalt() { return digitalRead(communicationModulePIN) == LOW; }
 
   enum COLOR { // for the LED colors
     OFF = 0,
@@ -68,7 +70,6 @@ private:
 
   static void localToWorld(float lx, float ly, float heading_deg, float &gx, float &gy);
 };
-
 
 #endif //BOHLEBOTS_2026_SENSORS_H
 

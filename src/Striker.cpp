@@ -258,9 +258,6 @@ bool Striker::checkBallInPocket() const {
     while (globalGoalDir > 180) globalGoalDir -= 360;
     while (globalGoalDir < -180) globalGoalDir += 360;
 
-    Serial.println(ballX);
-    Serial.println(globalGoalDir);
-
     if (!_cm5->getBallExists() && (globalGoalDir > FieldConfig::FieldPocketAngle || globalGoalDir < -FieldConfig::FieldPocketAngle)) {
         return true;
     }
@@ -274,7 +271,6 @@ bool Striker::checkBallInPocket() const {
 
 void Striker::update() const {
     //updateRandomWalk(); // ai vid
-    constexpr int speed = 50.0f;
     static bool kickOff = false;
 
     updatePositionYAvg(_cm5->getGlobalY());
@@ -299,11 +295,17 @@ void Striker::update() const {
     bool useRotPID = true;
     bool kick = false;
     bool useRotDelta = true;
+    int speed = 50.0f;
 
     // inits
     int rot = 0;
     Vector2 target;
     double rotInput = 0;
+
+    // because used multiple times
+    double globalBallDir = _cm5->getBallRot() - _cm5->getHeading();
+    while (globalBallDir > 180) globalBallDir -= 360;
+    while (globalBallDir < -180) globalBallDir += 360;
 
     if (!Sensors::getHasBall()) {
         hasBallTimer = 0;
@@ -312,19 +314,19 @@ void Striker::update() const {
     // drive away from line
     if (_sensors->getLineSeen()) {
         target = getAwayFromLineVec(30);
-        if (checkBallOnLine() && std::abs(_cm5->getBallRot()) < 90.0) {
-            if (std::abs(_cm5->getHeading()) < 90.0) {
+        if (checkBallOnLine()) {
+            if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
                 rotInput = _cm5->getBallRot();
             }
             else {
-                rotInput = 0;
+                rotInput = _cm5->getHeading();
             }
         }
         else {
-            rotInput = 0;
+            rotInput = _cm5->getHeading();
         }
 
-        if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna() && _sensors->getHasBall()) {
+        if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna() && Sensors::getHasBall() && _cm5->getTargetGoalDist() < FieldConfig::kickDistance) {
             kick = true;
         }
         usePID = false;
@@ -332,10 +334,10 @@ void Striker::update() const {
 
     // drive to goal if the bot has the ball
     else if (Sensors::getHasBall()) {
-        if (hasBallTimer > 100) {
+        if (hasBallTimer > 200) {
 
             // get ball out of pocket
-            if (checkBallInPocket() || neutralPointTimer < 2500) {
+            if (checkBallInPocket() || neutralPointTimer < 2000) {
                 target = Vector2(-10, 0);
                 target.normalize();
                 target *= 20;
@@ -356,9 +358,13 @@ void Striker::update() const {
                         rot = -20;
                     }
                 }
+                if (std::abs(target_angle) < 45 && _cm5->getTargetGoalDist() > FieldConfig::kickDistance) {
+                    target = degToVec(_cm5->getTargetGoalRot());
+                    target *= 40;
+                }
             }
 
-            if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna()) {
+            if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna() && _cm5->getTargetGoalDist() < FieldConfig::kickDistance) {
                 kick = true;
             }
         }
@@ -376,7 +382,7 @@ void Striker::update() const {
         // approach ball
         if (std::abs(_cm5->getBallRot()) < 10 && _cm5->getBallDist() < 30.0) {
             target = getBallApproachVec(30);
-            if (std::abs(_cm5->getHeading()) < 90.0) {
+            if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
                 rotInput = _cm5->getBallRot();
             }
             else {
@@ -388,14 +394,16 @@ void Striker::update() const {
         // pursue ball
         else {
             // rotate to ball
-            if ((checkBallOnLine() || checkBallInPocket()) && std::abs(_cm5->getBallRot()) < 90.0) {
-                if (std::abs(_cm5->getHeading()) < 90.0) {
+            if (checkBallOnLine() || checkBallInPocket()) {
+                if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
                     rotInput = _cm5->getBallRot();
                 }
                 else {
                     rotInput = _cm5->getHeading();
                 }
-                target = getBallApproachVec(15);
+                if (_cm5->getBallDist() < 20.0) { speed = 15; }
+                else { speed = 30; }
+                target = getBallApproachVec(speed);
                 usePID = false;
             }
 

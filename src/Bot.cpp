@@ -51,8 +51,6 @@ void Bot::update() const {
     fillEspNowPacket(toSend);
     espNowUpdate(toSend);
 
-    //printPeerPacket(); // debug
-
     if (!_cm5->getCM5Running()) {
         _sensors->haltLEDs();
         pushData(false, false, 0, 0, 0, 0, false);
@@ -66,15 +64,19 @@ void Bot::update() const {
 
     _gameState->update();
 
-    if (!_sensors->getEna()) {
+    if (getSwitchWantedFromPeer()) {
+        _gameState->setRole(GameStateHandler::Role::GOALIE);
+        Serial.println("[GAMESTATE] Switching role due to peer request");
+    }
+
+    if (Sensors::getForceHalt()) {
         pushData(false, false, 0, 0, 0, 0, false);
         return;
     }
 
-    if (getSwitchWantedFromPeer()) {
-        // toggle role
-        _gameState->setRole(GameStateHandler::Role::GOALIE);
-        Serial.println("[GAMESTATE] Switching role due to peer request");
+    if (!_sensors->getEna()) {
+        pushData(false, false, 0, 0, 0, 0, false);
+        return;
     }
 
     if (_gameState->getRole() == GameStateHandler::Role::GOALIE) {
