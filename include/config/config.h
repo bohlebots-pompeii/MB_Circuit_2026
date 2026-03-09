@@ -9,6 +9,7 @@
 // pins
 constexpr int buttonPIN = 19;
 constexpr int piezoPIN = 23;
+constexpr int lightGatePIN = 39;
 constexpr int communicationModulePIN = 36;
 
 // i²c adresses

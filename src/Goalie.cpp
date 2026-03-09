@@ -225,7 +225,7 @@ void Goalie::update() {
 
     setRotDelta(_positioning->getRotationDelta());
 
-    if (!_cm5->getCM5Running() != CM5_initialized) {
+    if (_cm5->getCM5Running() != CM5_initialized) {
         CM5_initialized = _cm5->getCM5Running();
         _sensors->allLEDsOff();
     }

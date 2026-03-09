@@ -22,7 +22,7 @@ Sensors::Sensors(const std::shared_ptr<CM5> &cm5) {
   // Initialize the button pin as input
   pinMode(buttonPIN, INPUT);
   // Light gate
-  pinMode(39, INPUT);
+  pinMode(lightGatePIN, INPUT);
   // comms module
   pinMode(communicationModulePIN, INPUT);
 }

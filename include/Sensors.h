@@ -30,8 +30,8 @@ public:
   [[nodiscard]] bool getLineSeen() const { return progress != -1 && line_rot != -1; }
   [[nodiscard]] Vector2 getPosition() const { return position; }
   [[nodiscard]] bool getEna() const { return ena; }
-  [[nodiscard]] static bool getHasBall() { return analogRead(39) > 4000;}
-  [[nodiscard]] static int getBallLightGate() { return analogRead(39); }
+  [[nodiscard]] static bool getHasBall() { return analogRead(lightGatePIN) > 4000;}
+  [[nodiscard]] static int getBallLightGate() { return analogRead(lightGatePIN); }
   [[nodiscard]] static bool getForceHalt() { return digitalRead(communicationModulePIN) == LOW; }
 
   enum COLOR { // for the LED colors

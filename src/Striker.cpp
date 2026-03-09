@@ -100,8 +100,9 @@ void Striker::updateRandomWalk() const {
     constexpr int speed = 30;
 
     if (lineSeen) {
-        const int lineRot = toRad(_sensors->getLineRot());
-        auto line = Vector2(cos(lineRot), sin(lineRot));
+        const int lineRot = static_cast<int>(_sensors->getLineRot());
+        const double lineRotRad = toRad(static_cast<double>(lineRot));
+        auto line = Vector2(cos(lineRotRad), sin(lineRotRad));
         line.normalize();
         line *= 30;
         line.rotate(std::numbers::pi);
@@ -295,7 +296,7 @@ void Striker::update() const {
     bool useRotPID = true;
     bool kick = false;
     bool useRotDelta = true;
-    int speed = 50.0f;
+    int speed = 50;
 
     // inits
     int rot = 0;
