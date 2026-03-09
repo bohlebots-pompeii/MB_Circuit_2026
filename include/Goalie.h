@@ -28,7 +28,8 @@ private:
     [[nodiscard]] Vector2 getAwayFromLineVec(int speed) const;
     [[nodiscard]] Vector2 driveOnLine(const Vector2& target) const;
     [[nodiscard]] Vector2 getMoveToCenterVec(int speed) const;
-    [[nodiscard]] Vector2 getHalfCircleTarget() const;
+    [[nodiscard]] Vector2 getHalfCircleTarget(const Vector2* ballVecOverride = nullptr) const;
+    [[nodiscard]] Vector2 getEmergencyBallVec() const;
 };
 
 #endif //BOT_2026_GOALIE_H

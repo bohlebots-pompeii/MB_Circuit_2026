@@ -126,28 +126,11 @@ Vector2 Goalie::driveOnLine(const Vector2& target) const {
     return result;
 }
 
-Vector2 Goalie::getMoveToCenterVec(const int speed) const {
+Vector2 Goalie::getHalfCircleTarget(const Vector2* ballVecOverride) const {
     constexpr double HALF_CIRCLE_RADIUS = 60.0;
 
     const Vector2 ownGoalVec = _cm5->getOwnGoalVec();
-
-    Vector2 awayFromGoal = ownGoalVec * -1.0;
-    awayFromGoal.normalize();
-
-    Vector2 target = ownGoalVec + awayFromGoal * HALF_CIRCLE_RADIUS;
-
-    target.normalize();
-    target *= speed;
-
-    return target;
-}
-
-Vector2 Goalie::getHalfCircleTarget() const {
-    constexpr double HALF_CIRCLE_RADIUS = 60.0;
-
-    const Vector2 ownGoalVec = _cm5->getOwnGoalVec();
-
-    const Vector2 ballVec = _cm5->getBallVec();
+    const Vector2 ballVec = ballVecOverride ? *ballVecOverride : _cm5->getBallVec();
 
     Vector2 goalToBall = ballVec - ownGoalVec;
 
@@ -170,6 +153,43 @@ Vector2 Goalie::getHalfCircleTarget() const {
     const Vector2 targetOnCircle = ownGoalVec + goalToBall * HALF_CIRCLE_RADIUS;
 
     return targetOnCircle;
+}
+
+// reconstruct ball position
+Vector2 Goalie::getEmergencyBallVec() const {
+    if constexpr (!USE_COMMUNICATION) { // disabled comms
+        return {0, 0};
+    }
+
+    const auto& [globalX, globalY, heading, ballRot, ballDist, flags] = espNowGetPeerData();
+
+    // mate sees ball
+    if (!espNowPeerAlive() || !espNowGetFlag(flags, 3)) {
+        return {0, 0};
+    }
+
+    if (ballDist <= 0) {
+        return {0, 0};
+    }
+
+    const double pGlobalX = globalX;
+    const double pGlobalY = globalY;
+
+    const double ballAngleGlobal = toRad(ballRot + heading);
+    const double ballGlobalX = pGlobalX + cos(ballAngleGlobal) * ballDist;
+    const double ballGlobalY = pGlobalY + sin(ballAngleGlobal) * ballDist;
+
+    const double myGlobalX = _cm5->getGlobalX();
+    const double myGlobalY = _cm5->getGlobalY();
+
+    const double diffGlobalX = ballGlobalX - myGlobalX;
+    const double diffGlobalY = ballGlobalY - myGlobalY;
+
+    const double myHeadingRad = toRad(_cm5->getHeading());
+    const double localX =  diffGlobalX * cos(-myHeadingRad) - diffGlobalY * sin(-myHeadingRad);
+    const double localY =  diffGlobalX * sin(-myHeadingRad) + diffGlobalY * cos(-myHeadingRad);
+
+    return {localX, localY};
 }
 
 bool Goalie::getSwitchWanted() const {
@@ -297,12 +317,21 @@ void Goalie::update() {
     }
 
     else if (!_cm5->getBallExists()) {
-        const double globalX = _cm5->getGlobalX();
-        const double globalY = _cm5->getGlobalY();
+        const Vector2 emergencyBall = getEmergencyBallVec();
 
-        target = getToPointVec(globalX, globalY, FieldConfig::GoalNeutralPointPositionX, 0);
-        rotInput = _cm5->getHeading();
-        usePID = true;
+        if (const double emergencyDist = emergencyBall.getMagnitude(); emergencyDist > 1.0) {
+            // rough ball position
+            target = getHalfCircleTarget(&emergencyBall);
+            rotInput = _cm5->getAwayFromOwnGoalAngle();
+            usePID = true;
+        } else {
+            // drive to neutral point
+            const double globalX = _cm5->getGlobalX();
+            const double globalY = _cm5->getGlobalY();
+            target = getToPointVec(globalX, globalY, FieldConfig::GoalNeutralPointPositionX, 0);
+            rotInput = _cm5->getHeading();
+            usePID = true;
+        }
     }
 
     else if (drivingToBall) {
