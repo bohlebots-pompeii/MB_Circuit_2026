@@ -67,6 +67,10 @@ void Positioning::updateRotationDelta() {
   rotationDeltaTimer = 0;
   const double rot = _cm5->getHeading();
   rotationDelta = rot - lastHeading;
+  // Wrap to [-180, 180] so crossing the ±180° boundary doesn't
+  // produce a ~360° spike that would wildly rotate the drive vector.
+  if (rotationDelta > 180.0) rotationDelta -= 360.0;
+  if (rotationDelta < -180.0) rotationDelta += 360.0;
   lastHeading = rot;
 }
 

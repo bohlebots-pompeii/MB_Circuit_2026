@@ -237,8 +237,9 @@ bool Striker::checkBallOnLine() const {
     const double ballRot = _cm5->getBallRot();
     const double ballDist = _cm5->getBallDist();
 
-    const double ballRadians = toRad(ballRot);
-    const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
+    // Convert ball position from robot frame to world frame using heading
+    const double globalBallAngleRad = toRad(ballRot - _cm5->getHeading());
+    const double ballGlobalY = globalY + sin(globalBallAngleRad) * ballDist;
 
     if (globalY > FieldConfig::FieldLinePositionY && ballGlobalY > globalY) {
         return true;

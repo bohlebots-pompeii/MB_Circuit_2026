@@ -205,8 +205,14 @@ bool Goalie::getSwitchWanted() const {
     const float oBallRot = _cm5->getBallRot();
     const float oHeading = _cm5->getHeading();
 
-    const double gPBallRot = pBallRot + pHeading;
-    const double gOBallRot = oBallRot + oHeading;
+    // Convert ball angles to world frame: world_angle = ballRot - heading
+    double gPBallRot = pBallRot - pHeading;
+    if (gPBallRot > 180.0) gPBallRot -= 360.0;
+    if (gPBallRot < -180.0) gPBallRot += 360.0;
+
+    double gOBallRot = oBallRot - oHeading;
+    if (gOBallRot > 180.0) gOBallRot -= 360.0;
+    if (gOBallRot < -180.0) gOBallRot += 360.0;
 
     if (std::abs(gOBallRot) < std::abs(gPBallRot) && oBallDist < pBallDist) {
         switchWantedCooldownTimer = 0;
