@@ -100,8 +100,7 @@ void Striker::updateRandomWalk() const {
     constexpr int speed = 30;
 
     if (lineSeen) {
-        const int lineRot = static_cast<int>(_sensors->getLineRot());
-        const double lineRotRad = toRad(static_cast<double>(lineRot));
+        const double lineRotRad = toRad(static_cast<double>(_sensors->getLineRot()));
         auto line = Vector2(cos(lineRotRad), sin(lineRotRad));
         line.normalize();
         line *= 30;
