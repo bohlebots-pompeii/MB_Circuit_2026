@@ -173,11 +173,15 @@ Vector2 Vector2::rotate(const Vector2 &v, const double &angle_rad) {
 //--- ANGLES -------------------------------------------------//
 ////////////////////////////////////////////////////////////////
 double Vector2::angleOffsetTo(const Vector2 &v) const {
-    return acos(Vector2::dotProduct(*this, v) / (this->_magnitude * v._magnitude));
+    const double denom = this->_magnitude * v._magnitude;
+    if (denom < 1e-9) return 0.0;
+    return acos(std::clamp(dotProduct(*this, v) / denom, -1.0, 1.0));
 }
 
 double Vector2::angleOffsetBetween(const Vector2 &v1, const Vector2 &v2) {
-    return acos(Vector2::dotProduct(v1, v2) / (v1._magnitude * v2._magnitude));
+    const double denom = v1._magnitude * v2._magnitude;
+    if (denom < 1e-9) return 0.0;
+    return acos(std::clamp(dotProduct(v1, v2) / denom, -1.0, 1.0));
 }
 
 ////////////////////////////////////////////////////////////////
@@ -209,13 +213,15 @@ std::string Vector2::debugString() const {
 }
 
 void Vector2::normalize() {
+    if (this->_magnitude < 1e-9) return;
     this->_x = this->_x / this->_magnitude;
     this->_y = this->_y / this->_magnitude;
     this->_magnitude = 1.0;
 }
 
 Vector2 Vector2::normalize(Vector2 &v) {
-    double magnitude = v.getMagnitude();
+    const double magnitude = v.getMagnitude();
+    if (magnitude < 1e-9) return Vector2(0.0,0.0);
     return Vector2(v._x / magnitude, v._y / magnitude);
 }
 

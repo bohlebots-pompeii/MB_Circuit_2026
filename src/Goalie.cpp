@@ -22,11 +22,11 @@ namespace {
 
     // y axis
     double y_Setpoint = 0, y_Input = 0, y_Output = 0;
-    PID y_motion(&y_Input, &y_Output, &y_Setpoint, 3.0, PIDConfig::Y_Ki, 0.1, DIRECT);
+    PID y_motion(&y_Input, &y_Output, &y_Setpoint, 3.0, 0.0, 0.1, DIRECT);
 
     // x axis
     double x_Setpoint = 0, x_Input = 0, x_Output = 0;
-    PID x_motion(&x_Input, &x_Output, &x_Setpoint, 2.5, PIDConfig::X_Ki, 0.1, DIRECT);
+    PID x_motion(&x_Input, &x_Output, &x_Setpoint, 2.5, 0.0, 0.1, DIRECT);
 
     // rotation
     double rot_Setpoint = 0, rot_Input = 0, rot_Output = 0;
@@ -36,7 +36,7 @@ namespace {
 
     int getRotationControl(const float input) {
         rot_Input = input;
-        if (std::abs(rot_Input) < PIDConfig::Rot_Deadzone) {
+        if (std::abs(rot_Input) < PIDConfig::Rot_deadline) {
             rot_Input = 0;
         }
         rot_motion.Compute();
@@ -173,13 +173,13 @@ Vector2 Goalie::getHalfCircleTarget() const {
 }
 
 bool Goalie::getSwitchWanted() const {
-    if (!USE_COMMUNICATION) { // if not used
+    if constexpr (!USE_COMMUNICATION) { // if comms disabled
         return false;
     }
 
     const auto& [_globalX, _globalY, _heading, _ballRot, _ballDist, _flags] = espNowGetPeerData();
 
-    if (_sensors->getHasBall()) {
+    if (Sensors::getHasBall()) {
         switchWantedCooldownTimer = 0;
         return true;
     }
@@ -205,8 +205,13 @@ bool Goalie::getSwitchWanted() const {
     const float oBallRot = _cm5->getBallRot();
     const float oHeading = _cm5->getHeading();
 
-    const double gPBallRot = pBallRot + pHeading;
-    const double gOBallRot = oBallRot + oHeading;
+    double gPBallRot = pBallRot - pHeading;
+    if (gPBallRot > 180.0) gPBallRot -= 360.0;
+    if (gPBallRot < -180.0) gPBallRot += 360.0;
+
+    double gOBallRot = oBallRot - oHeading;
+    if (gOBallRot > 180.0) gOBallRot -= 360.0;
+    if (gOBallRot < -180.0) gOBallRot += 360.0;
 
     if (std::abs(gOBallRot) < std::abs(gPBallRot) && oBallDist < pBallDist) {
         switchWantedCooldownTimer = 0;
@@ -217,18 +222,12 @@ bool Goalie::getSwitchWanted() const {
 }
 
 void Goalie::update() {
-    static bool CM5_initialized = false;
     static Vector2 lastBallVec(0, 0);
     static bool drivingToBall = false;
 
     int dribbler = 0;
 
     setRotDelta(_positioning->getRotationDelta());
-
-    if (!_cm5->getCM5Running() != CM5_initialized) {
-        CM5_initialized = _cm5->getCM5Running();
-        _sensors->allLEDsOff();
-    }
 
     if (ledTimer > 200) {
         _sensors->allLEDsOff();
@@ -307,6 +306,7 @@ void Goalie::update() {
     }
 
     else if (drivingToBall) {
+        // prevent driving into the ball when going backwards
         if (std::abs(_cm5->getBallRot()) < 80) {
             Vector2 toBall = _cm5->getBallVec();
             toBall.normalize();
@@ -327,6 +327,34 @@ void Goalie::update() {
         usePID = true;
     }
 
+    // dont crash into the ball when driving backwards
+    if (_cm5->getBallExists() && !Sensors::getHasBall() && _cm5->getOwnGoalDist() > 100) {
+        const Vector2 ballVec = _cm5->getBallVec();
+
+        if (const double ballDist = _cm5->getBallDist(); ballDist > 0 && ballDist < BALL_AVOID_DIST) {
+            Vector2 ballDir = ballVec;
+            ballDir.normalize();
+
+            const double dot = target.getX() * ballDir.getX()
+                             + target.getY() * ballDir.getY();
+
+            if (dot > 0) {
+                const double perpX = target.getX() - dot * ballDir.getX();
+                const double perpY = target.getY() - dot * ballDir.getY();
+
+                const double side90X = -ballDir.getY();
+                const double side90Y =  ballDir.getX();
+
+                const double sideSign = perpX * side90X + perpY * side90Y >= 0 ? 1.0 : -1.0;
+
+                const double deflection = dot * (1.5 - ballDist / BALL_AVOID_DIST);
+
+                target = Vector2(perpX + sideSign * side90X * deflection,
+                                 perpY + sideSign * side90Y * deflection);
+            }
+        }
+    }
+
     // update pids
     const int rot = getRotationControl(static_cast<float>(rotInput));
 
@@ -344,6 +372,7 @@ void Goalie::update() {
         vy = static_cast<float>(target.getY());
     }
 
+    // speed limit to prevent out of bounds
     _positioning->speedLimit(vx, vy, target);
 
     if (std::abs(_cm5->getHeading()) > 100) {
@@ -352,5 +381,4 @@ void Goalie::update() {
     }
 
     pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, dribbler, true);
-    //pushData(false, false, 0, 0, 0, 0, false);
 }

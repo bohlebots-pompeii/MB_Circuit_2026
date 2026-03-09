@@ -37,7 +37,7 @@ namespace {
 
     int getRotationControl(const float input) {
         rot_Input = input;
-        if (std::abs(rot_Input) < PIDConfig::Rot_Deadzone) {
+        if (std::abs(rot_Input) < PIDConfig::Rot_deadline) {
             rot_Input = 0;
         }
         rot_motion.Compute();
@@ -100,13 +100,13 @@ void Striker::updateRandomWalk() const {
     constexpr int speed = 30;
 
     if (lineSeen) {
-        const int lineRot = toRad(_sensors->getLineRot());
-        auto line = Vector2(cos(lineRot), sin(lineRot));
+        const double lineRotRad = toRad(_sensors->getLineRot());
+        auto line = Vector2(cos(lineRotRad), sin(lineRotRad));
         line.normalize();
         line *= 30;
         line.rotate(std::numbers::pi);
-        const int vx = line.getX();
-        const int vy = line.getY();
+        const double vx = line.getX();
+        const double vy = line.getY();
         wasOnLine = true;
         lastLineRot = _sensors->getLineRot();
         pushData(ena, false, static_cast<int>(round(vx)), static_cast<int>(round(vy)), 0, 0, true);
@@ -234,10 +234,13 @@ Vector2 Striker::getToNeutralPointVec() const {
 
 bool Striker::checkBallOnLine() const {
     const double globalY = _cm5->getGlobalY();
-    const double ballRot = _cm5->getBallRot();
     const double ballDist = _cm5->getBallDist();
 
-    const double ballRadians = toRad(ballRot);
+    double globalBallRot = _cm5->getBallRot() - _cm5->getHeading();
+    if (globalBallRot > 180.0) globalBallRot -= 360.0;
+    if (globalBallRot < -180.0) globalBallRot += 360.0;
+
+    const double ballRadians = toRad(globalBallRot);
     const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
 
     if (globalY > FieldConfig::FieldLinePositionY && ballGlobalY > globalY) {
@@ -295,7 +298,7 @@ void Striker::update() const {
     bool useRotPID = true;
     bool kick = false;
     bool useRotDelta = true;
-    int speed = 50.0f;
+    int speed = 50;
 
     // inits
     int rot = 0;
@@ -380,7 +383,7 @@ void Striker::update() const {
     // else pursue ball
     else {
         // approach ball
-        if (std::abs(_cm5->getBallRot()) < 10 && _cm5->getBallDist() < 30.0) {
+        if (std::abs(_cm5->getBallRot()) < 10 && _cm5->getBallDist() < 30.0 && std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
             target = getBallApproachVec(30);
             if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
                 rotInput = _cm5->getBallRot();
@@ -394,7 +397,7 @@ void Striker::update() const {
         // pursue ball
         else {
             // rotate to ball
-            if (checkBallOnLine() || checkBallInPocket()) {
+            if ((checkBallOnLine() || checkBallInPocket()) && std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
                 if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
                     rotInput = _cm5->getBallRot();
                 }
@@ -442,8 +445,8 @@ void Striker::update() const {
     }
 
     int drib;
-    if (target.getX() > 0) {
-        drib = 50;
+    if (target.getX() > 10) {
+        drib = 25;
     } else {
         drib = 100;
     }

@@ -64,10 +64,16 @@ void Positioning::updateRotationDelta() {
   if (rotationDeltaTimer < 21) {
     return;
   }
-  rotationDeltaTimer = 0;
+
   const double rot = _cm5->getHeading();
-  rotationDelta = rot - lastHeading;
+  _rotationDelta = rot - lastHeading;
+
+  // norm
+  if (_rotationDelta > 180.0) _rotationDelta -= 360.0;
+  if (_rotationDelta < -180.0) _rotationDelta += 360.0;
+
   lastHeading = rot;
+  rotationDeltaTimer = 0;
 }
 
 void Positioning::updateVelocity() {

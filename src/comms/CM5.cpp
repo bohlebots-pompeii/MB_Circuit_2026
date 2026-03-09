@@ -8,11 +8,6 @@
 #include <cstring>
 #include <util/helper.h>
 
-Detection detections[6]; // memory because memory issues
-Object objects[6] = {};
-int num_detections = 0;
-float heading = 0.0f;
-
 constexpr float mirror_cx = 320.0f;
 constexpr float mirror_cy = 320.0f;
 
