@@ -177,7 +177,7 @@ Vector2 Striker::getMoveToCenterVec(const int speed) const {
 }
 
 Vector2 Striker::getBallAlignedVec(const int speed) const {
-    auto target = _cm5->getTargetGoalVec();
+    Vector2 target = degToVec(_cm5->getTargetGoalRot());
     target.normalize();
     return target * speed;
 }
@@ -220,7 +220,11 @@ Vector2 Striker::getBallPursuitVec() const {
         idealPos = idealPos + perpendicular * (side * maxShift * shiftStrength);
     }
 
-    const Vector2 target = idealPos;
+    Vector2 target = idealPos;
+    if (target.getMagnitude() < 10.0) {
+        target.normalize();
+        target *= 10;
+    }
     return target;
 }
 
@@ -321,7 +325,11 @@ void Striker::update() const {
     while (globalBallDir > 180) globalBallDir -= 360;
     while (globalBallDir < -180) globalBallDir += 360;
 
-    if (!Sensors::getHasBall()) {
+    double globalGoalDir = _cm5->getTargetGoalRot() - _cm5->getHeading();
+    while (globalGoalDir > 180) globalGoalDir -= 360;
+    while (globalGoalDir < -180) globalGoalDir += 360;
+
+    if (!Sensors::getHasBall() && hasBallTimer > 200) {
         hasBallTimer = 0;
     }
 
@@ -359,7 +367,7 @@ void Striker::update() const {
                 rot = 0;
             }
 
-            else if (_cm5->getGlobalX() > 0) {
+            else if (std::abs(globalGoalDir) < FieldConfig::FieldPocketAngle && std::abs(globalGoalDir) > FieldConfig::FieldPocketAngle - 10.0) {
                 usePID = false;
                 useRotPID = false;
                 useRotDelta = false;
@@ -368,13 +376,13 @@ void Striker::update() const {
             }
 
             else {
-                 rotInput = _cm5->getTargetGoalRot();
-                 target = getBallAlignedVec(50);
+                 rotInput = _cm5->getTargetGoalRot() / 2;
+                 target = getBallAlignedVec(100);
                  usePID = false;
             }
 
             // optional kick
-            if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna()) {
+            if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna() && _cm5->getTargetGoalDist() < FieldConfig::kickDistance) {
                 kick = true;
             }
         }
@@ -390,8 +398,12 @@ void Striker::update() const {
     // else pursue ball
     else {
         // approach ball
-        if (std::abs(_cm5->getBallRot()) < 10 && _cm5->getBallDist() < 30.0) {
-            target = getBallApproachVec(30);
+        if (std::abs(_cm5->getBallRot()) < 10.0) {
+            if (_cm5->getBallDist() > 30.0) {
+                target = getBallApproachVec(speed);
+            }
+            else { target = getBallApproachVec(30); }
+
             if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
                 rotInput = _cm5->getBallRot();
             }
