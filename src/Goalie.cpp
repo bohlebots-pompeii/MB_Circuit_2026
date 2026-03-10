@@ -12,6 +12,7 @@
 #include <util/helper.h>
 #include <config/config.h>
 #include <comms/esp-now.h>
+#include <util/MovingAverage.h>
 
 namespace {
     elapsedMillis ledTimer;
@@ -19,6 +20,12 @@ namespace {
     elapsedMillis ballMovementTimer;
     elapsedMillis drivingToBallTimer;
     elapsedMillis switchWantedCooldownTimer;
+
+    MovingAverage<double, 10> emergencyBallAvgX;
+    MovingAverage<double, 10> emergencyBallAvgY;
+
+    MovingAverage<double, 10> strikerAvgX;
+    MovingAverage<double, 10> strikerAvgY;
 
     // y axis
     double y_Setpoint = 0, y_Input = 0, y_Output = 0;
@@ -185,11 +192,14 @@ Vector2 Goalie::getEmergencyBallVec() const {
     const double diffGlobalX = ballGlobalX - myGlobalX;
     const double diffGlobalY = ballGlobalY - myGlobalY;
 
-    const double myHeadingRad = toRad(_cm5->getHeading());
+    const double myHeadingRad = toRad(_cm5->getHeading()); // rotate back to local for own usage
     const double localX =  diffGlobalX * cos(-myHeadingRad) - diffGlobalY * sin(-myHeadingRad);
     const double localY =  diffGlobalX * sin(-myHeadingRad) + diffGlobalY * cos(-myHeadingRad);
 
-    return {localX, localY};
+    emergencyBallAvgX.addValue(localX); // try to smooth out
+    emergencyBallAvgY.addValue(localY);
+
+    return {emergencyBallAvgX.getAverage(), emergencyBallAvgY.getAverage()};
 }
 
 bool Goalie::getSwitchWanted() const {
@@ -204,13 +214,13 @@ bool Goalie::getSwitchWanted() const {
         return true;
     }
 
-    if (!_cm5->getBallExists()) {
-        return false;
-    }
-
     if (!espNowGetFlag(_flags, 0)) {
         switchWantedCooldownTimer = 0;
         return true;
+    }
+
+    if (!_cm5->getBallExists()) {
+        return false;
     }
 
     if (switchWantedCooldownTimer < 2000) {
@@ -235,6 +245,24 @@ bool Goalie::getSwitchWanted() const {
 
     if (std::abs(gOBallRot) < std::abs(gPBallRot) && oBallDist < pBallDist) {
         switchWantedCooldownTimer = 0;
+        return true;
+    }
+
+    return false;
+}
+
+bool Goalie::checkBallInOwnPocket() const {
+    const double ballX = _cm5->getBallVec().getX();
+
+    float globalGoalDir = _cm5->getOwnGoalRot() - _cm5->getHeading();
+    while (globalGoalDir > 180) globalGoalDir -= 360;
+    while (globalGoalDir < -180) globalGoalDir += 360;
+
+    if (!_cm5->getBallExists() && (globalGoalDir > FieldConfig::FieldPocketAngle || globalGoalDir < -FieldConfig::FieldPocketAngle)) {
+        return true;
+    }
+
+    if (ballX > 0 && (globalGoalDir > FieldConfig::FieldPocketAngle || globalGoalDir < -FieldConfig::FieldPocketAngle)) {
         return true;
     }
 
@@ -336,7 +364,7 @@ void Goalie::update() {
 
     else if (drivingToBall) {
         // prevent driving into the ball when going backwards
-        if (std::abs(_cm5->getBallRot()) < 80) {
+        if (std::abs(_cm5->getBallRot()) < 80.0) {
             Vector2 toBall = _cm5->getBallVec();
             toBall.normalize();
             target = toBall * 60.0;
@@ -356,31 +384,73 @@ void Goalie::update() {
         usePID = true;
     }
 
-    // dont crash into the ball when driving backwards
-    if (_cm5->getBallExists() && !Sensors::getHasBall() && _cm5->getOwnGoalDist() > 100) {
-        const Vector2 ballVec = _cm5->getBallVec();
-
-        if (const double ballDist = _cm5->getBallDist(); ballDist > 0 && ballDist < BALL_AVOID_DIST) {
-            Vector2 ballDir = ballVec;
+    // smoothly circle around the ball if too close
+    if (_cm5->getBallExists() && !Sensors::getHasBall()) {        const double ballDist = _cm5->getBallDist();
+        if (ballDist > 0 && ballDist < BALL_AVOID_DIST && std::abs(_cm5->getBallRot()) > 90.0) {
+            Vector2 ballDir = _cm5->getBallVec();
             ballDir.normalize();
 
-            const double dot = target.getX() * ballDir.getX()
-                             + target.getY() * ballDir.getY();
+            const Vector2 tangentL(-ballDir.getY(),  ballDir.getX());
+            const Vector2 tangentR( ballDir.getY(), -ballDir.getX());
 
-            if (dot > 0) {
-                const double perpX = target.getX() - dot * ballDir.getX();
-                const double perpY = target.getY() - dot * ballDir.getY();
+            const double dotL = target.getX() * tangentL.getX() + target.getY() * tangentL.getY();
+            const double dotR = target.getX() * tangentR.getX() + target.getY() * tangentR.getY();
+            const Vector2 tangent = dotL >= dotR ? tangentL : tangentR;
 
-                const double side90X = -ballDir.getY();
-                const double side90Y =  ballDir.getX();
+            const double t = 1.0 - ballDist / BALL_AVOID_DIST;
+            const double speed = target.getMagnitude();
 
-                const double sideSign = perpX * side90X + perpY * side90Y >= 0 ? 1.0 : -1.0;
+            Vector2 blended(
+                target.getX() / (speed > 1e-3 ? speed : 1.0) * (1.0 - t) + tangent.getX() * t,
+                target.getY() / (speed > 1e-3 ? speed : 1.0) * (1.0 - t) + tangent.getY() * t
+            );
+            blended.normalize();
+            target = blended * speed;
+        }
+    }
 
-                const double deflection = dot * (1.5 - ballDist / BALL_AVOID_DIST);
+    // smoothly avoid the striker using MA(10)-smoothed peer position
+    constexpr double STRIKER_AVOID_DIST = 40.0;
+    if (espNowPeerAlive()) {
+        const auto& peerPkt = espNowGetPeerData();
+        const double pGlobalX = peerPkt.globalX;
+        const double pGlobalY = peerPkt.globalY;
+        const double myGlobalX = _cm5->getGlobalX();
+        const double myGlobalY = _cm5->getGlobalY();
 
-                target = Vector2(perpX + sideSign * side90X * deflection,
-                                 perpY + sideSign * side90Y * deflection);
-            }
+        // convert peer global pos to local frame
+        const double diffX = pGlobalX - myGlobalX;
+        const double diffY = pGlobalY - myGlobalY;
+        const double headingRad = toRad(_cm5->getHeading());
+        const double localX =  diffX * cos(-headingRad) - diffY * sin(-headingRad);
+        const double localY =  diffX * sin(-headingRad) + diffY * cos(-headingRad);
+
+        strikerAvgX.addValue(localX);
+        strikerAvgY.addValue(localY);
+
+        const Vector2 strikerLocal(strikerAvgX.getAverage(), strikerAvgY.getAverage());
+        const double strikerDist = strikerLocal.getMagnitude();
+
+        if (strikerDist > 1e-3 && strikerDist < STRIKER_AVOID_DIST) {
+            Vector2 strikerDir = strikerLocal;
+            strikerDir.normalize();
+
+            const Vector2 tangentL(-strikerDir.getY(),  strikerDir.getX());
+            const Vector2 tangentR( strikerDir.getY(), -strikerDir.getX());
+
+            const double dotL = target.getX() * tangentL.getX() + target.getY() * tangentL.getY();
+            const double dotR = target.getX() * tangentR.getX() + target.getY() * tangentR.getY();
+            const Vector2 tangent = dotL >= dotR ? tangentL : tangentR;
+
+            const double t = 1.0 - strikerDist / STRIKER_AVOID_DIST;
+            const double speed = target.getMagnitude();
+
+            Vector2 blended(
+                target.getX() / (speed > 1e-3 ? speed : 1.0) * (1.0 - t) + tangent.getX() * t,
+                target.getY() / (speed > 1e-3 ? speed : 1.0) * (1.0 - t) + tangent.getY() * t
+            );
+            blended.normalize();
+            target = blended * speed;
         }
     }
 

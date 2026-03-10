@@ -1,4 +1,5 @@
 .pio
 .idea
 
+# The mac addresses are private!
 config_esp_now.h

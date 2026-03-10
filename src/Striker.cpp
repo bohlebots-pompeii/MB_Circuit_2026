@@ -12,12 +12,14 @@
 #include <util/MovingAverage.h>
 #include <util/helper.h>
 #include <config/config.h>
+#include <comms/esp-now.h>
 
 namespace {
     elapsedMillis hasBallTimer;
     elapsedMillis ledTimer;
     elapsedMillis positionYAvgTimer;
     elapsedMillis neutralPointTimer;
+    elapsedMillis kickOffTimer;
 
     MovingAverage<double, 10> positionYAvg;
 
@@ -148,6 +150,20 @@ Vector2 Striker::getAwayFromLineVec(const int speed) const {
 }
 
 Vector2 Striker::getMoveToCenterVec(const int speed) const {
+    if (espNowPeerAlive()) {
+        if (const auto& peerPkt = espNowGetPeerData(); !espNowGetFlag(peerPkt.flags, 0)) {
+            const double globalX = _cm5->getGlobalX();
+            const double globalY = _cm5->getGlobalY();
+            return getToPointVec(globalX, globalY, FieldConfig::GoalNeutralPointPositionX, 0);
+        }
+    }
+
+    if (!espNowPeerAlive()) {
+        const double globalX = _cm5->getGlobalX();
+        const double globalY = _cm5->getGlobalY();
+        return getToPointVec(globalX, globalY, FieldConfig::GoalNeutralPointPositionX, 0);
+    }
+
     Vector2 middlePointVector = _positioning->getMiddlePointVector();
     const double distance = middlePointVector.getMagnitude();
     middlePointVector.normalize();
@@ -279,15 +295,10 @@ void Striker::update() const {
     updatePositionYAvg(_cm5->getGlobalY());
     setRotDelta(_positioning->getRotationDelta());
 
-    /*
     if (!kickOff && _sensors->getEna()) {
-        pushData(_sensors->getEna(), false, 50, 0, 0, 0);
-        delay(300);
+        pushData(_sensors->getEna(), true, 50, 0, 0, 0, false);
         kickOff = true;
-        pushData(_sensors->getEna(), true, 50, 0, 0, 0);
-        delay(100);
     }
-    */
 
     if (ledTimer > 200) {
         _sensors->allLEDsOff();
@@ -346,12 +357,14 @@ void Striker::update() const {
                 target *= 20;
                 rotInput = 0;
                 usePID = false;
+                useRotDelta = false;
             }
 
             // align with goal and shoot
             else {
                 const double target_angle = _cm5->getTargetGoalRot();
-                if (std::abs(target_angle) > 10) {
+
+                if (std::abs(target_angle) > 10.0) {
                     useRotPID = false;
                     if (target_angle < 0) {
                         target = Vector2(0,0);
@@ -361,9 +374,10 @@ void Striker::update() const {
                         rot = -20;
                     }
                 }
-                if (std::abs(target_angle) < 45 && _cm5->getTargetGoalDist() > FieldConfig::kickDistance) {
-                    target = degToVec(_cm5->getTargetGoalRot());
-                    target *= 40;
+
+                if (std::abs(target_angle) < 45.0) {
+                    target = degToVec(_cm5->getTargetGoalRot()) * _cm5->getTargetGoalDist();
+                    usePID = true;
                 }
             }
 
@@ -446,7 +460,7 @@ void Striker::update() const {
 
     int drib;
     if (target.getX() > 10) {
-        drib = 25;
+        drib = 50;
     } else {
         drib = 100;
     }

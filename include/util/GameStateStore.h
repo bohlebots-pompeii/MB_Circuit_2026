@@ -28,4 +28,3 @@ namespace GameStateStore {
     SavedState load();
     void       clear();
 }
-

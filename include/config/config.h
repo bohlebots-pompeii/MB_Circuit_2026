@@ -28,7 +28,7 @@ constexpr double slowingDistance = 60.0;
 constexpr unsigned long BALL_STATIONARY_MS = 2000;
 constexpr unsigned long DRIVE_TO_BALL_MS = 600;
 constexpr double BALL_MOVED_THRESH = 5.0;
-constexpr float BALL_AVOID_DIST = 20.0f;
+constexpr float BALL_AVOID_DIST = 50.0f;
 
 // communication
 constexpr bool USE_COMMUNICATION = true;
@@ -36,17 +36,17 @@ constexpr bool USE_COMMUNICATION = true;
 // PID Configuration
 namespace PIDConfig {
     // Y-axis motion PID
-    constexpr double Y_Kp = 1.6;
+    constexpr double Y_Kp = 2.0;
     constexpr double Y_Ki = 0.07;
-    constexpr double Y_Kd = 0.05;
+    constexpr double Y_Kd = 0.065;
     constexpr double Y_OutputMin = -70.0;
     constexpr double Y_OutputMax = 70.0;
     constexpr int Y_SampleTime = 21;
 
     // X-axis motion PID
-    constexpr double X_Kp = 1.6;
+    constexpr double X_Kp = 2.0;
     constexpr double X_Ki = 0.07;
-    constexpr double X_Kd = 0.05;
+    constexpr double X_Kd = 0.065;
     constexpr double X_OutputMin = -70.0;
     constexpr double X_OutputMax = 70.0;
     constexpr int X_SampleTime = 21;
