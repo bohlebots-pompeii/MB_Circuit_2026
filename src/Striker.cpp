@@ -20,8 +20,11 @@ namespace {
     elapsedMillis positionYAvgTimer;
     elapsedMillis neutralPointTimer;
     elapsedMillis kickOffTimer;
+    elapsedMillis middlePointTimer;
 
     MovingAverage<double, 10> positionYAvg;
+
+    auto _lastTarget = Vector2(0,0);
 
     // y axis
     double y_Setpoint = 0, y_Input = 0, y_Output = 0;
@@ -333,6 +336,10 @@ void Striker::update() const {
         hasBallTimer = 0;
     }
 
+    if (_cm5->getBallExists()) {
+        middlePointTimer = 0;
+    }
+
     // drive away from line
     if (_sensors->getLineSeen()) {
         target = getAwayFromLineVec(30);
@@ -357,13 +364,14 @@ void Striker::update() const {
     // drive to goal if the bot has the ball
     else if (Sensors::getHasBall()) {
         if (hasBallTimer > 200) {
+            middlePointTimer = 0;
             // get ball out of pocket
             if (checkBallInPocket() || neutralPointTimer < 2000) {
                 usePID = false;
                 useRotPID = false;
                 useRotDelta = false;
                 target = Vector2(-1, 0);
-                target *= 20;
+                target *= 15;
                 rot = 0;
             }
 
@@ -382,7 +390,7 @@ void Striker::update() const {
             }
 
             // optional kick
-            if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna() && _cm5->getTargetGoalDist() < FieldConfig::kickDistance) {
+            if (std::abs(_cm5->getTargetGoalRot()) < 15.0 && _sensors->getEna()) {
                 kick = true;
             }
         }
@@ -390,15 +398,21 @@ void Striker::update() const {
 
     // drive to midPoint if ball not seen
     else if (!_cm5->getBallExists()) {
-        target = getMoveToCenterVec(speed);
-        rotInput = _cm5->getHeading();
-        usePID = false;
+        if (middlePointTimer < 500) {
+            target = _lastTarget;
+            rotInput = 0;
+            usePID = false;
+        } else {
+            target = getMoveToCenterVec(speed);
+            rotInput = _cm5->getHeading();
+            usePID = false;
+        }
     }
 
     // else pursue ball
     else {
         // approach ball
-        if (std::abs(_cm5->getBallRot()) < 10.0) {
+        if (std::abs(_cm5->getBallRot()) < 15.0) {
             if (_cm5->getBallDist() > 30.0) {
                 target = getBallApproachVec(speed);
             }
@@ -437,6 +451,14 @@ void Striker::update() const {
         }
     }
 
+    const auto& [_globalX, _globalY, _heading, _ballRot, _ballDist, _flags] = espNowGetPeerData();
+    if (espNowGetFlag(_flags, 0) && _cm5->getGlobalX() < -70) {
+        target = _positioning->getMiddlePointVector();
+        target.normalize();
+        target *= 20;
+        usePID = false;
+    }
+
     // update pids
     if (useRotPID) {
         rot = getRotationControl(static_cast<float>(rotInput));
@@ -469,6 +491,8 @@ void Striker::update() const {
     } else {
         drib = 100;
     }
+
+    _lastTarget = target;
 
     pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, drib, useRotDelta);
 }

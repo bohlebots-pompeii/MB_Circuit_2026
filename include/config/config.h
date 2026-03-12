@@ -22,7 +22,7 @@ constexpr int imuAddress = 0x60;
 constexpr int buttonModuleAddress = 0x20;
 
 constexpr double maxDistance = 80.0;
-constexpr double slowingDistance = 65.0;
+constexpr double slowingDistance = 60.0;
 
 // Goalie config
 constexpr unsigned long BALL_STATIONARY_MS = 2000;

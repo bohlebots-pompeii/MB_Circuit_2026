@@ -138,7 +138,7 @@ const EspNowPacket& espNowGetPeerData() {
 }
 
 bool espNowPeerAlive() {
-    return millis() - s_lastRxMs < 500;
+    return millis() - s_lastRxMs < 1000;
 }
 
 bool espNowPeerKnown() {

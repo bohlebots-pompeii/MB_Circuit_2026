@@ -207,6 +207,10 @@ bool Goalie::getSwitchWanted() const {
         return false;
     }
 
+    if (!espNowPeerAlive()) {
+        return true;
+    }
+
     const auto& [_globalX, _globalY, _heading, _ballRot, _ballDist, _flags] = espNowGetPeerData();
 
     if (Sensors::getHasBall()) {
@@ -227,6 +231,7 @@ bool Goalie::getSwitchWanted() const {
         return false;
     }
 
+    /*
     const float pBallDist = _ballDist;
     const float pBallRot = _ballRot;
     const float pHeading = _heading;
@@ -247,6 +252,7 @@ bool Goalie::getSwitchWanted() const {
         switchWantedCooldownTimer = 0;
         return true;
     }
+    */
 
     return false;
 }

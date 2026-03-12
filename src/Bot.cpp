@@ -21,6 +21,8 @@ Bot::Bot() {
     _striker     = std::make_unique<Striker>(_cm5, _sensors, _positioning);
     _goalie      = std::make_unique<Goalie>(_cm5, _sensors, _positioning);
     _gameState   = std::make_unique<GameStateHandler>(_sensors, _cm5);
+
+    pinMode(buttonPIN, INPUT);
 }
 
 void Bot::printPeerPacket() {
@@ -47,9 +49,16 @@ void Bot::update() const {
     _sensors->update();
     _positioning->update();
 
+    Serial.println(_cm5->getGlobalX());
+    Serial.println(_cm5->getGlobalY());
+
     EspNowPacket toSend = {};
     fillEspNowPacket(toSend);
     espNowUpdate(toSend);
+
+    if (digitalRead(buttonPIN)) {
+        pushData(false, true, 0, 0, 0, 0, false);
+    }
 
     if (!_cm5->getCM5Running()) {
         _sensors->haltLEDs();
