@@ -22,6 +22,18 @@ namespace {
     elapsedMillis kickOffTimer;
     elapsedMillis middlePointTimer;
 
+    enum class State {
+        SEARCH_BALL,
+        GET_BALL,
+        DRIVE_BACK,
+        SEARCH_GOAL,
+        DRIVE_TO_GOAL,
+        CLEAR_BALL_VIEW
+    };
+
+    auto state = State::SEARCH_BALL;
+    elapsedMillis stateTimer;
+
     MovingAverage<double, 10> positionYAvg;
 
     auto _lastTarget = Vector2(0,0);
@@ -297,6 +309,8 @@ bool Striker::checkBallInPocket() const {
 
 void Striker::update() const {
     //updateRandomWalk(); // ai vid
+
+    /*
     static bool kickOff = false;
 
     updatePositionYAvg(_cm5->getGlobalY());
@@ -493,6 +507,81 @@ void Striker::update() const {
     }
 
     _lastTarget = target;
+    */
+
+    int rot = 0;
+    int drib = 0;
+    int vx = 0;
+    int vy = 0;
+    bool kick = false;
+
+    switch (state) {
+    case State::SEARCH_BALL:
+        rot = -10;
+
+        if (_cm5->getBallExists()) {
+            state = State::GET_BALL;
+        }
+        break;
+
+    case State::GET_BALL:
+        drib = 100;
+        vx = 15;
+
+        if (Sensors::getHasBall()) {
+            state = State::DRIVE_BACK;
+            stateTimer = 0;
+        }
+        break;
+
+    case State::DRIVE_BACK:
+        vx = -20;
+        drib = 100;
+
+        if (stateTimer > 1500) {
+            state = State::SEARCH_GOAL;
+        }
+
+        /*
+        if (!Sensors::getHasBall()) {
+            state = State::GET_BALL;
+            stateTimer = 0;
+        }
+        */
+
+        break;
+
+    case State::SEARCH_GOAL:
+        rot = -20;
+
+        if (_cm5->getTargetGoalDist() != 0) {
+            state = State::DRIVE_TO_GOAL;
+        }
+        break;
+
+    case State::DRIVE_TO_GOAL:
+        vx = 20;
+        drib = 50;
+
+        if (_cm5->getTargetGoalDist() < 30) { // adjust
+            state = State::CLEAR_BALL_VIEW;
+            stateTimer = 0;
+            kick = true;
+        }
+        break;
+
+    case State::CLEAR_BALL_VIEW:
+        rot = -20;
+        if (stateTimer > 1000) {
+            state = State::SEARCH_BALL;
+        }
+        break;
+    }
+
+    constexpr bool useRotDelta = false;
+
+    Serial.println(_cm5->getBallExists());
+
 
     pushData(_sensors->getEna(), kick, static_cast<int>(vx), static_cast<int>(vy), rot, drib, useRotDelta);
 }

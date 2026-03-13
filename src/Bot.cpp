@@ -49,9 +49,6 @@ void Bot::update() const {
     _sensors->update();
     _positioning->update();
 
-    Serial.println(_cm5->getGlobalX());
-    Serial.println(_cm5->getGlobalY());
-
     EspNowPacket toSend = {};
     fillEspNowPacket(toSend);
     espNowUpdate(toSend);
