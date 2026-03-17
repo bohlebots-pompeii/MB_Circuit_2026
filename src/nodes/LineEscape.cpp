@@ -7,8 +7,7 @@
 #include <cmath>
 #include <numbers>
 
-LineEscape::LineEscape(std::shared_ptr<MotionController> motion)
-    : _motion(std::move(motion)) {}
+LineEscape::LineEscape(std::shared_ptr<MotionController> motion) : _motion(std::move(motion)) {}
 
 BT::Status LineEscape::tick(const WorldState& ws) {
     if (!ws.lineSeen) {
@@ -37,9 +36,9 @@ BT::Status LineEscape::tick(const WorldState& ws) {
         kick = true;
     }
 
-    auto out = _motion->compute(target, rotInput, false); // usePID = false
+    auto [vx, vy, rot] = _motion->compute(target, rotInput, false);
 
-    pushData(ws.ena, kick, static_cast<int>(out.vx), static_cast<int>(out.vy), out.rot, 0, true, _motion->getRotDeltaRad());
+    pushData(ws.ena, kick, static_cast<int>(vx), static_cast<int>(vy), rot, 0, true);
 
     return BT::Status::RUNNING;
 }

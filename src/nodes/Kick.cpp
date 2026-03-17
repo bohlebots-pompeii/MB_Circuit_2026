@@ -2,7 +2,6 @@
 #include <WorldState.h>
 #include <MotionController.h>
 #include <motor_mb.h>
-#include <util/helper.h>
 #include <cmath>
 
 Kick::Kick(std::shared_ptr<MotionController> motion)
@@ -13,19 +12,12 @@ BT::Status Kick::tick(const WorldState& ws) {
         return BT::Status::FAILURE;
     }
 
-    const Vector2 target = getBallAlignedVec(ws, 100);
-    const float rotInput = ws.targetGoalRot / 2.0f;
+    constexpr int vx = 0;
+    constexpr int vy = 0;
+    constexpr int rot = 0;
 
-    auto [vx, vy, rot] = _motion->compute(target, rotInput, false); // usePID = false
-
-    pushData(ws.ena, true, static_cast<int>(vx), static_cast<int>(vy), rot, 0, true, _motion->getRotDeltaRad());
+    pushData(ws.ena, true, vx, vy, rot, 0, true);
 
     return BT::Status::RUNNING;
-}
-
-Vector2 Kick::getBallAlignedVec(const WorldState& ws, int speed) const {
-    Vector2 target = degToVec(ws.targetGoalRot);
-    target.normalize();
-    return target * speed;
 }
 

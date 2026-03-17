@@ -8,15 +8,14 @@ public:
 
     MotionController();
 
-    // Compute vx/vy/rot from a target vector and rotation input.
-    // usePID=true uses the x/y PIDs; usePID=false passes target directly.
     Output compute(const Vector2& target, float rotInput, bool usePID = false);
 
-    // Called once per tick from Bot::update() with the current rotation delta.
     void setRotDeltaRad(double rad);
 
-    // Read by pushData() instead of the removed global.
     [[nodiscard]] double getRotDeltaRad() const;
+
+    static void setInstance(MotionController* instance);
+    static MotionController* getInstance();
 
 private:
     double _rotDeltaRad = 0.0;
@@ -31,5 +30,7 @@ private:
 
     bool _initialized = false;
     void init();
+
+    static MotionController* _instance;
 };
 

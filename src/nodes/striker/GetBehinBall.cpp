@@ -1,4 +1,4 @@
-#include <nodes/striker/OrbitApproach.h>
+#include <nodes/striker/GetBehinBall.h>
 #include <WorldState.h>
 #include <MotionController.h>
 #include <motor_mb.h>
@@ -7,78 +7,63 @@
 #include <cmath>
 #include <algorithm>
 
-OrbitApproach::OrbitApproach(std::shared_ptr<MotionController> motion)
+GetBehinBall::GetBehinBall(std::shared_ptr<MotionController> motion)
     : _motion(std::move(motion)) {}
 
-BT::Status OrbitApproach::tick(const WorldState& ws) {
+BT::Status GetBehinBall::tick(const WorldState& ws) {
     if (!(ws.ballExists && !ws.hasBall)) {
         return BT::Status::FAILURE;
     }
 
     Vector2 target;
     float rotInput = 0;
-    bool usePID = true; // Default to true as per Striker.cpp line 440 target=getBallPursuitVec
+    bool usePID = true;
     int speed = 50;
 
     double globalBallDir = ws.ballRot - ws.heading;
     while (globalBallDir > 180) globalBallDir -= 360;
     while (globalBallDir < -180) globalBallDir += 360;
 
-    // approach ball
-    if (std::abs(ws.ballRot) < 15.0) {
-        if (ws.ballDist > 30.0) {
-            target = getBallApproachVec(ws, speed);
-        } else {
-            target = getBallApproachVec(ws, 30);
-        }
+    const bool ballAligned = std::abs(globalBallDir) < FieldConfig::rotateToBallAngle;
+    const bool ballInEdgeCase = checkBallOnLine(ws) || checkBallInPocket(ws);
 
-        if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
-            rotInput = ws.ballRot;
-        } else {
-            rotInput = ws.heading;
-        }
+    if (std::abs(ws.ballRot) < 15.0) {
+        // ball is straight ahead — direct approach
+        target = getBallApproachVec(ws, ws.ballDist > 30.0 ? speed : 30);
+        rotInput = ballAligned ? ws.ballRot : ws.heading;
         usePID = false;
     }
-    // pursue ball
+    else if (ballInEdgeCase && ballAligned) {
+        // ball near line or pocket — careful approach
+        target = getBallApproachVec(ws, ws.ballDist < 20.0 ? 15 : 30);
+        rotInput = ws.ballRot;
+        usePID = false;
+    }
     else {
-        // rotate to ball
-        if ((checkBallOnLine(ws) || checkBallInPocket(ws)) && std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
-            if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
-                rotInput = ws.ballRot;
-            } else {
-                rotInput = ws.heading;
-            }
-            if (ws.ballDist < 20.0) { speed = 15; }
-            else { speed = 30; }
-            target = getBallApproachVec(ws, speed);
-            usePID = false;
-        }
-        // normal ball pursuit
-        else {
-            rotInput = ws.targetGoalRot;
-            target = getBallPursuitVec(ws);
-            // usePID remains true (default)
-        }
+        // normal pursuit
+        target = getBallPursuitVec(ws);
+        rotInput = ws.targetGoalRot;
+        usePID = true;
     }
 
-    if (ws.peerRunning && ws.globalX < -70) {
+    if (ws.peerRunning && ws.globalX < -70) { // prevent crashing into each other
        Vector2 mv(-ws.globalX, -ws.globalY);
        mv.normalize();
        target = mv * 20.0f;
        usePID = false;
     }
 
-    const int drib = (target.getX() > 10) ? 50 : 100;
+    const int drib = target.getX() > 10 ? 50 : 100;
 
     // MotionController compute
     auto [vx, vy, rot] = _motion->compute(target, rotInput, usePID);
 
-    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true, _motion->getRotDeltaRad());
+    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
 
     return BT::Status::RUNNING;
 }
 
-Vector2 OrbitApproach::getBallPursuitVec(const WorldState& ws) const {
+Vector2 GetBehinBall::getBallPursuitVec(const WorldState& ws) const {
     const auto ballVec = ws.ballVec;
     const auto targetGoalVec = ws.targetGoalVec;
 
@@ -115,19 +100,19 @@ Vector2 OrbitApproach::getBallPursuitVec(const WorldState& ws) const {
     return target;
 }
 
-Vector2 OrbitApproach::getBallApproachVec(const WorldState& ws, int speed) const {
+Vector2 GetBehinBall::getBallApproachVec(const WorldState& ws, int speed) const {
     auto target = ws.ballVec;
     target.normalize();
     return target * speed;
 }
 
-Vector2 OrbitApproach::getBallAlignedVec(const WorldState& ws, int speed) const {
+Vector2 GetBehinBall::getBallAlignedVec(const WorldState& ws, int speed) const {
     Vector2 target = degToVec(ws.targetGoalRot);
     target.normalize();
     return target * speed;
 }
 
-bool OrbitApproach::checkBallOnLine(const WorldState& ws) const {
+bool GetBehinBall::checkBallOnLine(const WorldState& ws) const {
     const double globalY = ws.globalY;
     const double ballDist = ws.ballDist;
 
@@ -149,7 +134,7 @@ bool OrbitApproach::checkBallOnLine(const WorldState& ws) const {
     return false;
 }
 
-bool OrbitApproach::checkBallInPocket(const WorldState& ws) const {
+bool GetBehinBall::checkBallInPocket(const WorldState& ws) const {
     const double ballX = ws.ballVec.getX();
 
     float globalGoalDir = ws.targetGoalRot - ws.heading;

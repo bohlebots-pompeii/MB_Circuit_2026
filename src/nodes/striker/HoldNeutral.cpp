@@ -44,7 +44,7 @@ BT::Status HoldNeutral::tick(const WorldState& ws) {
     const int drib = (target.getX() > 10) ? 50 : 100;
 
     auto [vx, vy, rot] = _motion->compute(target, rotInput, usePID);
-    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true, _motion->getRotDeltaRad());
+    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
 
     return BT::Status::RUNNING;
 }

@@ -34,7 +34,7 @@ BT::Status InterceptBall::tick(const WorldState& ws) {
     const int drib = (ws.ballDist < 40 && ws.ballDist != 0) ? 100 : 0;
 
     auto [vx, vy, rot] = _motion->compute(target, rotInput, usePID);
-    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true, _motion->getRotDeltaRad());
+    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
 
     return BT::Status::RUNNING;
 }

@@ -38,7 +38,7 @@ BT::Status HalfCircleGuard::tick(const WorldState& ws) {
     const int drib = ws.ballDist < 40 && ws.ballDist != 0 ? 100 : 0;
 
     auto out = _motion->compute(target, rotInput, usePID);
-    pushData(ws.ena, false, static_cast<int>(out.vx), static_cast<int>(out.vy), out.rot, drib, true, _motion->getRotDeltaRad());
+    pushData(ws.ena, false, static_cast<int>(out.vx), static_cast<int>(out.vy), out.rot, drib, true);
 
     return BT::Status::RUNNING;
 }

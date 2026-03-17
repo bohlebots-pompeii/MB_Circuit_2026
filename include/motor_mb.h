@@ -14,4 +14,4 @@ struct __attribute__((packed)) MotorCmd {
   int8_t  drib;    // -100 .. 100
 };
 
-void pushData(bool enable, bool kick, int vx, int vy, int rot, int dribbler, bool useRotDelta, double rotDeltaRad = 0.0);
+void pushData(bool enable, bool kick, int vx, int vy, int rot, int dribbler, bool useRotDelta);

@@ -14,7 +14,7 @@ BT::Status GoalNeutral::tick(const WorldState& ws) {
     constexpr bool usePID = true;
 
     auto [vx, vy, rot] = _motion->compute(target, rotInput, usePID);
-    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, 0, true, _motion->getRotDeltaRad());
+    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, 0, true);
 
     return BT::Status::RUNNING;
 }

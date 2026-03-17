@@ -2,6 +2,8 @@
 #include <config/config.h>
 #include <cmath>
 
+MotionController* MotionController::_instance = nullptr;
+
 MotionController::MotionController()
     : _xPID(&_xIn, &_xOut, &_xSet, PIDConfig::X_Kp, PIDConfig::X_Ki, PIDConfig::X_Kd, DIRECT),
       _yPID(&_yIn, &_yOut, &_ySet, PIDConfig::Y_Kp, PIDConfig::Y_Ki, PIDConfig::Y_Kd, DIRECT),
@@ -66,4 +68,12 @@ void MotionController::setRotDeltaRad(const double rad) {
 
 double MotionController::getRotDeltaRad() const {
     return _rotDeltaRad;
+}
+
+void MotionController::setInstance(MotionController* instance) {
+    _instance = instance;
+}
+
+MotionController* MotionController::getInstance() {
+    return _instance;
 }

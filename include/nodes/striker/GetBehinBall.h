@@ -5,9 +5,9 @@
 
 class MotionController;
 
-class OrbitApproach final : public BT::BehaviorNode {
+class GetBehinBall final : public BT::BehaviorNode {
 public:
-    explicit OrbitApproach(std::shared_ptr<MotionController> motion);
+    explicit GetBehinBall(std::shared_ptr<MotionController> motion);
     BT::Status tick(const WorldState& ws) override;
 
 private:

@@ -27,7 +27,6 @@ BT::Status DribbleToGoal::tick(const WorldState& ws) {
     Vector2 target;
     int rot = 0;
     float rotInput = 0;
-    bool kick = false;
 
     double globalGoalDir = ws.targetGoalRot - ws.heading;
     while (globalGoalDir > 180) globalGoalDir -= 360;
@@ -50,12 +49,8 @@ BT::Status DribbleToGoal::tick(const WorldState& ws) {
     }
     else {
         rotInput = ws.targetGoalRot / 2;
-        target = getBallAlignedVec(ws, 100);
+        target = getBallAlignedVec(ws, 50);
         usePID = false;
-    }
-
-    if (std::abs(ws.targetGoalRot) < 15.0 && ws.ena) {
-        kick = true;
     }
 
     MotionController::Output out;
@@ -66,11 +61,9 @@ BT::Status DribbleToGoal::tick(const WorldState& ws) {
         out.rot = rot;
     }
 
-    const double rotDeltaRad = _motion->getRotDeltaRad();
+    const int drib = target.getX() > 10 ? 50 : 100;
 
-    const int drib = (target.getX() > 10) ? 50 : 100;
-
-    pushData(ws.ena, kick, static_cast<int>(out.vx), static_cast<int>(out.vy), out.rot, drib, useRotDelta, rotDeltaRad);
+    pushData(ws.ena, false, static_cast<int>(out.vx), static_cast<int>(out.vy), out.rot, drib, useRotDelta);
 
     return BT::Status::RUNNING;
 }

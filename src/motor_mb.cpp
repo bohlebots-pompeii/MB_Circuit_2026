@@ -7,15 +7,19 @@
 #include <Wire.h>
 #include <config/config.h>
 #include <util/Vector2.hpp>
-#include <numbers>
 
-void pushData(const bool enable, const bool kick, const int vx, const int vy, int rot, int dribbler, const bool useRotDelta, const double rotDeltaRad) {
+#include "MotionController.h"
+
+void pushData(const bool enable, const bool kick, const int vx, const int vy, int rot, int dribbler, const bool useRotDelta) {
   MotorCmd cmd{};
 
   rot *= -1;
 
   auto global_drive = Vector2(vx, vy);
-  if (useRotDelta) { global_drive.rotate(-rotDeltaRad * 2.0f); }
+  if (useRotDelta) {
+    const double rotDeltaRad = MotionController::getInstance() ? MotionController::getInstance()->getRotDeltaRad() : 0.0;
+    global_drive.rotate(-rotDeltaRad * 2.0f);
+  }
 
   const int vx_rot = constrain(global_drive.getX(), -70, 70);
   const int vy_rot = constrain(global_drive.getY(), -70, 70);
@@ -26,8 +30,8 @@ void pushData(const bool enable, const bool kick, const int vx, const int vy, in
   if (enable) cmd.flags |= 0x01;
   if (kick)   cmd.flags |= 0x02;
 
-  cmd.vx   = static_cast<int8_t>(-vx_rot);
-  cmd.vy   = static_cast<int8_t>(-vy_rot);
+  cmd.vx   = static_cast<int8_t>(-vy_rot); // swap because bottom pcb is wrong
+  cmd.vy   = static_cast<int8_t>(-vx_rot);
   cmd.rot  = static_cast<int8_t>(rot);
   cmd.drib = static_cast<int8_t>(dribbler);
 
