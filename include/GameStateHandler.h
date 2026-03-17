@@ -2,8 +2,7 @@
 // Created by julius on 22.02.2026.
 //
 
-#ifndef BOHLEBOTS_2026_GAMESTATEHANDLER_H
-#define BOHLEBOTS_2026_GAMESTATEHANDLER_H
+#pragma once
 
 #include <memory>
 #include "Sensors.h"
@@ -65,5 +64,3 @@ private:
         return _targetIsYellow ? Sensors::YELLOW : Sensors::BLUE;
     }
 };
-
-#endif //BOHLEBOTS_2026_GAMESTATEHANDLER_H

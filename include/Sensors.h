@@ -2,8 +2,7 @@
 // Created by julius on 05.01.2026.
 //
 
-#ifndef BOHLEBOTS_2026_SENSORS_H
-#define BOHLEBOTS_2026_SENSORS_H
+#pragma once
 
 #include <util/Vector2.hpp>
 #include <memory>
@@ -70,6 +69,4 @@ private:
 
   static void localToWorld(float lx, float ly, float heading_deg, float &gx, float &gy);
 };
-
-#endif //BOHLEBOTS_2026_SENSORS_H
 

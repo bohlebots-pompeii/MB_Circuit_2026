@@ -2,8 +2,8 @@
 // Created by julius on 05.01.2026.
 //
 
-#ifndef BOHLEBOTS_2026_I2C_H
-#define BOHLEBOTS_2026_I2C_H
+#pragma once
+
 #include <Arduino.h>
 
 struct __attribute__((packed)) MotorCmd {
@@ -14,7 +14,4 @@ struct __attribute__((packed)) MotorCmd {
   int8_t  drib;    // -100 .. 100
 };
 
-void pushData(bool enable, bool kick, int vx, int vy, int rot, int dribbler, bool useRotDelta);
-
-void setRotDelta(double delta);
-#endif //BOHLEBOTS_2026_I2C_H
+void pushData(bool enable, bool kick, int vx, int vy, int rot, int dribbler, bool useRotDelta, double rotDeltaRad = 0.0);

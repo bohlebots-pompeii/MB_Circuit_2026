@@ -8,59 +8,104 @@
 #include <memory>
 #include <motor_mb.h>
 #include <comms/esp-now.h>
+#include <config/config.h>
+
+#include <bt/PrioritySelector.h>
+#include <bt/RoleSelector.h>
+
+#include <nodes/Kick.h>
+#include <nodes/LineEscape.h>
+#include <nodes/SearchMode.h>
+#include <nodes/striker/DribbleToGoal.h>
+#include <nodes/striker/PocketEscape.h>
+#include <nodes/striker/OrbitApproach.h>
+#include <nodes/striker/HoldNeutral.h>
+#include <nodes/goalie/InterceptBall.h>
+#include <nodes/goalie/HalfCircleGuard.h>
+#include <nodes/goalie/EmergencyPosition.h>
+#include <nodes/goalie/GoalNeutral.h>
 
 Bot::Bot() {
     Wire.begin();
     Serial.begin(115200);
     Serial2.begin(115200, SERIAL_8N2, 16, 17);
 
-    // init pointers to classes
     _cm5         = std::make_shared<CM5>();
     _sensors     = std::make_shared<Sensors>(_cm5);
     _positioning = std::make_shared<Positioning>(_cm5);
-    _striker     = std::make_unique<Striker>(_cm5, _sensors, _positioning);
-    _goalie      = std::make_unique<Goalie>(_cm5, _sensors, _positioning);
     _gameState   = std::make_unique<GameStateHandler>(_sensors, _cm5);
+
+    _motion = std::make_shared<MotionController>();
+
+    auto striker = std::make_unique<BT::PrioritySelector>();
+    striker->addChild(std::make_unique<DribbleToGoal>(_motion));
+    striker->addChild(std::make_unique<PocketEscape>(_motion));
+    striker->addChild(std::make_unique<OrbitApproach>(_motion));
+    striker->addChild(std::make_unique<HoldNeutral>(_motion));
+
+    auto goalie = std::make_unique<BT::PrioritySelector>();
+    goalie->addChild(std::make_unique<InterceptBall>(_motion));
+    goalie->addChild(std::make_unique<HalfCircleGuard>(_motion));
+    goalie->addChild(std::make_unique<EmergencyPosition>(_motion));
+    goalie->addChild(std::make_unique<GoalNeutral>(_motion));
+
+    auto root = std::make_unique<BT::PrioritySelector>();
+    root->addChild(std::make_unique<LineEscape>(_motion));
+    root->addChild(std::make_unique<Kick>(_motion));
+    root->addChild(std::make_unique<BT::RoleSelector>(
+        std::move(striker), std::move(goalie)));
+    root->addChild(std::make_unique<SearchMode>(_motion));
+
+    _tree = std::move(root);
 
     pinMode(buttonPIN, INPUT);
 }
 
-void Bot::printPeerPacket() {
-    const auto& [globalX, globalY, heading, ballRot, ballDist, flags] = espNowGetPeerData();
-
-    Serial.println("=== Peer Packet ===");
-    Serial.print("globalX:      "); Serial.println(globalX);
-    Serial.print("globalY:      "); Serial.println(globalY);
-    Serial.print("heading:      "); Serial.println(heading);
-    Serial.print("ballRot:      "); Serial.println(ballRot);
-    Serial.print("ballDist:     "); Serial.println(ballDist);
-    Serial.print("running:      "); Serial.println(espNowGetFlag(flags, 0));
-    Serial.print("isGoalie:     "); Serial.println(espNowGetFlag(flags, 1));
-    Serial.print("seesLine:     "); Serial.println(espNowGetFlag(flags, 2));
-    Serial.print("ballValid:    "); Serial.println(espNowGetFlag(flags, 3));
-    Serial.print("switchWanted: "); Serial.println(espNowGetFlag(flags, 4));
-    Serial.println("=== Packet End ===");
-}
-
-void Bot::update() const {
+void Bot::update() {
     static bool CM5_initialized = false;
 
     _cm5->update();
     _sensors->update();
     _positioning->update();
 
-    Serial.println(_cm5->getGlobalX());
-    Serial.println(_cm5->getGlobalY());
+    const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
+
+    _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
+
+    if (ledTimer > 200) {
+        _sensors->allLEDsOff();
+    }
+
+    const bool switchWanted = getSwitchWanted(ws);
+
+    if (switchWanted) {
+        _gameState->setRole(GameStateHandler::Role::STRIKER);
+    }
 
     EspNowPacket toSend = {};
-    fillEspNowPacket(toSend);
+    toSend.globalX  = ws.globalX;
+    toSend.globalY  = ws.globalY;
+    toSend.heading  = ws.heading;
+    toSend.ballRot  = ws.ballRot;
+    toSend.ballDist = ws.ballDist;
+
+    const bool currentIsGoalie = (_gameState->getRole() == GameStateHandler::Role::GOALIE);
+    const bool running = _gameState->isRunning();
+
+    toSend.flags = 0;
+    espNowSetFlag(toSend.flags, 0, running);
+    espNowSetFlag(toSend.flags, 1, currentIsGoalie);
+    espNowSetFlag(toSend.flags, 2, ws.lineSeen);
+    espNowSetFlag(toSend.flags, 3, ws.ballExists);
+    espNowSetFlag(toSend.flags, 4, switchWanted);
+
     espNowUpdate(toSend);
 
     if (digitalRead(buttonPIN)) {
         pushData(false, true, 0, 0, 0, 0, false);
     }
 
-    if (!_cm5->getCM5Running()) {
+    if (!ws.cm5Running) {
         _sensors->haltLEDs();
         pushData(false, false, 0, 0, 0, 0, false);
         return;
@@ -73,7 +118,7 @@ void Bot::update() const {
 
     _gameState->update();
 
-    if (getSwitchWantedFromPeer()) {
+    if (ws.peerSwitchWanted) {
         _gameState->setRole(GameStateHandler::Role::GOALIE);
         Serial.println("[GAMESTATE] Switching role due to peer request");
     }
@@ -83,39 +128,40 @@ void Bot::update() const {
         return;
     }
 
-    if (!_sensors->getEna()) {
+    if (!ws.ena) {
         pushData(false, false, 0, 0, 0, 0, false);
         return;
     }
 
-    if (_gameState->getRole() == GameStateHandler::Role::GOALIE) {
-        _goalie->update();
-    } else {
-        _striker->update();
-    }
+    _tree->tick(ws);
 }
 
-void Bot::fillEspNowPacket(EspNowPacket& pkt) const {
-    pkt.globalX  = _cm5->getGlobalX();
-    pkt.globalY  = _cm5->getGlobalY();
-    pkt.heading  = _cm5->getHeading();
-    pkt.ballRot  = _cm5->getBallRot();
-    pkt.ballDist = _cm5->getBallDist();
-
-    const bool running   = _gameState->isRunning();
-    const bool isGoalie  = _gameState->getRole() == GameStateHandler::Role::GOALIE;
-    const bool seesLine  = _sensors->getLineSeen();
-    const bool ballValid = _cm5->getBallExists();
-    const bool switchWanted = _goalie->getSwitchWanted();
-
-    if (switchWanted) {
-        _gameState->setRole(GameStateHandler::Role::STRIKER);
+bool Bot::getSwitchWanted(const WorldState& ws) {
+    if constexpr (!USE_COMMUNICATION) {
+        return false;
     }
 
-    pkt.flags = 0;
-    espNowSetFlag(pkt.flags, 0, running);
-    espNowSetFlag(pkt.flags, 1, isGoalie);
-    espNowSetFlag(pkt.flags, 2, seesLine);
-    espNowSetFlag(pkt.flags, 3, ballValid);
-    espNowSetFlag(pkt.flags, 4, switchWanted);
+    if (!ws.peerAlive) {
+        return true;
+    }
+
+    if (ws.hasBall) {
+        switchWantedCooldownTimer = 0;
+        return true;
+    }
+
+    if (!ws.peerRunning) {
+        switchWantedCooldownTimer = 0;
+        return true;
+    }
+
+    if (!ws.ballExists) {
+        return false;
+    }
+
+    if (switchWantedCooldownTimer < 2000) {
+        return false;
+    }
+
+    return false;
 }

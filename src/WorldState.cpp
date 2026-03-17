@@ -1,0 +1,72 @@
+#include "WorldState.h"
+
+#include <comms/CM5.h>
+#include <Sensors.h>
+#include <Positioning.h>
+#include <GameStateHandler.h>
+#include <comms/esp-now.h>
+
+WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Positioning& positioning, const GameStateHandler& gameState) {
+    WorldState ws;
+
+    // ball
+    ws.ballVec = cm5.getBallVec();
+    ws.ballDist = cm5.getBallDist();
+    ws.ballRot = cm5.getBallRot();
+    ws.ballExists = cm5.getBallExists();
+    ws.hasBall = Sensors::getHasBall();
+
+    // line sensor
+    ws.lineSeen = sensors.getLineSeen();
+    ws.lineRot = static_cast<float>(sensors.getLineRot());
+    ws.lineProgress = sensors.getProgress();
+
+    // position + motion
+    ws.globalX = cm5.getGlobalX();
+    ws.globalY = cm5.getGlobalY();
+    ws.heading = cm5.getHeading();
+    ws.velocity = positioning.getVelocity();
+
+    // goals
+    ws.targetGoalRot = cm5.getTargetGoalRot();
+    ws.targetGoalDist = cm5.getTargetGoalDist();
+    ws.targetGoalVec = cm5.getTargetGoalVec();
+    ws.ownGoalRot = cm5.getOwnGoalRot();
+    ws.ownGoalDist = cm5.getOwnGoalDist();
+    ws.ownGoalVec = cm5.getOwnGoalVec();
+    ws.awayFromOwnGoalAngle = cm5.getAwayFromOwnGoalAngle();
+
+    // peer robot (ESP-NOW)
+    ws.peerAlive = espNowPeerAlive();
+    if (ws.peerAlive) {
+        const auto& [globalX, globalY, heading, ballRot, ballDist, flags] = espNowGetPeerData();
+        ws.peerGlobalX = globalX;
+        ws.peerGlobalY = globalY;
+        ws.peerHeading = heading;
+        ws.peerBallRot = ballRot;
+        ws.peerBallDist = ballDist;
+        ws.peerRunning = espNowGetFlag(flags, 0);
+        ws.peerIsGoalie = espNowGetFlag(flags, 1);
+        ws.peerSeesLine = espNowGetFlag(flags, 2);
+        ws.peerBallValid = espNowGetFlag(flags, 3);
+        ws.peerSwitchWanted = espNowGetFlag(flags, 4);
+    } else {
+        ws.peerGlobalX = 0;
+        ws.peerGlobalY = 0;
+        ws.peerHeading = 0;
+        ws.peerBallRot = 0;
+        ws.peerBallDist = 0;
+        ws.peerRunning = false;
+        ws.peerIsGoalie = false;
+        ws.peerSeesLine = false;
+        ws.peerBallValid = false;
+        ws.peerSwitchWanted = false;
+    }
+
+    // game state
+    ws.isGoalie = gameState.getRole() == GameStateHandler::Role::GOALIE;
+    ws.ena = sensors.getEna();
+    ws.cm5Running = cm5.getCM5Running();
+
+    return ws;
+}

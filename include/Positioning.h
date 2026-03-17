@@ -2,8 +2,7 @@
 // Created by julius on 06.01.2026.
 //
 
-#ifndef BOHLEBOTS_2026_POSITIONING_H
-#define BOHLEBOTS_2026_POSITIONING_H
+#pragma once
 
 #include <memory>
 #include <comms/CM5.h>
@@ -33,6 +32,3 @@ private:
   void updateRotationDelta();
   void updateVelocity();
 };
-
-
-#endif //BOHLEBOTS_2026_POSITIONING_H

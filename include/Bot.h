@@ -2,41 +2,37 @@
 // Created by julius on 11.11.2025.
 //
 
-#ifndef BOT_2026_BOT_H
-#define BOT_2026_BOT_H
+#pragma once
 
 #include "comms/CM5.h"
-#include "comms/esp-now.h"
 #include "Sensors.h"
-#include <memory>
-#include <Positioning.h>
-#include "Striker.h"
-#include "Goalie.h"
+#include "Positioning.h"
 #include "GameStateHandler.h"
+#include "MotionController.h"
+#include "WorldState.h"
+#include <bt/BehaviorNode.h>
+#include <memory>
+#include <elapsedMillis.h>
 
 class Bot {
 public:
     Bot();
 
-    void update() const;
+    void update();
 
 private:
-    std::shared_ptr<CM5>          _cm5;
-    std::shared_ptr<Sensors>      _sensors;
-    std::shared_ptr<Positioning>  _positioning;
-    std::unique_ptr<Striker>      _striker;
-    std::unique_ptr<Goalie>       _goalie;
+    std::shared_ptr<CM5>              _cm5;
+    std::shared_ptr<Sensors>          _sensors;
+    std::shared_ptr<Positioning>      _positioning;
+    std::shared_ptr<MotionController> _motion;
     std::unique_ptr<GameStateHandler> _gameState;
 
-    static void printPeerPacket();
+    std::unique_ptr<BT::BehaviorNode> _tree;
 
-    static bool getSwitchWantedFromPeer() {
-        const auto& pkt = espNowGetPeerData();
-        return espNowGetFlag(pkt.flags, 4);
-    }
+    elapsedMillis ledTimer;
+    elapsedMillis switchWantedCooldownTimer;
 
-    void fillEspNowPacket(EspNowPacket& pkt) const;
+    // Helper for getSwitchWanted logic (ported from Goalie)
+    bool getSwitchWanted(const WorldState& ws);
 };
-
-#endif //BOT_2026_BOT_H
 
