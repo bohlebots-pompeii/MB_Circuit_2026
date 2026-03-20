@@ -8,7 +8,6 @@
 #include <memory>
 #include <comms/CM5.h>
 #include <Arduino.h>
-
 #include "config/config.h"
 
 class Sensors {
@@ -31,7 +30,7 @@ public:
   [[nodiscard]] bool getEna() const { return ena; }
   [[nodiscard]] static bool getHasBall() { return analogRead(39) > 4000;}
   [[nodiscard]] static int getBallLightGate() { return analogRead(39); }
-  [[nodiscard]] static bool getForceHalt() { return digitalRead(communicationModulePIN) == LOW; }
+  [[nodiscard]] static bool getForceHalt() { return digitalRead(PINS::communicationModulePIN) == LOW; }
 
   enum COLOR { // for the LED colors
     OFF = 0,

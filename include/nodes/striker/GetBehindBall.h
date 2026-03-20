@@ -5,9 +5,9 @@
 
 class MotionController;
 
-class GetBehinBall final : public BT::BehaviorNode {
+class GetBehindBall final : public BT::BehaviorNode {
 public:
-    explicit GetBehinBall(std::shared_ptr<MotionController> motion);
+    explicit GetBehindBall(std::shared_ptr<MotionController> motion);
     BT::Status tick(const WorldState& ws) override;
 
 private:

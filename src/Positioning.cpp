@@ -120,10 +120,10 @@ void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
 
   double factor = 1.0;
 
-  if (futureDist > maxDistance) {
+  if (futureDist > SpeedLimiting::maxDistance) {
     factor = 0.0;
-  } else if (futureDist > slowingDistance) {
-    const double normalizedDist = (futureDist - slowingDistance) / (maxDistance - slowingDistance);
+  } else if (futureDist > SpeedLimiting::slowingDistance) {
+    const double normalizedDist = (futureDist - SpeedLimiting::slowingDistance) / (SpeedLimiting::maxDistance - SpeedLimiting::slowingDistance);
     factor = 1.0 - normalizedDist * normalizedDist;
   }
 

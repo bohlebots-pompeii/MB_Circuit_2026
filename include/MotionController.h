@@ -1,12 +1,14 @@
 #pragma once
 #include <util/Vector2.hpp>
 #include <PID_v1.h>
+#include <memory>
+#include "Positioning.h"
 
 class MotionController {
 public:
     struct Output { float vx; float vy; int rot; };
 
-    MotionController();
+    explicit MotionController(std::shared_ptr<Positioning> positioning);
 
     Output compute(const Vector2& target, float rotInput, bool usePID = false);
 
@@ -28,9 +30,10 @@ private:
     PID _yPID;
     PID _rotPID;
 
+    std::shared_ptr<Positioning> _positioning;
+
     bool _initialized = false;
     void init();
 
     static MotionController* _instance;
 };
-

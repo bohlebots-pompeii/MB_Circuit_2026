@@ -34,7 +34,7 @@ BT::Status EmergencyPosition::tick(const WorldState& ws) {
 }
 
 Vector2 EmergencyPosition::getEmergencyBallVec(const WorldState& ws) {
-    if constexpr (!USE_COMMUNICATION) {
+    if constexpr (!GeneralConfig::USE_COMMUNICATION) {
         return {0, 0};
     }
 
@@ -73,7 +73,6 @@ Vector2 EmergencyPosition::getEmergencyBallVec(const WorldState& ws) {
 }
 
 Vector2 EmergencyPosition::getHalfCircleTarget(const WorldState& ws, const Vector2* ballVecOverride) const {
-    constexpr double HALF_CIRCLE_RADIUS = 60.0;
 
     const Vector2 ownGoalVec = ws.ownGoalVec;
     const Vector2 ballVec = ballVecOverride ? *ballVecOverride : ws.ballVec;
@@ -93,6 +92,6 @@ Vector2 EmergencyPosition::getHalfCircleTarget(const WorldState& ws, const Vecto
         goalToBall = perp * (projPerp >= 0 ? 1.0 : -1.0);
     }
 
-    return ownGoalVec + goalToBall * HALF_CIRCLE_RADIUS;
+    return ownGoalVec + goalToBall * Goalie::HALF_CIRCLE_RADIUS;
 }
 

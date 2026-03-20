@@ -4,7 +4,6 @@
 #include <motor_mb.h>
 #include <util/helper.h>
 #include <config/config.h>
-#include <cmath>
 
 DribbleToGoal::DribbleToGoal(std::shared_ptr<MotionController> motion)
     : _motion(std::move(motion)) {
@@ -17,53 +16,21 @@ BT::Status DribbleToGoal::tick(const WorldState& ws) {
         return BT::Status::FAILURE;
     }
 
-    if (hasBallTimer <= 200) {
+    if (hasBallTimer <= GeneralConfig::HasBallValidTime) {
         return BT::Status::FAILURE;
     }
 
-    bool usePID = true;
-    bool useRotPID = true;
-    bool useRotDelta = true;
-    Vector2 target;
-    int rot = 0;
+    constexpr bool useRotDelta = true;
     float rotInput = 0;
 
-    double globalGoalDir = ws.targetGoalRot - ws.heading;
-    while (globalGoalDir > 180) globalGoalDir -= 360;
-    while (globalGoalDir < -180) globalGoalDir += 360;
+    rotInput = ws.targetGoalRot / 2;
+    const Vector2 target = getBallAlignedVec(ws, 50);
 
-    if (checkBallInPocket(ws) || neutralPointTimer < 2000) {
-        usePID = false;
-        useRotPID = false;
-        useRotDelta = false;
-        target = Vector2(-1, 0);
-        target *= 15;
-        rot = 0;
-    }
-    else if (std::abs(globalGoalDir) < FieldConfig::FieldPocketAngle && std::abs(globalGoalDir) > FieldConfig::FieldPocketAngle - 10.0) {
-        usePID = false;
-        useRotPID = false;
-        useRotDelta = false;
-        target = Vector2(0, 0);
-        rot = ws.targetGoalRot > 0 ? -15 : 15;
-    }
-    else {
-        rotInput = ws.targetGoalRot / 2;
-        target = getBallAlignedVec(ws, 50);
-        usePID = false;
-    }
+    auto [vx, vy, rot] = _motion->compute(target, rotInput, true);
 
-    MotionController::Output out;
-    if (useRotPID) {
-        out = _motion->compute(target, rotInput, usePID);
-    } else {
-        out = _motion->compute(target, 0, usePID);
-        out.rot = rot;
-    }
+    const int dribblerSpeed = target.getX() > 10 ? 50 : 100;
 
-    const int drib = target.getX() > 10 ? 50 : 100;
-
-    pushData(ws.ena, false, static_cast<int>(out.vx), static_cast<int>(out.vy), out.rot, drib, useRotDelta);
+    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, useRotDelta);
 
     return BT::Status::RUNNING;
 }

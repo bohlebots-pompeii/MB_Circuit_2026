@@ -17,12 +17,14 @@
 #include <nodes/LineEscape.h>
 #include <nodes/SearchMode.h>
 #include <nodes/striker/DribbleToGoal.h>
-#include <nodes/striker/GetBehinBall.h>
+#include <nodes/striker/GetBehindBall.h>
 #include <nodes/striker/HoldNeutral.h>
 #include <nodes/goalie/InterceptBall.h>
 #include <nodes/goalie/HalfCircleGuard.h>
 #include <nodes/goalie/EmergencyPosition.h>
 #include <nodes/goalie/GoalNeutral.h>
+
+#include "nodes/striker/RetrieveFromPocket.h"
 
 Bot::Bot() {
     Wire.begin();
@@ -34,13 +36,14 @@ Bot::Bot() {
     _positioning = std::make_shared<Positioning>(_cm5);
     _gameState = std::make_unique<GameStateHandler>(_sensors, _cm5);
 
-    _motion = std::make_shared<MotionController>();
+    _motion = std::make_shared<MotionController>(_positioning);
     MotionController::setInstance(_motion.get());
 
     // build behaviour tree
     auto striker = std::make_unique<BT::PrioritySelector>();
+    striker->addChild(std::make_unique<RetrieveFromPocket>(_motion));
     striker->addChild(std::make_unique<DribbleToGoal>(_motion));
-    striker->addChild(std::make_unique<GetBehinBall>(_motion));
+    striker->addChild(std::make_unique<GetBehindBall>(_motion));
     striker->addChild(std::make_unique<HoldNeutral>(_motion));
 
     auto goalie = std::make_unique<BT::PrioritySelector>();
@@ -57,7 +60,7 @@ Bot::Bot() {
 
     _tree = std::move(root);
 
-    pinMode(buttonPIN, INPUT);
+    pinMode(PINS::buttonPIN, INPUT);
 }
 
 void Bot::update() {
@@ -101,7 +104,7 @@ void Bot::update() {
 
     espNowUpdate(toSend);
 
-    if (digitalRead(buttonPIN)) {
+    if (digitalRead(PINS::buttonPIN)) {
         pushData(false, true, 0, 0, 0, 0, false);
     }
 
@@ -137,7 +140,7 @@ void Bot::update() {
 }
 
 bool Bot::getSwitchWanted(const WorldState& ws) {
-    if constexpr (!USE_COMMUNICATION) {
+    if constexpr (!GeneralConfig::USE_COMMUNICATION) {
         return false;
     }
 

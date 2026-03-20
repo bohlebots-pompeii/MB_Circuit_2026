@@ -35,7 +35,7 @@ void pushData(const bool enable, const bool kick, const int vx, const int vy, in
   cmd.rot  = static_cast<int8_t>(rot);
   cmd.drib = static_cast<int8_t>(dribbler);
 
-  Wire.beginTransmission(motorMBAddress);
+  Wire.beginTransmission(I2C_ADDRESSES::motorMBAddress);
   Wire.write(reinterpret_cast<uint8_t*>(&cmd), sizeof(cmd));
   Wire.endTransmission();
 }

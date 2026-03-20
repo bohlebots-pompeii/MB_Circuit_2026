@@ -20,7 +20,7 @@ BT::Status InterceptBall::tick(const WorldState& ws) {
 
     Vector2 target;
     const float rotInput = ws.awayFromOwnGoalAngle;
-    const bool usePID = false;
+    constexpr bool usePID = false;
 
     // prevent driving into the ball when going backwards
     if (std::abs(ws.ballRot) < 80.0) {
@@ -42,16 +42,15 @@ BT::Status InterceptBall::tick(const WorldState& ws) {
 void InterceptBall::updateTimers(const WorldState& ws) {
     if (ws.ballExists) {
         const Vector2 currentBallVec = ws.ballVec;
-        const Vector2 diff = currentBallVec - lastBallVec;
 
-        if (diff.getMagnitude() > BALL_MOVED_THRESH) {
+        if (const Vector2 diff = currentBallVec - lastBallVec; diff.getMagnitude() > Goalie::BALL_MOVED_THRESH) {
             ballMovementTimer = 0;
             drivingToBall = false;
         }
 
         lastBallVec = currentBallVec;
 
-        if (!drivingToBall && ballMovementTimer > BALL_STATIONARY_MS) {
+        if (!drivingToBall && ballMovementTimer > Goalie::BALL_STATIONARY_MS) {
             drivingToBall = true;
             drivingToBallTimer = 0;
         }
@@ -60,7 +59,7 @@ void InterceptBall::updateTimers(const WorldState& ws) {
         drivingToBall = false;
     }
 
-    if (drivingToBall && drivingToBallTimer >= DRIVE_TO_BALL_MS) {
+    if (drivingToBall && drivingToBallTimer >= Goalie::DRIVE_TO_BALL_MS) {
         drivingToBall = false;
         ballMovementTimer = 0;
     }

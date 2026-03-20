@@ -37,8 +37,8 @@ BT::Status HalfCircleGuard::tick(const WorldState& ws) {
 
     const int drib = ws.ballDist < 40 && ws.ballDist != 0 ? 100 : 0;
 
-    auto out = _motion->compute(target, rotInput, usePID);
-    pushData(ws.ena, false, static_cast<int>(out.vx), static_cast<int>(out.vy), out.rot, drib, true);
+    auto [vx, vy, rot] = _motion->compute(target, rotInput, usePID);
+    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
 
     return BT::Status::RUNNING;
 }
@@ -103,7 +103,7 @@ Vector2 HalfCircleGuard::driveOnLine(const WorldState& ws, const Vector2& target
 
 void HalfCircleGuard::applyBallAvoidance(const WorldState& ws, Vector2& target) const {
     const double ballDist = ws.ballDist;
-    if (ballDist > 0 && ballDist < BALL_AVOID_DIST && std::abs(ws.ballRot) > 90.0) {
+    if (ballDist > 0 && ballDist < Goalie::BALL_AVOID_DIST && std::abs(ws.ballRot) > 90.0) {
         Vector2 ballDir = ws.ballVec;
         ballDir.normalize();
 
@@ -114,7 +114,7 @@ void HalfCircleGuard::applyBallAvoidance(const WorldState& ws, Vector2& target) 
         const double dotR = target.getX() * tangentR.getX() + target.getY() * tangentR.getY();
         const Vector2 tangent = dotL >= dotR ? tangentL : tangentR;
 
-        const double t = 1.0 - ballDist / BALL_AVOID_DIST;
+        const double t = 1.0 - ballDist / Goalie::BALL_AVOID_DIST;
         const double speed = target.getMagnitude();
 
         Vector2 blended(
