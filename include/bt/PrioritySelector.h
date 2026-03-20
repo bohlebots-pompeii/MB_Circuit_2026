@@ -7,6 +7,7 @@ namespace BT {
 
     class PrioritySelector final : public BehaviorNode {
     public:
+        explicit PrioritySelector(std::string name) : BehaviorNode(std::move(name)) {}
         void addChild(std::unique_ptr<BehaviorNode> child);
         Status tick(const WorldState& ws) override;
 
@@ -15,4 +16,3 @@ namespace BT {
     };
 
 }
-

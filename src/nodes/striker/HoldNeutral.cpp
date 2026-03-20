@@ -8,7 +8,7 @@
 #include <algorithm>
 
 HoldNeutral::HoldNeutral(std::shared_ptr<MotionController> motion)
-    : _motion(std::move(motion)), _lastTarget(0,0) {
+    : BT::BehaviorNode("HoldNeutral"), _motion(std::move(motion)), _lastTarget(0,0) {
     middlePointTimer = 0;
 }
 
@@ -49,7 +49,7 @@ BT::Status HoldNeutral::tick(const WorldState& ws) {
     return BT::Status::RUNNING;
 }
 
-Vector2 HoldNeutral::getMoveToCenterVec(const WorldState& ws, const int speed) const {
+Vector2 HoldNeutral::getMoveToCenterVec(const WorldState& ws, const int speed) {
     if (ws.peerAlive && !ws.peerRunning) {
         return getToPointVec(ws.globalX, ws.globalY, FieldConfig::GoalNeutralPointPositionX, 0);
     }

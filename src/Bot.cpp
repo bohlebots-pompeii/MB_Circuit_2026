@@ -40,28 +40,31 @@ Bot::Bot() {
     MotionController::setInstance(_motion.get());
 
     // build behaviour tree
-    auto striker = std::make_unique<BT::PrioritySelector>();
+    auto striker = std::make_unique<BT::PrioritySelector>("StrikerSelector");
     striker->addChild(std::make_unique<RetrieveFromPocket>(_motion));
     striker->addChild(std::make_unique<DribbleToGoal>(_motion));
     striker->addChild(std::make_unique<GetBehindBall>(_motion));
     striker->addChild(std::make_unique<HoldNeutral>(_motion));
 
-    auto goalie = std::make_unique<BT::PrioritySelector>();
+    auto goalie = std::make_unique<BT::PrioritySelector>("GoalieSelector");
     goalie->addChild(std::make_unique<InterceptBall>(_motion));
     goalie->addChild(std::make_unique<HalfCircleGuard>(_motion));
     goalie->addChild(std::make_unique<EmergencyPosition>(_motion));
     goalie->addChild(std::make_unique<GoalNeutral>(_motion));
 
-    auto root = std::make_unique<BT::PrioritySelector>();
+    auto root = std::make_unique<BT::PrioritySelector>("RootSelector");
     root->addChild(std::make_unique<LineEscape>(_motion));
-    root->addChild(std::make_unique<Kick>(_motion));
-    root->addChild(std::make_unique<BT::RoleSelector>(std::move(striker), std::move(goalie)));
+    root->addChild(std::make_unique<BT::RoleSelector>("RoleSelector", std::move(striker), std::move(goalie)));
     root->addChild(std::make_unique<SearchMode>(_motion));
 
     _tree = std::move(root);
 
+    _kickNode = std::make_unique<Kick>(_motion);
+
     pinMode(PINS::buttonPIN, INPUT);
 }
+
+Bot::~Bot() = default;
 
 void Bot::update() {
     static bool CM5_initialized = false;
@@ -106,11 +109,13 @@ void Bot::update() {
 
     if (digitalRead(PINS::buttonPIN)) {
         pushData(false, true, 0, 0, 0, 0, false);
+        return;
     }
 
     if (!ws.cm5Running) {
         _sensors->haltLEDs();
         pushData(false, false, 0, 0, 0, 0, false);
+        sendData();
         return;
     }
 
@@ -127,16 +132,23 @@ void Bot::update() {
 
     if (Sensors::getForceHalt()) {
         pushData(false, false, 0, 0, 0, 0, false);
+        sendData();
         return;
     }
 
     if (!ws.ena) {
         pushData(false, false, 0, 0, 0, 0, false);
+        sendData();
         return;
     }
 
     // update normal behaviour tree
     _tree->tick(ws);
+
+    // Kicker Logic - runs in parallel to movement
+    _kickNode->tick(ws);
+
+    sendData();
 }
 
 bool Bot::getSwitchWanted(const WorldState& ws) {

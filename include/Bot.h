@@ -14,9 +14,12 @@
 #include <memory>
 #include <elapsedMillis.h>
 
+class Kick;
+
 class Bot {
 public:
     Bot();
+    ~Bot();
 
     void update();
 
@@ -28,6 +31,7 @@ private:
     std::unique_ptr<GameStateHandler> _gameState;
 
     std::unique_ptr<BT::BehaviorNode> _tree;
+    std::unique_ptr<Kick>             _kickNode;
 
     elapsedMillis ledTimer;
     elapsedMillis switchWantedCooldownTimer;
@@ -35,4 +39,3 @@ private:
     // Helper for getSwitchWanted logic (ported from Goalie)
     bool getSwitchWanted(const WorldState& ws);
 };
-

@@ -10,32 +10,71 @@
 
 #include "MotionController.h"
 
-void pushData(const bool enable, const bool kick, const int vx, const int vy, int rot, int dribbler, const bool useRotDelta) {
-  MotorCmd cmd{};
+// Buffers
+static int _vx = 0;
+static int _vy = 0;
+static int _rot = 0;
+static int _drib = 0;
+static bool _ena = false;
+static bool _kick = false;
+static bool _useRotDelta = false;
 
-  rot *= -1;
+void pushData(const bool enable, const bool kick, const int vx, const int vy, const int rot, const int dribbler, const bool useRotDelta) {
+    _vx = vx;
+    _vy = vy;
+    _rot = rot;
+    _drib = dribbler;
+    _ena = enable;
+    _kick = kick;
+    _useRotDelta = useRotDelta;
+}
 
-  auto global_drive = Vector2(vx, vy);
-  if (useRotDelta) {
-    const double rotDeltaRad = MotionController::getInstance() ? MotionController::getInstance()->getRotDeltaRad() : 0.0;
-    global_drive.rotate(-rotDeltaRad * 2.0f);
-  }
+void setData(const int vx, const int vy, const int rot, const bool useRotDelta) {
+    _vx = vx;
+    _vy = vy;
+    _rot = rot;
+    _useRotDelta = useRotDelta;
+}
 
-  const int vx_rot = constrain(global_drive.getX(), -70, 70);
-  const int vy_rot = constrain(global_drive.getY(), -70, 70);
-  rot = constrain(rot, -50, 50);
-  dribbler = constrain(dribbler, -100, 100);
+void setDribbler(const int speed) {
+    _drib = speed;
+}
 
-  cmd.flags = 0;
-  if (enable) cmd.flags |= 0x01;
-  if (kick)   cmd.flags |= 0x02;
+void setKick(const bool kick) {
+    _kick = kick;
+}
 
-  cmd.vx   = static_cast<int8_t>(-vy_rot); // swap because bottom pcb is wrong
-  cmd.vy   = static_cast<int8_t>(-vx_rot);
-  cmd.rot  = static_cast<int8_t>(rot);
-  cmd.drib = static_cast<int8_t>(dribbler);
+void setEnable(const bool enable) {
+    _ena = enable;
+}
 
-  Wire.beginTransmission(I2C_ADDRESSES::motorMBAddress);
-  Wire.write(reinterpret_cast<uint8_t*>(&cmd), sizeof(cmd));
-  Wire.endTransmission();
+void sendData() {
+    MotorCmd cmd{};
+
+    const int rotCalc = _rot * -1;
+
+    auto global_drive = Vector2(_vx, _vy);
+    if (_useRotDelta) {
+        const double rotDeltaRad = MotionController::getInstance() ? MotionController::getInstance()->getRotDeltaRad() : 0.0;
+        global_drive.rotate(-rotDeltaRad * 2.0f);
+    }
+
+    const int vx_rot = constrain(global_drive.getX(), -70, 70);
+    const int vy_rot = constrain(global_drive.getY(), -70, 70);
+    const int rot_final = constrain(rotCalc, -50, 50);
+    const int dribbler_final = constrain(_drib, -100, 100);
+
+    cmd.flags = 0;
+    if (_ena) cmd.flags |= 0x01;
+    if (_kick)   cmd.flags |= 0x02;
+
+    cmd.vx   = static_cast<int8_t>(-vy_rot);
+    cmd.vy   = static_cast<int8_t>(-vx_rot);
+    cmd.rot  = static_cast<int8_t>(rot_final);
+    cmd.drib = static_cast<int8_t>(dribbler_final);
+
+    Wire.beginTransmission(I2C_ADDRESSES::motorMBAddress);
+    Wire.write(reinterpret_cast<uint8_t*>(&cmd), sizeof(cmd));
+    Wire.endTransmission();
+    _kick = false;
 }

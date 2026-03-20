@@ -16,6 +16,6 @@ private:
     elapsedMillis middlePointTimer;
     Vector2 _lastTarget;
 
-    Vector2 getMoveToCenterVec(const WorldState& ws, int speed) const;
+    static Vector2 getMoveToCenterVec(const WorldState& ws, int speed);
 };
 

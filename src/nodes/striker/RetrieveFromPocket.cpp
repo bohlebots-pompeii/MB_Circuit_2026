@@ -10,7 +10,7 @@
 #include "motor_mb.h"
 
 RetrieveFromPocket::RetrieveFromPocket(std::shared_ptr<MotionController> motion)
-  : _motion(std::move(motion)) {
+  : BT::BehaviorNode("RetrieveFromPocket"), _motion(std::move(motion)) {
   hasBallTimer = 0;
 }
 

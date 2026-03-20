@@ -8,7 +8,7 @@
 #include <numbers>
 
 HalfCircleGuard::HalfCircleGuard(std::shared_ptr<MotionController> motion)
-    : _motion(std::move(motion)) {}
+    : BT::BehaviorNode("HalfCircleGuard"), _motion(std::move(motion)) {}
 
 BT::Status HalfCircleGuard::tick(const WorldState& ws) {
     if (!(ws.ballExists && !ws.hasBall)) {
@@ -22,14 +22,14 @@ BT::Status HalfCircleGuard::tick(const WorldState& ws) {
     // Line logic
     if (ws.lineSeen) {
         if (ws.lineProgress < 16) {
-            const Vector2 desiredTarget = getHalfCircleTarget(ws, nullptr);
+            const Vector2 desiredTarget = getHalfCircleTarget(ws);
             target = driveOnLine(ws, desiredTarget);
         } else {
-            target = getAwayFromLineVec(ws, 30);
+            target = getAwayFromLineVec(ws);
         }
     } else {
         // Normal guarding
-        target = getHalfCircleTarget(ws, nullptr);
+        target = getHalfCircleTarget(ws);
     }
 
     applyBallAvoidance(ws, target);
@@ -43,11 +43,11 @@ BT::Status HalfCircleGuard::tick(const WorldState& ws) {
     return BT::Status::RUNNING;
 }
 
-Vector2 HalfCircleGuard::getHalfCircleTarget(const WorldState& ws, const Vector2* ballVecOverride) const {
+Vector2 HalfCircleGuard::getHalfCircleTarget(const WorldState& ws) {
     constexpr double HALF_CIRCLE_RADIUS = 60.0;
 
     const Vector2 ownGoalVec = ws.ownGoalVec;
-    const Vector2 ballVec = ballVecOverride ? *ballVecOverride : ws.ballVec;
+    const Vector2 ballVec = ws.ballVec;
 
     Vector2 goalToBall = ballVec - ownGoalVec;
 
@@ -67,7 +67,7 @@ Vector2 HalfCircleGuard::getHalfCircleTarget(const WorldState& ws, const Vector2
     return ownGoalVec + goalToBall * HALF_CIRCLE_RADIUS;
 }
 
-Vector2 HalfCircleGuard::getAwayFromLineVec(const WorldState& ws, const int speed) const {
+Vector2 HalfCircleGuard::getAwayFromLineVec(const WorldState& ws) {
     const double lineRot = ws.lineRot;
     auto lineVec = degToVec(lineRot);
     lineVec.rotate(std::numbers::pi);
@@ -78,11 +78,11 @@ Vector2 HalfCircleGuard::getAwayFromLineVec(const WorldState& ws, const int spee
 
     Vector2 target = lineVec * 0.3f + midVec * 0.7f;
     target.normalize();
-    target *= speed;
+    target *= 30; // default speed
     return target;
 }
 
-Vector2 HalfCircleGuard::driveOnLine(const WorldState& ws, const Vector2& target) const {
+Vector2 HalfCircleGuard::driveOnLine(const WorldState& ws, const Vector2& target) {
     const double lineRot = ws.lineRot;
     Vector2 lineNormal = degToVec(lineRot);
     lineNormal.rotate(std::numbers::pi);
@@ -101,7 +101,7 @@ Vector2 HalfCircleGuard::driveOnLine(const WorldState& ws, const Vector2& target
     return result;
 }
 
-void HalfCircleGuard::applyBallAvoidance(const WorldState& ws, Vector2& target) const {
+void HalfCircleGuard::applyBallAvoidance(const WorldState& ws, Vector2& target) {
     const double ballDist = ws.ballDist;
     if (ballDist > 0 && ballDist < Goalie::BALL_AVOID_DIST && std::abs(ws.ballRot) > 90.0) {
         Vector2 ballDir = ws.ballVec;

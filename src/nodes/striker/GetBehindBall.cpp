@@ -8,7 +8,7 @@
 #include <algorithm>
 
 GetBehindBall::GetBehindBall(std::shared_ptr<MotionController> motion)
-  : _motion(std::move(motion)) {}
+  : BT::BehaviorNode("GetBehindBall"), _motion(std::move(motion)) {}
 
 BT::Status GetBehindBall::tick(const WorldState& ws) {
   if (!(ws.ballExists && !ws.hasBall)) {
@@ -17,7 +17,7 @@ BT::Status GetBehindBall::tick(const WorldState& ws) {
 
   Vector2 target;
   float rotInput = 0;
-  bool usePID = true;
+  bool usePID;
   int speed = 50;
 
   double globalBallDir = ws.ballRot - ws.heading;
@@ -54,17 +54,18 @@ BT::Status GetBehindBall::tick(const WorldState& ws) {
     usePID = false;
   }
 
-  const int drib = target.getX() > 10 ? 50 : 100;
+  //const int drib = target.getX() > 10 ? 50 : 100;
+  constexpr int dribblerSpeed = 100;
 
   // MotionController compute
   auto [vx, vy, rot] = _motion->compute(target, rotInput, usePID);
 
-  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
+  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, true);
 
   return BT::Status::RUNNING;
 }
 
-Vector2 GetBehindBall::getBallPursuitVec(const WorldState& ws) const {
+Vector2 GetBehindBall::getBallPursuitVec(const WorldState& ws) {
   const auto ballVec = ws.ballVec;
   const auto targetGoalVec = ws.targetGoalVec;
 
@@ -102,19 +103,19 @@ Vector2 GetBehindBall::getBallPursuitVec(const WorldState& ws) const {
   return target;
 }
 
-Vector2 GetBehindBall::getBallApproachVec(const WorldState& ws, int speed) const {
+Vector2 GetBehindBall::getBallApproachVec(const WorldState& ws, int speed) {
   auto target = ws.ballVec;
   target.normalize();
   return target * speed;
 }
 
-Vector2 GetBehindBall::getBallAlignedVec(const WorldState& ws, int speed) const {
+Vector2 GetBehindBall::getBallAlignedVec(const WorldState& ws, int speed) {
   Vector2 target = degToVec(ws.targetGoalRot);
   target.normalize();
   return target * speed;
 }
 
-bool GetBehindBall::checkBallOnLine(const WorldState& ws) const {
+bool GetBehindBall::checkBallOnLine(const WorldState& ws) {
   const double globalY = ws.globalY;
   const double ballDist = ws.ballDist;
 
@@ -136,17 +137,12 @@ bool GetBehindBall::checkBallOnLine(const WorldState& ws) const {
   return false;
 }
 
-bool GetBehindBall::checkBallInPocket(const WorldState& ws) const {
+bool GetBehindBall::checkBallInPocket(const WorldState& ws) {
   const double ballX = ws.ballVec.getX();
 
   float globalGoalDir = ws.targetGoalRot - ws.heading;
   while (globalGoalDir > 180) globalGoalDir -= 360;
   while (globalGoalDir < -180) globalGoalDir += 360;
-
-  if (!ws.ballExists && (globalGoalDir > FieldConfig::FieldPocketAngle || globalGoalDir < -
-    FieldConfig::FieldPocketAngle)) {
-    return true;
-  }
 
   if (ballX > 0 && (globalGoalDir > FieldConfig::FieldPocketAngle || globalGoalDir < -FieldConfig::FieldPocketAngle)) {
     return true;

@@ -7,7 +7,7 @@
 #include <cmath>
 
 EmergencyPosition::EmergencyPosition(std::shared_ptr<MotionController> motion)
-    : _motion(std::move(motion)) {}
+    : BT::BehaviorNode("EmergencyPosition"), _motion(std::move(motion)) {}
 
 BT::Status EmergencyPosition::tick(const WorldState& ws) {
     if (!(!ws.ballExists && ws.peerBallValid && ws.peerAlive)) {
@@ -72,10 +72,10 @@ Vector2 EmergencyPosition::getEmergencyBallVec(const WorldState& ws) {
     return {emergencyBallAvgX.getAverage(), emergencyBallAvgY.getAverage()};
 }
 
-Vector2 EmergencyPosition::getHalfCircleTarget(const WorldState& ws, const Vector2* ballVecOverride) const {
+Vector2 EmergencyPosition::getHalfCircleTarget(const WorldState& ws, const Vector2* ballVecOverride) {
 
     const Vector2 ownGoalVec = ws.ownGoalVec;
-    const Vector2 ballVec = ballVecOverride ? *ballVecOverride : ws.ballVec;
+    const Vector2 ballVec = *ballVecOverride;
 
     Vector2 goalToBall = ballVec - ownGoalVec;
 

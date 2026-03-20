@@ -61,7 +61,7 @@ void CM5::calibMirror(const Detection* det, const int num_det) {
       const float dy = mirror_cy - det[i].center[1];
 
       const float r = sqrtf(dx * dx + dy * dy);
-      Serial.println(r);
+      Serial.println(r); // calibration output
     }
   }
 }

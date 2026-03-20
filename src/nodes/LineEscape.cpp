@@ -7,7 +7,8 @@
 #include <cmath>
 #include <numbers>
 
-LineEscape::LineEscape(std::shared_ptr<MotionController> motion) : _motion(std::move(motion)) {}
+LineEscape::LineEscape(std::shared_ptr<MotionController> motion)
+    : BT::BehaviorNode("LineEscape"), _motion(std::move(motion)) {}
 
 BT::Status LineEscape::tick(const WorldState& ws) {
     if (!ws.lineSeen) {

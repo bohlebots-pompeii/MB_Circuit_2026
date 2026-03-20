@@ -6,7 +6,7 @@
 #include <config/config.h>
 
 DribbleToGoal::DribbleToGoal(std::shared_ptr<MotionController> motion)
-    : _motion(std::move(motion)) {
+    : BT::BehaviorNode("DribbleToGoal"), _motion(std::move(motion)) {
     hasBallTimer = 0;
 }
 
@@ -28,7 +28,8 @@ BT::Status DribbleToGoal::tick(const WorldState& ws) {
 
     auto [vx, vy, rot] = _motion->compute(target, rotInput, true);
 
-    const int dribblerSpeed = target.getX() > 10 ? 50 : 100;
+    //const int dribblerSpeed = target.getX() > 10 ? 50 : 100;
+    constexpr int dribblerSpeed = 100;
 
     pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, useRotDelta);
 

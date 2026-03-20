@@ -16,10 +16,10 @@ private:
     MovingAverage<double, 10> strikerAvgX;
     MovingAverage<double, 10> strikerAvgY;
 
-    Vector2 getHalfCircleTarget(const WorldState& ws, const Vector2* ballVecOverride) const;
-    [[nodiscard]] Vector2 getAwayFromLineVec(const WorldState& ws, int speed) const;
-    [[nodiscard]] Vector2 driveOnLine(const WorldState& ws, const Vector2& target) const;
-    void applyBallAvoidance(const WorldState& ws, Vector2& target) const;
+    static Vector2 getHalfCircleTarget(const WorldState& ws);
+    [[nodiscard]] static Vector2 getAwayFromLineVec(const WorldState& ws);
+    [[nodiscard]] static Vector2 driveOnLine(const WorldState& ws, const Vector2& target);
+    static void applyBallAvoidance(const WorldState& ws, Vector2& target);
     void applyStrikerAvoidance(const WorldState& ws, Vector2& target);
 };
 

@@ -7,9 +7,7 @@ namespace BT {
 
     class RoleSelector final : public BehaviorNode {
     public:
-        RoleSelector(std::unique_ptr<BehaviorNode> striker,
-                     std::unique_ptr<BehaviorNode> goalie);
-
+        RoleSelector(std::string name, std::unique_ptr<BehaviorNode> striker, std::unique_ptr<BehaviorNode> goalie);
         Status tick(const WorldState& ws) override;
 
     private:
@@ -18,4 +16,3 @@ namespace BT {
     };
 
 }
-

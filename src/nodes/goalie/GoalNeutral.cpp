@@ -6,7 +6,7 @@
 #include <util/helper.h>
 
 GoalNeutral::GoalNeutral(std::shared_ptr<MotionController> motion)
-    : _motion(std::move(motion)) {}
+    : BT::BehaviorNode("GoalNeutral"), _motion(std::move(motion)) {}
 
 BT::Status GoalNeutral::tick(const WorldState& ws) {
     const Vector2 target = getToPointVec(ws.globalX, ws.globalY, FieldConfig::GoalNeutralPointPositionX, 0);

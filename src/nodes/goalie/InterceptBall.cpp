@@ -6,7 +6,7 @@
 #include <cmath>
 
 InterceptBall::InterceptBall(std::shared_ptr<MotionController> motion)
-    : _motion(std::move(motion)), drivingToBall(false), lastBallVec(0,0) {
+    : BT::BehaviorNode("InterceptBall"), _motion(std::move(motion)), drivingToBall(false), lastBallVec(0,0) {
     ballMovementTimer = 0;
     drivingToBallTimer = 0;
 }

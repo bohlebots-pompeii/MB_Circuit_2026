@@ -8,7 +8,7 @@
 #include <cmath>
 
 SearchMode::SearchMode(std::shared_ptr<MotionController> motion)
-    : _motion(std::move(motion)) {}
+    : BT::BehaviorNode("SearchMode"), _motion(std::move(motion)) {}
 
 BT::Status SearchMode::tick(const WorldState& ws) {
     // Always running as fallback

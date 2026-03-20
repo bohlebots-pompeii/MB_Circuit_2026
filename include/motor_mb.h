@@ -15,3 +15,10 @@ struct __attribute__((packed)) MotorCmd {
 };
 
 void pushData(bool enable, bool kick, int vx, int vy, int rot, int dribbler, bool useRotDelta);
+
+void setData(int vx, int vy, int rot, bool useRotDelta);
+void setDribbler(int speed);
+void setKick(bool kick);
+void setEnable(bool enable);
+void sendData();
+

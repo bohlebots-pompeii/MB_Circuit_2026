@@ -17,6 +17,6 @@ private:
     MovingAverage<double, 10> emergencyBallAvgY;
 
     Vector2 getEmergencyBallVec(const WorldState& ws);
-    Vector2 getHalfCircleTarget(const WorldState& ws, const Vector2* ballVecOverride) const;
+    static Vector2 getHalfCircleTarget(const WorldState& ws, const Vector2* ballVecOverride);
 };
 

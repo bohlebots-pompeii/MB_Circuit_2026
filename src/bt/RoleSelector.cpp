@@ -2,7 +2,8 @@
 
 namespace BT {
 
-    RoleSelector::RoleSelector(std::unique_ptr<BehaviorNode> striker, std::unique_ptr<BehaviorNode> goalie) : _striker(std::move(striker)), _goalie(std::move(goalie)) {}
+    RoleSelector::RoleSelector(std::string name, std::unique_ptr<BehaviorNode> striker, std::unique_ptr<BehaviorNode> goalie)
+        : BehaviorNode(std::move(name)), _striker(std::move(striker)), _goalie(std::move(goalie)) {}
 
     Status RoleSelector::tick(const WorldState& ws) {
         if (ws.isGoalie) {
@@ -12,4 +13,3 @@ namespace BT {
     }
 
 }
-

@@ -13,10 +13,10 @@ public:
 private:
     std::shared_ptr<MotionController> _motion;
 
-    Vector2 getBallPursuitVec(const WorldState& ws) const;
-    Vector2 getBallApproachVec(const WorldState& ws, int speed) const;
-    Vector2 getBallAlignedVec(const WorldState& ws, int speed) const;
-    bool checkBallOnLine(const WorldState& ws) const;
-    bool checkBallInPocket(const WorldState& ws) const;
+    static Vector2 getBallPursuitVec(const WorldState& ws);
+    static Vector2 getBallApproachVec(const WorldState& ws, int speed);
+    static Vector2 getBallAlignedVec(const WorldState& ws, int speed);
+    static bool checkBallOnLine(const WorldState& ws);
+    static bool checkBallInPocket(const WorldState& ws);
 };
 
