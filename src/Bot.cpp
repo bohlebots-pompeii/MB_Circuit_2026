@@ -75,9 +75,11 @@ void Bot::update() {
 
     if (digitalRead(PINS::buttonPIN)) {
         pushData(false, true, 0,0,0,0,false);
+        sendData();
         return;
     }
 
+    /*
     // build world state frame
     const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
 
@@ -148,6 +150,9 @@ void Bot::update() {
     // Kicker Logic - runs in parallel to movement
     _kickNode->tick(ws);
 
+    */
+
+    pushData(true, false, 0,0,0,100,false);
     sendData();
 }
 
