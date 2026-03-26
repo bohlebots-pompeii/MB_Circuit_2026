@@ -73,6 +73,11 @@ void Bot::update() {
     _sensors->update();
     _positioning->update();
 
+    if (digitalRead(PINS::buttonPIN)) {
+        pushData(false, true, 0,0,0,0,false);
+        return;
+    }
+
     // build world state frame
     const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
 
@@ -106,11 +111,6 @@ void Bot::update() {
     espNowSetFlag(toSend.flags, 4, switchWanted);
 
     espNowUpdate(toSend);
-
-    if (digitalRead(PINS::buttonPIN)) {
-        pushData(false, true, 0, 0, 0, 0, false);
-        return;
-    }
 
     if (!ws.cm5Running) {
         _sensors->haltLEDs();
