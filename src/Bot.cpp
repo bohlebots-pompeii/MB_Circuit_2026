@@ -81,6 +81,8 @@ void Bot::update() {
     // build world state frame
     const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
 
+    Serial.println(ws.hasBall);
+
     _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
 
     if (ledTimer > 200 && _gameState->isRunning()) {

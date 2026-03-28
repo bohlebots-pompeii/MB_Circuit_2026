@@ -62,7 +62,7 @@ void sendData() {
     const int vx_rot = constrain(global_drive.getX(), -70, 70);
     const int vy_rot = constrain(global_drive.getY(), -70, 70);
     const int rot_final = constrain(rotCalc, -50, 50);
-    const int dribbler_final = constrain(_drib, -100, 100);
+    const int dribbler_final = constrain(_drib, -70, 70);
 
     cmd.flags = 0;
     if (_ena) cmd.flags |= 0x01;
