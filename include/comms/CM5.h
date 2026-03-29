@@ -17,25 +17,25 @@ struct CalibPoint {
 
 struct Detection {
   uint8_t label;
-  float bbox[4]; // x_min, y_min, x_max, y_max
-  float center[2];
+  double bbox[4]; // x_min, y_min, x_max, y_max
+  double center[2];
 };
 
 struct Object {
   uint8_t label;
-  float rotation_deg;
-  float dist_cm;
+  double rotation_deg;
+  double dist_cm;
 };
 
 class CM5 {
 public:
   void update();
 
-  [[nodiscard]] float getHeading() const { return heading; }
+  [[nodiscard]] double getHeading() const { return heading; }
 
   // Target goal (goal to attack)
-  [[nodiscard]] float getTargetGoalRot() const { return targetGoalRot; }
-  [[nodiscard]] float getTargetGoalDist() const { return targetGoalDist; }
+  [[nodiscard]] double getTargetGoalRot() const { return targetGoalRot; }
+  [[nodiscard]] double getTargetGoalDist() const { return targetGoalDist; }
   [[nodiscard]] Vector2 getTargetGoalVec() const {
     if (targetGoalDist == 0) return {0, 0};
     const double angle_rad = toRad(targetGoalRot);
@@ -43,16 +43,16 @@ public:
   }
 
   // Own goal (goal to defend)
-  [[nodiscard]] float getOwnGoalRot() const { return ownGoalRot; }
-  [[nodiscard]] float getOwnGoalDist() const { return ownGoalDist; }
+  [[nodiscard]] double getOwnGoalRot() const { return ownGoalRot; }
+  [[nodiscard]] double getOwnGoalDist() const { return ownGoalDist; }
   [[nodiscard]] Vector2 getOwnGoalVec() const {
     if (ownGoalDist == 0) return {0, 0};
     const double angle_rad = toRad(ownGoalRot);
     return {cos(angle_rad) * ownGoalDist, sin(angle_rad) * ownGoalDist};
   }
 
-  [[nodiscard]] float getBallRot() const { return ballRot; }
-  [[nodiscard]] float getBallDist() const { return ballDist; }
+  [[nodiscard]] double getBallRot() const { return ballRot; }
+  [[nodiscard]] double getBallDist() const { return ballDist; }
   [[nodiscard]] bool getBallExists() const { return ballDist != 0; }
   [[nodiscard]] Vector2 getBallVec() const {
     if (!getBallExists()) return {0, 0};
@@ -63,12 +63,12 @@ public:
   [[nodiscard]] const Object* getObjects() const { return objects; }
   [[nodiscard]] int getNumDetections() const { return num_detections; }
 
-  [[nodiscard]] float getGlobalX() const { return g_x; }
-  [[nodiscard]] float getGlobalY() const { return g_y; }
+  [[nodiscard]] double getGlobalX() const { return g_x; }
+  [[nodiscard]] double getGlobalY() const { return g_y; }
 
-  [[nodiscard]] bool getCM5Running() const { return lastUpdateTimer < 50;}
+  [[nodiscard]] bool getCM5Running() const { return lastUpdateTimer < 50.0;}
 
-  [[nodiscard]] float getAwayFromOwnGoalAngle() const { return awayFromOwnGoalAngle; }
+  [[nodiscard]] double getAwayFromOwnGoalAngle() const { return awayFromOwnGoalAngle; }
 
   enum COLOR {
     BLUE = 1,
@@ -83,29 +83,29 @@ private:
   Detection detections[6] = {};
   int num_detections = 0;
   Object objects[6] = {};
-  float heading = 0;
+  double heading = 0;
 
   // Target goal (goal to attack) and own goal (goal to defend)
-  float targetGoalRot = 0;
-  float targetGoalDist = 0;
-  float ownGoalRot = 0;
-  float ownGoalDist = 0;
+  double targetGoalRot = 0;
+  double targetGoalDist = 0;
+  double ownGoalRot = 0;
+  double ownGoalDist = 0;
 
-  float awayFromOwnGoalAngle = 0;
+  double awayFromOwnGoalAngle = 0;
 
   // Goal label mapping: 1=blue, 2=yellow
   uint8_t targetGoalLabel = 2; // default: attack yellow
   uint8_t ownGoalLabel = 1;    // default: defend blue
 
-  float ballRot = 0;
-  float ballDist = 0;
+  double ballRot = 0;
+  double ballDist = 0;
 
-  float g_x = 0;
-  float g_y = 0;
+  double g_x = 0;
+  double g_y = 0;
 
-  static float pixelToCm(float pixel);
+  static double pixelToCm(double x);
 
-  static float halfToFloat(uint16_t h);
+  static double halfToFloat(uint16_t h);
 
   static void calibMirror(const Detection* det, int num_det); // unused
 

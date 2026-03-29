@@ -41,7 +41,7 @@ Bot::Bot() {
 
     // build behaviour tree
     auto striker = std::make_unique<BT::PrioritySelector>("StrikerSelector");
-    striker->addChild(std::make_unique<RetrieveFromPocket>(_motion));
+    //striker->addChild(std::make_unique<RetrieveFromPocket>(_motion));
     striker->addChild(std::make_unique<DribbleToGoal>(_motion));
     striker->addChild(std::make_unique<GetBehindBall>(_motion));
     striker->addChild(std::make_unique<HoldNeutral>(_motion));
@@ -55,7 +55,7 @@ Bot::Bot() {
     auto root = std::make_unique<BT::PrioritySelector>("RootSelector");
     root->addChild(std::make_unique<LineEscape>(_motion));
     root->addChild(std::make_unique<BT::RoleSelector>("RoleSelector", std::move(striker), std::move(goalie)));
-    root->addChild(std::make_unique<SearchMode>(_motion));
+    //root->addChild(std::make_unique<SearchMode>(_motion));
 
     _tree = std::move(root);
 
@@ -81,7 +81,7 @@ void Bot::update() {
     // build world state frame
     const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
 
-    Serial.println(ws.hasBall);
+    Serial.println(_sensors->getBallLightGate());
 
     _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
 

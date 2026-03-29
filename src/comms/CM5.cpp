@@ -8,8 +8,8 @@
 #include <cstring>
 #include <util/helper.h>
 
-constexpr float mirror_cx = 320.0f;
-constexpr float mirror_cy = 320.0f;
+constexpr double mirror_cx = 320.0;
+constexpr double mirror_cy = 320.0;
 
 static CalibPoint calib[] = {
   {  75.0f,  10.0f },
@@ -36,8 +36,7 @@ static CalibPoint calib[] = {
   { 215.8f,220.0f }
 };
 
-static int CALIB_N = std::size(calib);
-
+/*
 float CM5::pixelToCm(const float pixel) {
   if (pixel <= calib[0].pixel) return calib[0].cm;
   if (pixel >= calib[CALIB_N - 1].pixel) return calib[CALIB_N - 1].cm;
@@ -52,22 +51,38 @@ float CM5::pixelToCm(const float pixel) {
   }
   return 0.0f;
 }
+*/
+
+double CM5::pixelToCm(const double x) {
+  const double xc = std::max(97.0, std::min(x, 214.0));
+  const double xn = (xc - 184.294872) / 31.994735;
+  return  1.6715534999e+00 * pow(xn, 9)
+        + 1.3376102010e+01 * pow(xn, 8)
+        + 3.6139788395e+01 * pow(xn, 7)
+        + 2.8784078503e+01 * pow(xn, 6)
+        + -2.2945215557e+01 * pow(xn, 5)
+        + -2.2580204450e+01 * pow(xn, 4)
+        + 3.6218671956e+01 * pow(xn, 3)
+        + 4.0181055143e+01 * pow(xn, 2)
+        + 4.3030558229e+01 * pow(xn, 1)
+        + 8.6984088433e+01;
+}
 
 // function to calibrate mirror
 void CM5::calibMirror(const Detection* det, const int num_det) {
   for (int i = 0; i < num_det; ++i) {
     if (det[i].label == 1 || det[i].label == 2) {
-      const float dx = det[i].center[0] - mirror_cx;
-      const float dy = mirror_cy - det[i].center[1];
+      const double dx = det[i].center[0] - mirror_cx;
+      const double dy = mirror_cy - det[i].center[1];
 
-      const float r = sqrtf(dx * dx + dy * dy);
+      const double r = sqrt(dx * dx + dy * dy);
       Serial.println(r); // calibration output
     }
   }
 }
 
 // convert from half-float to float32 (wikipedia)
-float CM5::halfToFloat(const uint16_t h) {
+double CM5::halfToFloat(const uint16_t h) {
   uint16_t h_exp = (h & 0x7C00) >> 10;
   uint16_t h_sig = h & 0x03FF;
   const uint32_t f_sgn = (h & 0x8000) << 16;
@@ -122,17 +137,19 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
 
   for (int i = 0; i < num_det; ++i) {
     // difference between img center and obj center
-    const float dx = det[i].center[0] - mirror_cx;
-    const float dy = det[i].center[1] - mirror_cy;
+    const double dx = det[i].center[0] - mirror_cx;
+    const double dy = det[i].center[1] - mirror_cy;
 
     // compute rotation of object to img center
-    const float angle_rad = atan2f(dy, dx);
-    const auto angle_deg = static_cast<float>(toDeg(angle_rad));
-    objects[i].rotation_deg = angle_deg;
+    const double angle_rad = atan2(dy, dx);
+    const auto angle_deg = toDeg(angle_rad);
+    objects[i].rotation_deg =angle_deg;
 
     // compute distances of object from image center and estimate cm
-    const float dist_px = pythagoreanf(dx, dy);
-    const float dist_cm = pixelToCm(dist_px);
+    const double dist_px = pythagorean(dx, dy);
+    //Serial.println(dist_px);
+    const double dist_cm = pixelToCm(dist_px);
+    //Serial.println(dist_cm);
     objects[i].dist_cm = dist_cm;
 
     objects[i].label = det[i].label;
@@ -152,27 +169,27 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
 }
 
 void CM5::computeAwayFromOwnGoalAngle() {
-  float awayAngle = ownGoalRot + 180.0f;
+  double awayAngle = ownGoalRot + 180.0f;
   if (awayAngle > 180.0f) awayAngle -= 360.0f;
   if (awayAngle < -180.0f) awayAngle += 360.0f;
   awayFromOwnGoalAngle = awayAngle;
 }
 
 // correction estimate for y axis pos
-float correction(const float x) {
-  return static_cast<float>(7.59502963e-06 * pow(x, 3) - 1.82918911e-03 * pow(x, 2) + 8.87600747e-01 * x - 4.79815488e-02);
+double correction(const double x) {
+  return 7.59502963e-06 * pow(x, 3) - 1.82918911e-03 * pow(x, 2) + 8.87600747e-01 * x - 4.79815488e-02;
 }
 
 void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
-  float x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+  double x1 = 0, y1 = 0, x2 = 0, y2 = 0;
   bool foundOwnGoal = false, foundTargetGoal = false;
 
   for (int i = 0; i < num_det; ++i) {
-    float theta = objects[i].rotation_deg; // deg
-    theta = static_cast<float>(toRad(theta)); // rad
-    const float d = objects[i].dist_cm;
-    const float x = d * cosf(theta);
-    const float y = d * sinf(theta);
+    double theta = objects[i].rotation_deg; // deg
+    theta = toRad(theta); // rad
+    const double d = objects[i].dist_cm;
+    const double x = d * cos(theta);
+    const double y = d * sin(theta);
 
     if (det[i].label == ownGoalLabel) { // own goal
       x1 = x; y1 = y; foundOwnGoal = true;
@@ -182,16 +199,16 @@ void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
   }
 
   if (foundOwnGoal && foundTargetGoal) {
-    const float dx = x2 - x1;
-    const float dy = y2 - y1;
-    const float h = atan2f(dy, dx);
-    heading = static_cast<float>(toDeg(h));
+    const double dx = x2 - x1;
+    const double dy = y2 - y1;
+    const double h = atan2(dy, dx);
+    heading = toDeg(h);
 
-    const float mx = (x1 + x2) * 0.5f;
-    const float my = (y1 + y2) * 0.5f;
+    const double mx = (x1 + x2) * 0.5f;
+    const double my = (y1 + y2) * 0.5f;
 
-    const float x = mx * cosf(-h) - my * sinf(-h);
-    const float y = mx * sinf(-h) + my * cosf(-h);
+    const double x = mx * cos(-h) - my * sin(-h);
+    const double y = mx * sin(-h) + my * cos(-h);
     g_x = -x;
     g_y = -y;
   }

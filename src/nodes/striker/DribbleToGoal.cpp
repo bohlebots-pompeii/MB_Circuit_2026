@@ -20,6 +20,9 @@ BT::Status DribbleToGoal::tick(const WorldState& ws) {
         return BT::Status::FAILURE;
     }
 
+    pushData(ws.ena, false, 0, 0, 0, 100, false);
+    return BT::Status::RUNNING;
+
     constexpr bool useRotDelta = true;
     float rotInput = 0;
 

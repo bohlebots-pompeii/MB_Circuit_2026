@@ -28,7 +28,7 @@ public:
   [[nodiscard]] bool getLineSeen() const { return progress != -1 && line_rot != -1; }
   [[nodiscard]] Vector2 getPosition() const { return position; }
   [[nodiscard]] bool getEna() const { return ena; }
-  [[nodiscard]] static bool getHasBall() { return analogRead(39) > 4000;}
+  [[nodiscard]] static bool getHasBall() { return analogRead(39) > 3900;}
   [[nodiscard]] static int getBallLightGate() { return analogRead(39); }
   [[nodiscard]] static bool getForceHalt() { return digitalRead(PINS::communicationModulePIN) == LOW; }
 

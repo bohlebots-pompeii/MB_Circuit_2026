@@ -55,7 +55,7 @@ BT::Status GetBehindBall::tick(const WorldState& ws) {
   }
 
   //const int drib = target.getX() > 10 ? 50 : 100;
-  constexpr int dribblerSpeed = 100;
+  constexpr int dribblerSpeed = 70;
 
   // MotionController compute
   auto [vx, vy, rot] = _motion->compute(target, rotInput, usePID);
