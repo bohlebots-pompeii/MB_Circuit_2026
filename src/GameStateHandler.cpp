@@ -8,7 +8,6 @@
 
 GameStateHandler::GameStateHandler(std::shared_ptr<Sensors> sensors, std::shared_ptr<CM5> cm5)
     : _sensors(std::move(sensors)), _cm5(std::move(cm5)) {
-
     const auto [valid, role, targetGoal] = GameStateStore::load();
     if (valid) {
         _role           = role    ? Role::STRIKER : Role::GOALIE;

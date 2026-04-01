@@ -8,6 +8,8 @@
 #include <cstring>
 #include <util/helper.h>
 
+#include "config/config.h"
+
 constexpr double mirror_cx = 320.0;
 constexpr double mirror_cy = 320.0;
 
@@ -230,7 +232,7 @@ void CM5::update() {
 
     if (num_detections_in == 0) {
       num_detections = 0;
-      Serial.println("WARN: No detections received.");
+      if constexpr (!GeneralConfig::DISABLE_WARNINGS) { Serial.println("WARN: No detections received."); }
       return;
     }
 

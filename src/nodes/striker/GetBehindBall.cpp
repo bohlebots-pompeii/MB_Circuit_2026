@@ -8,7 +8,7 @@
 #include <algorithm>
 
 GetBehindBall::GetBehindBall(std::shared_ptr<MotionController> motion)
-  : BT::BehaviorNode("GetBehindBall"), _motion(std::move(motion)) {}
+  : BehaviorNode("GetBehindBall"), _motion(std::move(motion)) {}
 
 BT::Status GetBehindBall::tick(const WorldState& ws) {
   if (!(ws.ballExists && !ws.hasBall)) {
@@ -18,7 +18,6 @@ BT::Status GetBehindBall::tick(const WorldState& ws) {
   Vector2 target;
   float rotInput = 0;
   bool usePID;
-  int speed = 50;
 
   double globalBallDir = ws.ballRot - ws.heading;
   while (globalBallDir > 180) globalBallDir -= 360;
@@ -28,6 +27,7 @@ BT::Status GetBehindBall::tick(const WorldState& ws) {
   const bool ballInEdgeCase = checkBallOnLine(ws) || checkBallInPocket(ws);
 
   if (std::abs(ws.ballRot) < 15.0) {
+    int speed = 50;
     // ball is straight ahead — direct approach
     target = getBallApproachVec(ws, ws.ballDist > 30.0 ? speed : 30);
     rotInput = ballAligned ? ws.ballRot : ws.heading;
@@ -55,7 +55,7 @@ BT::Status GetBehindBall::tick(const WorldState& ws) {
   }
 
   //const int drib = target.getX() > 10 ? 50 : 100;
-  constexpr int dribblerSpeed = 70;
+  constexpr int dribblerSpeed = 100;
 
   // MotionController compute
   auto [vx, vy, rot] = _motion->compute(target, rotInput, usePID);
@@ -103,13 +103,13 @@ Vector2 GetBehindBall::getBallPursuitVec(const WorldState& ws) {
   return target;
 }
 
-Vector2 GetBehindBall::getBallApproachVec(const WorldState& ws, int speed) {
+Vector2 GetBehindBall::getBallApproachVec(const WorldState& ws, const int speed) {
   auto target = ws.ballVec;
   target.normalize();
   return target * speed;
 }
 
-Vector2 GetBehindBall::getBallAlignedVec(const WorldState& ws, int speed) {
+Vector2 GetBehindBall::getBallAlignedVec(const WorldState& ws, const int speed) {
   Vector2 target = degToVec(ws.targetGoalRot);
   target.normalize();
   return target * speed;

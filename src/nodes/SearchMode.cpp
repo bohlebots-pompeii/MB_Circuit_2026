@@ -7,43 +7,43 @@
 #include <algorithm>
 #include <cmath>
 
-SearchMode::SearchMode(std::shared_ptr<MotionController> motion)
-    : BT::BehaviorNode("SearchMode"), _motion(std::move(motion)) {}
+SearchMode::SearchMode(std::shared_ptr<MotionController> motion) : BehaviorNode("SearchMode"),
+                                                                   _motion(std::move(motion)) {}
 
 BT::Status SearchMode::tick(const WorldState& ws) {
-    // Always running as fallback
-    int speed = 50;
+  // Always running as fallback
+  constexpr int speed = 50;
 
-    const Vector2 target = getMoveToCenterVec(ws, speed);
-    const float rotInput = ws.heading;
+  const Vector2 target = getMoveToCenterVec(ws, speed);
+  const double rotInput = ws.heading;
 
-    auto [vx, vy, rot] = _motion->compute(target, rotInput, false); // usePID = false
+  auto [vx, vy, rot] = _motion->compute(target, static_cast<float>(rotInput), false); // usePID = false
 
-    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, 0, true);
+  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, 100, true);
 
-    return BT::Status::RUNNING;
+  return BT::Status::RUNNING;
 }
 
 Vector2 SearchMode::getMoveToCenterVec(const WorldState& ws, const int speed) const {
-    if (ws.peerAlive) {
-        if (!ws.peerRunning) { // !espNowGetFlag(..., 0)
-            return getToPointVec(ws.globalX, ws.globalY, FieldConfig::GoalNeutralPointPositionX, 0);
-        }
+  if (ws.peerAlive) {
+    if (!ws.peerRunning) {
+      // !espNowGetFlag(..., 0)
+      return getToPointVec(ws.globalX, ws.globalY, FieldConfig::GoalNeutralPointPositionX, 0);
     }
+  }
 
-    if (!ws.peerAlive) {
-        return getToPointVec(ws.globalX, ws.globalY, FieldConfig::GoalNeutralPointPositionX, 0);
-    }
+  if (!ws.peerAlive) {
+    return getToPointVec(ws.globalX, ws.globalY, FieldConfig::GoalNeutralPointPositionX, 0);
+  }
 
-    Vector2 middlePointVector(-ws.globalX, -ws.globalY); // Same as Positioning::getMiddlePointVector
-    const double distance = middlePointVector.getMagnitude();
-    middlePointVector.normalize();
+  Vector2 middlePointVector(-ws.globalX, -ws.globalY);
+  const double distance = middlePointVector.getMagnitude();
+  middlePointVector.normalize();
 
-    constexpr double MAX_DISTANCE = 30.0f;
-    const double ratio = std::min(distance / MAX_DISTANCE, 1.0);
-    const double speedFactor = ratio * ratio;
-    const int dynamicSpeed = static_cast<int>(speed * speedFactor);
+  constexpr double MAX_DISTANCE = 30.0f;
+  const double ratio = std::min(distance / MAX_DISTANCE, 1.0);
+  const double speedFactor = ratio * ratio;
+  const int dynamicSpeed = static_cast<int>(speed * speedFactor);
 
-    return middlePointVector * dynamicSpeed;
+  return middlePointVector * dynamicSpeed;
 }
-

@@ -6,6 +6,14 @@
 #define I2C_SDA 21 // I2C
 #define I2C_SCL 22
 
+namespace GeneralConfig {
+  constexpr int HasBallValidTime = 200;
+
+  constexpr bool USE_COMMUNICATION = false;
+
+  constexpr bool DISABLE_WARNINGS = true;
+}
+
 // pins
 namespace PINS {
   constexpr int buttonPIN = 19;
@@ -34,12 +42,6 @@ namespace Goalie {
   constexpr double BALL_MOVED_THRESH = 5.0;
   constexpr float BALL_AVOID_DIST = 50.0f;
   constexpr double HALF_CIRCLE_RADIUS = 60.0;
-}
-
-namespace GeneralConfig {
-  constexpr int HasBallValidTime = 200;
-
-  constexpr bool USE_COMMUNICATION = true;
 }
 
 // PID Configuration

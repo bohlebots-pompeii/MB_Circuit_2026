@@ -10,9 +10,11 @@
 #include <comms/esp-now.h>
 #include <config/config.h>
 
+// behaviour tree framework
 #include <bt/PrioritySelector.h>
 #include <bt/RoleSelector.h>
 
+// nodes
 #include <nodes/Kick.h>
 #include <nodes/LineEscape.h>
 #include <nodes/SearchMode.h>
@@ -23,7 +25,6 @@
 #include <nodes/goalie/HalfCircleGuard.h>
 #include <nodes/goalie/EmergencyPosition.h>
 #include <nodes/goalie/GoalNeutral.h>
-
 #include "nodes/striker/RetrieveFromPocket.h"
 
 Bot::Bot() {
@@ -34,14 +35,14 @@ Bot::Bot() {
     _cm5 = std::make_shared<CM5>();
     _sensors = std::make_shared<Sensors>(_cm5);
     _positioning = std::make_shared<Positioning>(_cm5);
-    _gameState = std::make_unique<GameStateHandler>(_sensors, _cm5);
+    _gameState = std::make_shared<GameStateHandler>(_sensors, _cm5);
 
     _motion = std::make_shared<MotionController>(_positioning);
     MotionController::setInstance(_motion.get());
 
-    // build behaviour tree
+    // build behaviour tree (action decider)
     auto striker = std::make_unique<BT::PrioritySelector>("StrikerSelector");
-    //striker->addChild(std::make_unique<RetrieveFromPocket>(_motion));
+    striker->addChild(std::make_unique<RetrieveFromPocket>(_motion));
     striker->addChild(std::make_unique<DribbleToGoal>(_motion));
     striker->addChild(std::make_unique<GetBehindBall>(_motion));
     striker->addChild(std::make_unique<HoldNeutral>(_motion));
@@ -55,69 +56,43 @@ Bot::Bot() {
     auto root = std::make_unique<BT::PrioritySelector>("RootSelector");
     root->addChild(std::make_unique<LineEscape>(_motion));
     root->addChild(std::make_unique<BT::RoleSelector>("RoleSelector", std::move(striker), std::move(goalie)));
-    //root->addChild(std::make_unique<SearchMode>(_motion));
+    root->addChild(std::make_unique<SearchMode>(_motion));
 
     _tree = std::move(root);
 
-    _kickNode = std::make_unique<Kick>(_motion);
+    // build separate kick decider
+    _kick = std::make_unique<Kick>();
 
     pinMode(PINS::buttonPIN, INPUT);
 }
 
-Bot::~Bot() = default;
+Bot::~Bot() = default; // default
 
-void Bot::update() {
+void Bot::tick() {
     static bool CM5_initialized = false;
+
+    if (digitalRead(PINS::buttonPIN)) { // kick test
+        pushData(false, true, 0,0,0,0,false);
+        sendData();
+        return;
+    }
 
     _cm5->update();
     _sensors->update();
     _positioning->update();
 
-    if (digitalRead(PINS::buttonPIN)) {
-        pushData(false, true, 0,0,0,0,false);
-        return;
-    }
-
     // build world state frame
     const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
 
-    Serial.println(_sensors->getBallLightGate());
-
     _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
 
-    if (ledTimer > 200 && _gameState->isRunning()) {
+    if (ledTimer > 200.0 && _gameState->isRunning()) {
         _sensors->allLEDsOff();
     }
 
-    const bool switchWanted = getSwitchWanted(ws);
-
-    if (switchWanted) {
-        _gameState->setRole(GameStateHandler::Role::STRIKER);
-    }
-
-    EspNowPacket toSend = {};
-    toSend.globalX = ws.globalX;
-    toSend.globalY = ws.globalY;
-    toSend.heading = ws.heading;
-    toSend.ballRot = ws.ballRot;
-    toSend.ballDist = ws.ballDist;
-
-    const bool currentIsGoalie = _gameState->getRole() == GameStateHandler::Role::GOALIE;
-    const bool running = _gameState->isRunning();
-
-    toSend.flags = 0;
-    espNowSetFlag(toSend.flags, 0, running);
-    espNowSetFlag(toSend.flags, 1, currentIsGoalie);
-    espNowSetFlag(toSend.flags, 2, ws.lineSeen);
-    espNowSetFlag(toSend.flags, 3, ws.ballExists);
-    espNowSetFlag(toSend.flags, 4, switchWanted);
-
-    espNowUpdate(toSend);
-
     if (!ws.cm5Running) {
         _sensors->haltLEDs();
-        pushData(false, false, 0, 0, 0, 0, false);
-        sendData();
+        halt();
         return;
     }
 
@@ -128,28 +103,34 @@ void Bot::update() {
 
     _gameState->update();
 
-    if (ws.peerSwitchWanted) {
-        _gameState->setRole(GameStateHandler::Role::GOALIE);
-    }
-
     if (Sensors::getForceHalt()) {
-        pushData(false, false, 0, 0, 0, 0, false);
-        sendData();
+        halt();
         return;
     }
 
     if (!ws.ena) {
-        pushData(false, false, 0, 0, 0, 0, false);
-        sendData();
+        halt();
         return;
     }
 
-    // update normal behaviour tree
+    const bool switchWanted = getSwitchWanted(ws);
+
+    EspNow::getInstance().tick(ws, *_gameState, switchWanted);
+
+    if (switchWanted) {
+        _gameState->setRole(GameStateHandler::Role::STRIKER);
+    }
+
+    if (ws.peerSwitchWanted) {
+        _gameState->setRole(GameStateHandler::Role::GOALIE);
+    }
+
+    // node (action) decider
     _tree->tick(ws);
 
-    // Kicker Logic - runs in parallel to movement
-    _kickNode->tick(ws);
+    _kick->tick(ws);
 
+    // executing
     sendData();
 }
 
@@ -181,4 +162,10 @@ bool Bot::getSwitchWanted(const WorldState& ws) {
     }
 
     return false;
+}
+
+void Bot::halt() {
+    pushData(false, false, 0, 0, 0, 0, false);
+    setKick(false);
+    sendData();
 }

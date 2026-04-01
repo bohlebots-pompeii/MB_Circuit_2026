@@ -15,7 +15,7 @@ void setup() {
 }
 
 void loop() {
-    bot->update();
+    bot->tick();
 
     delay(1);
 }

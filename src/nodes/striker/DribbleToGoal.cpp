@@ -6,27 +6,21 @@
 #include <config/config.h>
 
 DribbleToGoal::DribbleToGoal(std::shared_ptr<MotionController> motion)
-    : BT::BehaviorNode("DribbleToGoal"), _motion(std::move(motion)) {
-    hasBallTimer = 0;
-}
+    : BehaviorNode("DribbleToGoal"), _motion(std::move(motion)) {}
 
 BT::Status DribbleToGoal::tick(const WorldState& ws) {
     if (!ws.hasBall) {
-        hasBallTimer = 0;
         return BT::Status::FAILURE;
     }
 
-    if (hasBallTimer <= GeneralConfig::HasBallValidTime) {
+    if (ws.hasBallTime <= GeneralConfig::HasBallValidTime) {
         return BT::Status::FAILURE;
     }
-
-    pushData(ws.ena, false, 0, 0, 0, 100, false);
-    return BT::Status::RUNNING;
 
     constexpr bool useRotDelta = true;
     float rotInput = 0;
 
-    rotInput = ws.targetGoalRot / 2;
+    rotInput = static_cast<float>(ws.targetGoalRot) / 2;
     const Vector2 target = getBallAlignedVec(ws, 50);
 
     auto [vx, vy, rot] = _motion->compute(target, rotInput, true);
@@ -43,23 +37,5 @@ Vector2 DribbleToGoal::getBallAlignedVec(const WorldState& ws, int speed) const 
     Vector2 target = degToVec(ws.targetGoalRot);
     target.normalize();
     return target * speed;
-}
-
-bool DribbleToGoal::checkBallInPocket(const WorldState& ws) const {
-    const double ballX = ws.ballVec.getX();
-
-    float globalGoalDir = ws.targetGoalRot - ws.heading;
-    while (globalGoalDir > 180) globalGoalDir -= 360;
-    while (globalGoalDir < -180) globalGoalDir += 360;
-
-    if (!ws.ballExists && (globalGoalDir > FieldConfig::FieldPocketAngle || globalGoalDir < -FieldConfig::FieldPocketAngle)) {
-        return true;
-    }
-
-    if (ballX > 0 && (globalGoalDir > FieldConfig::FieldPocketAngle || globalGoalDir < -FieldConfig::FieldPocketAngle)) {
-        return true;
-    }
-
-    return false;
 }
 

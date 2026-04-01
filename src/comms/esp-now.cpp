@@ -9,6 +9,8 @@
 #include <esp_now.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
+#include <WorldState.h>
+#include <GameStateHandler.h>
 
 int8_t espNowBotId = -1;
 
@@ -62,7 +64,12 @@ namespace {
     }
 }
 
-void espNowInit() {
+EspNow& EspNow::getInstance() {
+    static EspNow instance;
+    return instance;
+}
+
+void EspNow::init() {
     WiFiClass::mode(WIFI_STA);
     WiFi.disconnect();
 
@@ -113,7 +120,30 @@ void espNowInit() {
     Serial.println("[ESP-NOW] Ready");
 }
 
-void espNowUpdate(const EspNowPacket& myData) {
+void EspNow::tick(const WorldState& ws, const GameStateHandler& gameState, bool switchWanted) {
+    if (!s_initialized) return;
+
+    EspNowPacket toSend = {};
+    toSend.globalX = ws.globalX;
+    toSend.globalY = ws.globalY;
+    toSend.heading = ws.heading;
+    toSend.ballRot = ws.ballRot;
+    toSend.ballDist = ws.ballDist;
+
+    const bool currentIsGoalie = gameState.getRole() == GameStateHandler::Role::GOALIE;
+    const bool running = gameState.isRunning();
+
+    toSend.flags = 0;
+    espNowSetFlag(toSend.flags, 0, running);
+    espNowSetFlag(toSend.flags, 1, currentIsGoalie);
+    espNowSetFlag(toSend.flags, 2, ws.lineSeen);
+    espNowSetFlag(toSend.flags, 3, ws.ballExists);
+    espNowSetFlag(toSend.flags, 4, switchWanted);
+
+    update(toSend);
+}
+
+void EspNow::update(const EspNowPacket& myData) {
     if (!s_initialized) return;
 
     const uint32_t now = millis();
@@ -133,20 +163,20 @@ void espNowUpdate(const EspNowPacket& myData) {
     }
 }
 
-const EspNowPacket& espNowGetPeerData() {
+const EspNowPacket& EspNow::getPeerData() const {
     return s_peerData;
 }
 
-bool espNowPeerAlive() {
+bool EspNow::isPeerAlive() const {
     return millis() - s_lastRxMs < 1000;
 }
 
-bool espNowPeerKnown() {
+bool EspNow::isPeerKnown() const {
     const uint8_t* peerMac = getPeerMac();
     return peerMac != nullptr && !isMacAllFF(peerMac);
 }
 
-String espNowGetOwnMac() {
+String EspNow::getOwnMac() const {
     uint8_t mac[6];
     esp_wifi_get_mac(WIFI_IF_STA, mac);
     char buf[18];

@@ -1,11 +1,10 @@
 #include "WorldState.h"
-
 #include <comms/CM5.h>
 #include <Sensors.h>
 #include <Positioning.h>
 #include <GameStateHandler.h>
 #include <comms/esp-now.h>
-
+#include <elapsedMillis.h>
 WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Positioning& positioning, const GameStateHandler& gameState) {
     WorldState ws;
 
@@ -15,6 +14,16 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
     ws.ballRot = cm5.getBallRot();
     ws.ballExists = cm5.getBallExists();
     ws.hasBall = Sensors::getHasBall();
+
+    if (ws.ballExists) {
+        ws.lastBallSeenTime = 0;
+    } else {
+        ws.lastBallLostTime = 0;
+    }
+
+    if (!ws.hasBall) {
+        ws.hasBallTime = 0;
+    }
 
     // line sensor
     ws.lineSeen = sensors.getLineSeen();

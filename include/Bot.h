@@ -18,24 +18,25 @@ class Kick;
 
 class Bot {
 public:
-    Bot();
-    ~Bot();
+  Bot();
+  ~Bot();
 
-    void update();
+  void tick();
 
 private:
-    std::shared_ptr<CM5>              _cm5;
-    std::shared_ptr<Sensors>          _sensors;
-    std::shared_ptr<Positioning>      _positioning;
-    std::shared_ptr<MotionController> _motion;
-    std::unique_ptr<GameStateHandler> _gameState;
+  std::shared_ptr<CM5> _cm5;
+  std::shared_ptr<Sensors> _sensors;
+  std::shared_ptr<Positioning> _positioning;
+  std::shared_ptr<MotionController> _motion;
+  std::shared_ptr<GameStateHandler> _gameState;
 
-    std::unique_ptr<BT::BehaviorNode> _tree;
-    std::unique_ptr<Kick>             _kickNode;
+  std::unique_ptr<BT::BehaviorNode> _tree;
+  std::unique_ptr<Kick> _kick;
 
-    elapsedMillis ledTimer;
-    elapsedMillis switchWantedCooldownTimer;
+  elapsedMillis ledTimer;
+  elapsedMillis switchWantedCooldownTimer;
 
-    // Helper for getSwitchWanted logic (ported from Goalie)
-    bool getSwitchWanted(const WorldState& ws);
+  bool getSwitchWanted(const WorldState& ws);
+
+  static void halt();
 };

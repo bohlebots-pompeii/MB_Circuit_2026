@@ -39,7 +39,7 @@ BT::Status LineEscape::tick(const WorldState& ws) {
 
     auto [vx, vy, rot] = _motion->compute(target, rotInput, false);
 
-    pushData(ws.ena, kick, static_cast<int>(vx), static_cast<int>(vy), rot, 0, true);
+    pushData(ws.ena, kick, static_cast<int>(vx), static_cast<int>(vy), rot, 100, true);
 
     return BT::Status::RUNNING;
 }

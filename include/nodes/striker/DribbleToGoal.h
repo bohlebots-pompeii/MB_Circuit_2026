@@ -13,10 +13,7 @@ public:
 
 private:
     std::shared_ptr<MotionController> _motion;
-    elapsedMillis hasBallTimer;
-    elapsedMillis neutralPointTimer;
 
     [[nodiscard]] Vector2 getBallAlignedVec(const WorldState& ws, int speed) const;
-    [[nodiscard]] bool checkBallInPocket(const WorldState& ws) const;
 };
 

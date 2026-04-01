@@ -23,14 +23,31 @@ inline bool espNowGetFlag(const uint8_t flags, const uint8_t bit) {
     return (flags >> bit) & 1u;
 }
 
-void espNowInit();
+class WorldState;
+class GameStateHandler;
 
-void espNowUpdate(const EspNowPacket& myData);
+class EspNow {
+public:
+    static EspNow& getInstance();
 
-const EspNowPacket& espNowGetPeerData();
+    void init();
+    void tick(const WorldState& ws, const GameStateHandler& gameState, bool switchWanted);
 
-bool espNowPeerAlive();
+    const EspNowPacket& getPeerData() const;
+    bool isPeerAlive() const;
+    bool isPeerKnown() const;
+    String getOwnMac() const;
 
-bool espNowPeerKnown();
+private:
+    EspNow() = default;
 
-String espNowGetOwnMac();
+    void update(const EspNowPacket& myData);
+};
+
+// Global instance wrappers for backward compatibility if needed, or remove them.
+inline void espNowInit() { EspNow::getInstance().init(); }
+inline void espNowUpdate(const EspNowPacket& myData) { /* Use tick instead */ }
+inline const EspNowPacket& espNowGetPeerData() { return EspNow::getInstance().getPeerData(); }
+inline bool espNowPeerAlive() { return EspNow::getInstance().isPeerAlive(); }
+inline bool espNowPeerKnown() { return EspNow::getInstance().isPeerKnown(); }
+inline String espNowGetOwnMac() { return EspNow::getInstance().getOwnMac(); }

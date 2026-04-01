@@ -2,7 +2,6 @@
 #include <bt/BehaviorNode.h>
 #include <memory>
 #include <util/Vector2.hpp>
-#include <elapsedMillis.h>
 
 class MotionController;
 
@@ -13,9 +12,5 @@ public:
 
 private:
     std::shared_ptr<MotionController> _motion;
-    elapsedMillis middlePointTimer;
     Vector2 _lastTarget;
-
-    static Vector2 getMoveToCenterVec(const WorldState& ws, int speed);
 };
-

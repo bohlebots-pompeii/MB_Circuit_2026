@@ -5,6 +5,7 @@
 #pragma once
 
 #include <util/Vector2.hpp>
+#include <elapsedMillis.h>
 
 class CM5;
 class Sensors;
@@ -14,8 +15,8 @@ class GameStateHandler;
 struct WorldState {
     // ball
     Vector2 ballVec;
-    float ballDist;
-    float ballRot;
+    double ballDist;
+    double ballRot;
     bool ballExists;
     bool hasBall;
 
@@ -25,19 +26,24 @@ struct WorldState {
     int lineProgress;
 
     // position + motion
-    float globalX;
-    float globalY;
-    float heading;
+    double globalX;
+    double globalY;
+    double heading;
     Vector2 velocity;
 
     // goals
-    float targetGoalRot;
-    float targetGoalDist;
+    double targetGoalRot;
+    double targetGoalDist;
     Vector2 targetGoalVec;
-    float ownGoalRot;
-    float ownGoalDist;
+    double ownGoalRot;
+    double ownGoalDist;
     Vector2 ownGoalVec;
-    float awayFromOwnGoalAngle;
+    double awayFromOwnGoalAngle;
+
+    // timers
+    elapsedMillis lastBallSeenTime;
+    elapsedMillis lastBallLostTime;
+    elapsedMillis hasBallTime;
 
     // peer robot (ESP-NOW)
     bool peerAlive;
@@ -59,4 +65,3 @@ struct WorldState {
 
     static WorldState build(const CM5& cm5, const Sensors& sensors, const Positioning& positioning, const GameStateHandler& gameState);
 };
-
