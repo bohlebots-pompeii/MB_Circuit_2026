@@ -8,6 +8,9 @@
 WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Positioning& positioning, const GameStateHandler& gameState) {
     WorldState ws;
 
+    static elapsedMillis s_lastBallSeenTime;
+    static elapsedMillis s_hasBallTime;
+
     // ball
     ws.ballVec = cm5.getBallVec();
     ws.ballDist = cm5.getBallDist();
@@ -16,14 +19,15 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
     ws.hasBall = Sensors::getHasBall();
 
     if (ws.ballExists) {
-        ws.lastBallSeenTime = 0;
-    } else {
-        ws.lastBallLostTime = 0;
+        s_lastBallSeenTime = 0;
     }
 
     if (!ws.hasBall) {
-        ws.hasBallTime = 0;
+        s_hasBallTime = 0;
     }
+
+    ws.lastBallSeenTime = s_lastBallSeenTime;
+    ws.hasBallTime = s_hasBallTime;
 
     // line sensor
     ws.lineSeen = sensors.getLineSeen();

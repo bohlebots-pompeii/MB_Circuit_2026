@@ -17,7 +17,6 @@ public:
 
 private:
   std::shared_ptr<MotionController> _motion;
-  elapsedMillis hasBallTimer;
 
   static bool checkBallInPocket(const WorldState& ws);
 };

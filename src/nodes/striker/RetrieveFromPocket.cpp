@@ -10,17 +10,15 @@
 #include "motor_mb.h"
 
 RetrieveFromPocket::RetrieveFromPocket(std::shared_ptr<MotionController> motion)
-  : BT::BehaviorNode("RetrieveFromPocket"), _motion(std::move(motion)) {
-  hasBallTimer = 0;
+  : BehaviorNode("RetrieveFromPocket"), _motion(std::move(motion)) {
 }
 
 BT::Status RetrieveFromPocket::tick(const WorldState& ws) {
   if (!ws.hasBall) {
-    hasBallTimer = 0;
     return BT::Status::FAILURE;
   }
 
-  if (hasBallTimer < GeneralConfig::HasBallValidTime) {
+  if (ws.hasBallTime < GeneralConfig::HasBallValidTime) {
     return BT::Status::FAILURE;
   }
 

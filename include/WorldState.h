@@ -42,7 +42,6 @@ struct WorldState {
 
     // timers
     elapsedMillis lastBallSeenTime;
-    elapsedMillis lastBallLostTime;
     elapsedMillis hasBallTime;
 
     // peer robot (ESP-NOW)

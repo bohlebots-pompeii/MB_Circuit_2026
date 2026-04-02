@@ -1,6 +1,8 @@
 #include <bt/PrioritySelector.h>
 #include <Arduino.h>
 
+#include "config/config.h"
+
 namespace BT {
 
     void PrioritySelector::addChild(std::unique_ptr<BehaviorNode> child) {
