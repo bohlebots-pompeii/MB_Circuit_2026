@@ -109,12 +109,8 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
     // compute distances of object from image center and estimate cm
     const double dist_px = pythagorean(dx, dy);
     //Serial.println(dist_px);
-    const double dist_cm = toRealLifeDistance(dist_px, objects[i].label);
-    Serial.print(objects[i].label);
-    Serial.print(" px: ");
-    Serial.print(dist_px);
-    Serial.print(" cm: ");
-    Serial.println(toRealLifeDistance(dist_px, objects[i].label));
+    //const double dist_cm = toRealLifeDistance(dist_px, objects[i].label);
+    const double dist_cm = distanceFunction(dist_px);
     objects[i].dist_cm = dist_cm;
 
     objects[i].label = det[i].label;
