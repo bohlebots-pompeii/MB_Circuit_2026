@@ -13,49 +13,7 @@
 constexpr double mirror_cx = 320.0;
 constexpr double mirror_cy = 320.0;
 
-static CalibPoint calib[] = {
-  {  75.0f,  10.0f },
-  { 100.0f,  20.0f },
-  { 130.0f,  30.0f },
-  { 148.0f,  40.0f },
-  { 161.0f,  50.0f },
-  { 169.0f, 60.0f },
-  { 176.9f, 70.0f },
-  { 183.7f, 80.0f },
-  { 188.0f, 90.0f },
-  { 191.6f,100.0f },
-  { 194.5f,110.0f },
-  { 195.8f,120.0f },
-  { 197.2f,130.0f },
-  { 198.7f,140.0f },
-  { 200.8f,150.0f },
-  { 202.7f,160.0f },
-  { 203.9f,170.0f },
-  { 206.4f,180.0f },
-  { 208.35f,190.0f },
-  { 211.4f,200.0f },
-  { 213.8f,210.0f },
-  { 215.8f,220.0f }
-};
-
-/*
-float CM5::pixelToCm(const float pixel) {
-  if (pixel <= calib[0].pixel) return calib[0].cm;
-  if (pixel >= calib[CALIB_N - 1].pixel) return calib[CALIB_N - 1].cm;
-
-  for (int i = 0; i < CALIB_N - 1; i++) {
-    if (pixel >= calib[i].pixel && pixel <= calib[i + 1].pixel) {
-      const float t = (pixel - calib[i].pixel) /
-                (calib[i + 1].pixel - calib[i].pixel);
-      return calib[i].cm +
-             t * (calib[i + 1].cm - calib[i].cm);
-    }
-  }
-  return 0.0f;
-}
-*/
-
-double CM5::pixelToCm(const double x) {
+double CM5::distanceFunction(const double x) {
   const double xc = std::max(97.0, std::min(x, 214.0));
   const double xn = (xc - 184.294872) / 31.994735;
   return  1.6715534999e+00 * pow(xn, 9)
@@ -70,17 +28,18 @@ double CM5::pixelToCm(const double x) {
         + 8.6984088433e+01;
 }
 
-// function to calibrate mirror
-void CM5::calibMirror(const Detection* det, const int num_det) {
-  for (int i = 0; i < num_det; ++i) {
-    if (det[i].label == 1 || det[i].label == 2) {
-      const double dx = det[i].center[0] - mirror_cx;
-      const double dy = mirror_cy - det[i].center[1];
-
-      const double r = sqrt(dx * dx + dy * dy);
-      Serial.println(r); // calibration output
-    }
+// take object heights into account
+double CM5::toRealLifeDistance(const double pixel, const int label) {
+  const double projectedDistance = distanceFunction(pixel);
+  double objectHeight = 0.0;
+  if (label == 1 || label == 2) {
+    objectHeight = ObjectHeights::GOAL;
   }
+  else if (label == 3) {
+    objectHeight = ObjectHeights::BALL;
+  }
+
+  return projectedDistance * (ObjectHeights::MIRROR - objectHeight) / (ObjectHeights::MIRROR - ObjectHeights::BALL);
 }
 
 // convert from half-float to float32 (wikipedia)
@@ -150,8 +109,12 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
     // compute distances of object from image center and estimate cm
     const double dist_px = pythagorean(dx, dy);
     //Serial.println(dist_px);
-    const double dist_cm = pixelToCm(dist_px);
-    //Serial.println(dist_cm);
+    const double dist_cm = toRealLifeDistance(dist_px, objects[i].label);
+    Serial.print(objects[i].label);
+    Serial.print(" px: ");
+    Serial.print(dist_px);
+    Serial.print(" cm: ");
+    Serial.println(toRealLifeDistance(dist_px, objects[i].label));
     objects[i].dist_cm = dist_cm;
 
     objects[i].label = det[i].label;
@@ -175,11 +138,6 @@ void CM5::computeAwayFromOwnGoalAngle() {
   if (awayAngle > 180.0f) awayAngle -= 360.0f;
   if (awayAngle < -180.0f) awayAngle += 360.0f;
   awayFromOwnGoalAngle = awayAngle;
-}
-
-// correction estimate for y axis pos
-double correction(const double x) {
-  return 7.59502963e-06 * pow(x, 3) - 1.82918911e-03 * pow(x, 2) + 8.87600747e-01 * x - 4.79815488e-02;
 }
 
 void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {

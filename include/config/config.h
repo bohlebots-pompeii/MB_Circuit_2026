@@ -14,6 +14,12 @@ namespace GeneralConfig {
   constexpr bool DISABLE_WARNINGS = true;
 }
 
+namespace ObjectHeights {
+  constexpr double BALL = 2.1;
+  constexpr double GOAL = 6.0;
+  constexpr double MIRROR = 17.46;
+}
+
 // pins
 namespace PINS {
   constexpr int buttonPIN = 19;

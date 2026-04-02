@@ -103,11 +103,11 @@ private:
   double g_x = 0;
   double g_y = 0;
 
-  static double pixelToCm(double x);
+  static double distanceFunction(double x);
+
+  static double toRealLifeDistance(double pixel, int label);
 
   static double halfToFloat(uint16_t h);
-
-  static void calibMirror(const Detection* det, int num_det); // unused
 
   static void computeCenters(Detection* det, int num_det);
 
