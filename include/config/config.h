@@ -86,19 +86,22 @@ namespace FieldConfig {
 
   constexpr double GoalHalfWidth = 40.0;
 
+  constexpr double GoalSizeX = 30.0; // cm half hoal
+
   constexpr double FieldLinePositionY = 80.0;
 
   constexpr double FieldPocketPositionX = 60.0;
-  constexpr double FieldPocketPositionY = 40.0;
+  constexpr double FieldPocketFinalX = 40.0;
+  constexpr double FieldPocketFinalY = 50.0;
   constexpr double FieldPocketAngle = 40.0;
 
   constexpr double NeutralPointPositionX = 70.0;
   constexpr double NeutralPointPositionY = 40.0;
 
-  constexpr double GoalNeutralPointPositionX = -80.0;
+  constexpr double GoalNeutralPointPositionX = -50.0;
 
-  constexpr double PointReachedDistance = 10.0;
+  constexpr double PointReachedDistance = 11.0;
 
-  constexpr double kickDistance = 170.0;
+  constexpr double kickDistance = 100.0;
   constexpr double rotateToBallAngle = 70.0;
 }

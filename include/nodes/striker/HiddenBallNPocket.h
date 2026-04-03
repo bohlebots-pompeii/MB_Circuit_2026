@@ -6,13 +6,14 @@
 
 #include <bt/BehaviorNode.h>
 #include <memory>
-#include <elapsedMillis.h>
+
+#include "util/Vector2.hpp"
 
 class MotionController;
 
-class RetrieveFromPocket final : public BT::BehaviorNode {
+class HiddenBallNPocket final : public BT::BehaviorNode {
 public:
-  explicit RetrieveFromPocket(std::shared_ptr<MotionController> motion);
+  explicit HiddenBallNPocket(std::shared_ptr<MotionController> motion);
   BT::Status tick(const WorldState& ws) override;
 
 private:

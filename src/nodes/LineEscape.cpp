@@ -26,10 +26,10 @@ BT::Status LineEscape::tick(const WorldState& ws) {
         if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
             rotInput = ws.ballRot;
         } else {
-            rotInput = ws.heading;
+            rotInput = 0.0;
         }
     } else {
-        rotInput = ws.heading;
+        rotInput = 0.0;
     }
 
     bool kick = false;

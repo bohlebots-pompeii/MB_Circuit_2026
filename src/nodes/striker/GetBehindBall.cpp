@@ -42,7 +42,7 @@ BT::Status GetBehindBall::tick(const WorldState& ws) {
   else {
     // normal pursuit
     target = getBallPursuitVec(ws);
-    rotInput = ws.targetGoalRot;
+    rotInput = ws.heading;
     usePID = true;
   }
 

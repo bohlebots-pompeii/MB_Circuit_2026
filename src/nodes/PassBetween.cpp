@@ -47,10 +47,5 @@ double PassBetween::calculateShotAngle(const WorldState& ws, const Vector2& targ
   const double angle = toDeg(angleRad);
   Serial.println(angle);
 
-  double error = angle - ws.heading;
-  while (error > 180) error -= 360;
-  while (error < -180) error += 360;
-  Serial.println(error);
-
-  return error;
+  return 0;
 }

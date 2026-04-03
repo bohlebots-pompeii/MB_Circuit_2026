@@ -46,11 +46,9 @@ bool getPointReached(const double x1, const double y1, const double x2, const do
   const bool x_reached = std::abs(dx) < FieldConfig::PointReachedDistance;
   const bool y_reached = std::abs(dy) < FieldConfig::PointReachedDistance;
 
-  bool pointReached = false;
-
   if (x_reached && y_reached) {
-    pointReached = true;
+    return true;
   }
 
-  return pointReached;
+  return false;
 }

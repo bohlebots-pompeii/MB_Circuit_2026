@@ -80,7 +80,7 @@ double CM5::halfToFloat(const uint16_t h) {
 
 void CM5::computeCenters(Detection* det, const int num_det) {
   for (int i = 0; i < num_det; ++i) {
-    // swapped to match my coordinate system
+    // swapped because the camera is reverse mounted (POV: you let the hardware cook :))
     det[i].center[1] = (det[i].bbox[0] + det[i].bbox[2]) * 0.5f;
     det[i].center[0] = (det[i].bbox[1] + det[i].bbox[3]) * 0.5f;
   }

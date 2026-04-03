@@ -25,7 +25,7 @@
 #include <nodes/goalie/HalfCircleGuard.h>
 #include <nodes/goalie/EmergencyPosition.h>
 #include <nodes/goalie/GoalNeutral.h>
-#include "nodes/striker/RetrieveFromPocket.h"
+#include "nodes/striker/HiddenBallNPocket.h"
 #include "nodes/PassBetween.h"
 
 Bot::Bot() {
@@ -43,7 +43,7 @@ Bot::Bot() {
 
   // build behaviour tree (action decider)
   auto striker = std::make_unique<BT::PrioritySelector>("StrikerSelector");
-  striker->addChild(std::make_unique<RetrieveFromPocket>(_motion));
+  striker->addChild(std::make_unique<HiddenBallNPocket>(_motion));
   striker->addChild(std::make_unique<DribbleToGoal>(_motion));
   striker->addChild(std::make_unique<GetBehindBall>(_motion));
   striker->addChild(std::make_unique<HoldNeutral>(_motion));
@@ -102,7 +102,7 @@ void Bot::tick() {
 
   _gameState->update();
 
-  if (Sensors::getForceHalt() || !_gameState->isRunning()) {
+  if (Sensors::getForceHalt()) {
     halt();
     return;
   }
@@ -127,6 +127,11 @@ void Bot::tick() {
   _tree->tick(ws);
 
   _kick->tick(ws);
+
+  if (!_gameState->isRunning()) {
+    halt();
+    return;
+  }
 
   // executing
   sendData();
