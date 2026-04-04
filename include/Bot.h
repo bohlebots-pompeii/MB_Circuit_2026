@@ -13,23 +13,24 @@
 #include <memory>
 #include <elapsedMillis.h>
 
+
+// nodes
+#include <nodes/Kick.h>
+#include <nodes/LineEscape.h>
+#include <nodes/DriveToNeutral.h>
+#include <nodes/striker/DribbleToGoal.h>
+#include <nodes/striker/GetBehindBall.h>
+#include <nodes/striker/HoldNeutral.h>
+#include <nodes/striker/HiddenBallNPocket.h>
+#include <nodes/goalie/InterceptBall.h>
+#include <nodes/goalie/HalfCircleGuard.h>
+#include <nodes/goalie/EmergencyPosition.h>
+#include <nodes/goalie/GoalNeutral.h>
+
 class Bot {
 public:
   Bot();
   ~Bot();
-
-  enum class Action {
-    LINE_ESCAPE,
-    HIDDEN_BALL_N_POCKET,
-    DRIBBLE_TO_GOAL,
-    GET_BEHIND_BALL,
-    HOLD_NEUTRAL,
-    DRIVE_TO_NEUTRAL,
-    INTERCEPT_BALL,
-    HALF_CIRCLE_GUARD,
-    EMERGENCY_POSITION,
-    GOAL_NEUTRAL
-  };
 
   void tick();
 
@@ -43,9 +44,22 @@ private:
   elapsedMillis ledTimer;
   elapsedMillis switchWantedCooldownTimer;
 
-  bool getSwitchWanted(const WorldState& ws);
+  // Action bindings (function-pointer based)
+  ActionLineEscape _lineEscape;
+  ActionDriveToNeutral _driveToNeutral;
+  ActionKick _kick;
+  ActionHiddenBallNPocket _hiddenBallNPocket;
+  ActionDribbleToGoal _dribbleToGoal;
+  ActionGetBehindBall _getBehindBall;
+  ActionHoldNeutral _holdNeutral;
+  ActionInterceptBall _interceptBall;
+  ActionHalfCircleGuard _halfCircleGuard;
+  ActionEmergencyPosition _emergencyPosition;
+  ActionGoalNeutral _goalNeutral;
 
-  Action decideAction(const WorldState& ws);
+  void decideAndExecute(const WorldState& ws);
+
+  bool getSwitchWanted(const WorldState& ws);
 
   static void halt();
 };

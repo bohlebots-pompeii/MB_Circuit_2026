@@ -13,18 +13,18 @@
 #include <cstdint>
 
 namespace GameStateStore {
-    static constexpr uint8_t MAGIC       = 0xBB;
-    static constexpr int     ADDR_MAGIC  = 0;
-    static constexpr int     ADDR_ROLE   = 1;
-    static constexpr int     ADDR_TARGET = 2;
+  static constexpr uint8_t MAGIC = 0xBB;
+  static constexpr int ADDR_MAGIC = 0;
+  static constexpr int ADDR_ROLE = 1;
+  static constexpr int ADDR_TARGET = 2;
 
-    struct SavedState {
-        bool valid;
-        uint8_t role;        // 0 = GOALIE, 1 = STRIKER
-        uint8_t targetGoal;  // 0 = BLUE,   1 = YELLOW
-    };
+  struct SavedState {
+    bool valid;
+    uint8_t role; // 0 = GOALIE, 1 = STRIKER
+    uint8_t targetGoal; // 0 = BLUE,   1 = YELLOW
+  };
 
-    void       save(uint8_t role, uint8_t targetGoal);
-    SavedState load();
-    void       clear();
+  void save(uint8_t role, uint8_t targetGoal);
+  SavedState load();
+  void clear();
 }

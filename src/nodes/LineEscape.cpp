@@ -7,77 +7,69 @@
 #include <cmath>
 #include <numbers>
 
-namespace LineEscape {
-  Vector2 getAwayFromLineVec(const WorldState& ws, int speed);
-  bool checkBallOnLine(const WorldState& ws);
+void LineEscape::execute(const WorldState& ws, MotionController* motion) {
+  const Vector2 target = getAwayFromLineVec(ws, 30);
+  float rotInput = 0;
 
+  double globalBallDir = ws.ballRot - ws.heading;
+  while (globalBallDir > 180) globalBallDir -= 360;
+  while (globalBallDir < -180) globalBallDir += 360;
 
-  void execute(const WorldState& ws, MotionController* motion) {
-    if (!ws.lineSeen) {
-      return;
-    }
-
-    const Vector2 target = getAwayFromLineVec(ws, 30);
-    float rotInput = 0;
-
-    double globalBallDir = ws.ballRot - ws.heading;
-    while (globalBallDir > 180) globalBallDir -= 360;
-    while (globalBallDir < -180) globalBallDir += 360;
-
-    if (checkBallOnLine(ws)) {
-      if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
-        rotInput = ws.ballRot;
-      }
-      else {
-        rotInput = 0.0;
-      }
+  if (checkBallOnLine(ws)) {
+    if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
+      rotInput = static_cast<float>(ws.ballRot);
     }
     else {
       rotInput = 0.0;
     }
-
-    bool kick = false;
-    if (std::abs(ws.targetGoalRot) < 15.0 && ws.ena && ws.hasBall) {
-      kick = true;
-    }
-
-    auto [vx, vy, rot] = motion->compute(target, rotInput, false);
-
-    pushData(ws.ena, kick, static_cast<int>(vx), static_cast<int>(vy), rot, 100, true);
+  }
+  else {
+    rotInput = 0.0;
   }
 
-  Vector2 getAwayFromLineVec(const WorldState& ws, const int speed) {
-    Vector2 line = degToVec(ws.lineRot);
-    line.rotate(std::numbers::pi);
+  auto [vx, vy, rot] = motion->compute(target, rotInput, false);
 
-    Vector2 middlePointVector(-ws.globalX, -ws.globalY);
-    middlePointVector.normalize();
+  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, 100, true);
+}
 
-    line = line * 0.3f + middlePointVector * 0.7f;
-    line.normalize();
+Vector2 LineEscape::getAwayFromLineVec(const WorldState& ws, int speed) const {
+  Vector2 line = degToVec(ws.lineRot);
+  line.rotate(std::numbers::pi);
 
-    return line * speed;
+  Vector2 midVec(-ws.globalX, -ws.globalY);
+  if (midVec.getMagnitude() > 1e-3) {
+    midVec.normalize();
   }
 
-  bool checkBallOnLine(const WorldState& ws) {
-    const double globalY = ws.globalY;
-    const double ballDist = ws.ballDist;
+  line = line * 0.3f + midVec * 0.7f;
+  line.normalize();
 
-    double globalBallRot = ws.ballRot - ws.heading;
-    if (globalBallRot > 180.0) globalBallRot -= 360.0;
-    if (globalBallRot < -180.0) globalBallRot += 360.0;
+  return line * speed;
+}
 
-    const double ballRadians = toRad(globalBallRot);
-    const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
+bool LineEscape::checkBallOnLine(const WorldState& ws) const {
+  const double globalY = ws.globalY;
+  const double ballDist = ws.ballDist;
 
-    if (globalY > FieldConfig::FieldLinePositionY && ballGlobalY > globalY) {
-      return true;
-    }
+  double globalBallRot = ws.ballRot - ws.heading;
+  if (globalBallRot > 180.0) globalBallRot -= 360.0;
+  if (globalBallRot < -180.0) globalBallRot += 360.0;
 
-    if (globalY < -FieldConfig::FieldLinePositionY && ballGlobalY < globalY) {
-      return true;
-    }
+  const double ballRadians = toRad(globalBallRot);
+  const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
 
-    return false;
+  if (globalY > FieldConfig::FieldLinePositionY && ballGlobalY > globalY) {
+    return true;
   }
+
+  if (globalY < -FieldConfig::FieldLinePositionY && ballGlobalY < globalY) {
+    return true;
+  }
+
+  return false;
+}
+
+void executeLineEscape(const WorldState& ws, MotionController* motion) {
+  static LineEscape action;
+  action.execute(ws, motion);
 }

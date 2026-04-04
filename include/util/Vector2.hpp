@@ -49,183 +49,183 @@
 */
 class Vector2 {
 public:
-    /*
-    *   PUBLIC FUNCTIONS
-    */
-    /************************************************************
-    *
-    *   CONSTRUCTORS
-    *
-    ************************************************************/
-    Vector2();
+  /*
+  *   PUBLIC FUNCTIONS
+  */
+  /************************************************************
+  *
+  *   CONSTRUCTORS
+  *
+  ************************************************************/
+  Vector2();
 
-    Vector2(const double &a, const double &b);
+  Vector2(const double& a, const double& b);
 
-    Vector2(const std::uint8_t v[2]);
+  Vector2(const std::uint8_t v[2]);
 
-    /************************************************************
-    *
-    *   GETTER FUNCTIONS
-    *
-    ************************************************************/
-    double getX() const;
+  /************************************************************
+  *
+  *   GETTER FUNCTIONS
+  *
+  ************************************************************/
+  double getX() const;
 
-    double getY() const;
+  double getY() const;
 
-    double getAngle() const;
+  double getAngle() const;
 
-    double getMagnitude() const;
+  double getMagnitude() const;
 
-    /************************************************************
-    *
-    *   CLONING
-    *
-    ************************************************************/
-    Vector2 clone() const;
+  /************************************************************
+  *
+  *   CLONING
+  *
+  ************************************************************/
+  Vector2 clone() const;
 
-    static Vector2 clone(const Vector2 &v);
+  static Vector2 clone(const Vector2& v);
 
-    /************************************************************
-    *
-    *   OPERATORS
-    *
-    ************************************************************/
-    friend std::ostream& operator<<(std::ostream& os, const Vector2& v);
+  /************************************************************
+  *
+  *   OPERATORS
+  *
+  ************************************************************/
+  friend std::ostream& operator<<(std::ostream& os, const Vector2& v);
 
-    void operator +=(const Vector2 &v);
+  void operator +=(const Vector2& v);
 
-    void operator -=(const Vector2 &v);
+  void operator -=(const Vector2& v);
 
-    void operator *=(const double &d);
+  void operator *=(const double& d);
 
-    bool operator==(const Vector2 &v) const;
+  bool operator==(const Vector2& v) const;
 
-    Vector2 operator +(const Vector2 &v) const;
+  Vector2 operator +(const Vector2& v) const;
 
-    Vector2 operator -(const Vector2 &v) const;
+  Vector2 operator -(const Vector2& v) const;
 
-    Vector2 operator *(const double &d) const;
+  Vector2 operator *(const double& d) const;
 
-    double operator *(const Vector2 &v);
+  double operator *(const Vector2& v);
 
-    /************************************************************
-    *
-    *   ADDITION intern
-    *
-    ************************************************************/
-    void add(const Vector2 &v);
+  /************************************************************
+  *
+  *   ADDITION intern
+  *
+  ************************************************************/
+  void add(const Vector2& v);
 
-    /************************************************************
-    *
-    *   ADDITION extern
-    *
-    ************************************************************/
-    static Vector2 add(const Vector2 &v1, const Vector2 &v2);
+  /************************************************************
+  *
+  *   ADDITION extern
+  *
+  ************************************************************/
+  static Vector2 add(const Vector2& v1, const Vector2& v2);
 
-    /************************************************************
-    *
-    *   SUBTRACTION intern
-    *
-    ************************************************************/
-    void subtract(const Vector2 &v);
+  /************************************************************
+  *
+  *   SUBTRACTION intern
+  *
+  ************************************************************/
+  void subtract(const Vector2& v);
 
-    /************************************************************
-    *
-    *   SUBTRACTION extern
-    *
-    ************************************************************/
-    static Vector2 subtract(const Vector2 &v1, const Vector2 &v2);
+  /************************************************************
+  *
+  *   SUBTRACTION extern
+  *
+  ************************************************************/
+  static Vector2 subtract(const Vector2& v1, const Vector2& v2);
 
-    /************************************************************
-    *
-    *   MULTIPLICATION intern
-    *
-    ************************************************************/
-    void multiply(const double &d);
+  /************************************************************
+  *
+  *   MULTIPLICATION intern
+  *
+  ************************************************************/
+  void multiply(const double& d);
 
-    /************************************************************
-    *
-    *   MULTIPLICATION extern
-    *
-    ************************************************************/
-    static Vector2 multiply(const Vector2 &v, const double &d);
+  /************************************************************
+  *
+  *   MULTIPLICATION extern
+  *
+  ************************************************************/
+  static Vector2 multiply(const Vector2& v, const double& d);
 
-    static double dotProduct(const Vector2 &v1, const Vector2 &v2);
+  static double dotProduct(const Vector2& v1, const Vector2& v2);
 
-    /************************************************************
-    *
-    *   SCALING intern
-    *
-    ************************************************************/
-    void scale_XY(const double &a, const double &b);
+  /************************************************************
+  *
+  *   SCALING intern
+  *
+  ************************************************************/
+  void scale_XY(const double& a, const double& b);
 
-    /************************************************************
-    *
-    *   SCALING extern
-    *
-    ************************************************************/
-    static Vector2 scale_XY(const Vector2 &v, const double &a, const double &b);
+  /************************************************************
+  *
+  *   SCALING extern
+  *
+  ************************************************************/
+  static Vector2 scale_XY(const Vector2& v, const double& a, const double& b);
 
-    /************************************************************
-    *
-    *   ROTATION intern
-    *
-    ************************************************************/
-    void rotate(const double &angle_rad);
+  /************************************************************
+  *
+  *   ROTATION intern
+  *
+  ************************************************************/
+  void rotate(const double& angle_rad);
 
-    /************************************************************
-    *
-    *   ROTATION extern
-    *
-    ************************************************************/
-    static Vector2 rotate(const Vector2 &z, const double &angle_rad);
+  /************************************************************
+  *
+  *   ROTATION extern
+  *
+  ************************************************************/
+  static Vector2 rotate(const Vector2& z, const double& angle_rad);
 
-    /************************************************************
-    *
-    *   ANGLES
-    *
-    ************************************************************/
-    double angleOffsetTo(const Vector2 &v) const;
+  /************************************************************
+  *
+  *   ANGLES
+  *
+  ************************************************************/
+  double angleOffsetTo(const Vector2& v) const;
 
-    static double angleOffsetBetween(const Vector2 &v1, const Vector2 &v2);
+  static double angleOffsetBetween(const Vector2& v1, const Vector2& v2);
 
-    /************************************************************
-    *
-    *   SECTORS
-    *
-    ************************************************************/
-    bool isBetween(const Vector2 &v1, const Vector2 &v2) const;
+  /************************************************************
+  *
+  *   SECTORS
+  *
+  ************************************************************/
+  bool isBetween(const Vector2& v1, const Vector2& v2) const;
 
-    static bool vectorIsInSector(const Vector2 &v, const Vector2 &a, const Vector2 &b);
+  static bool vectorIsInSector(const Vector2& v, const Vector2& a, const Vector2& b);
 
-    /************************************************************
-    *
-    *   DEBUG
-    *
-    ************************************************************/
-    std::string debugString() const;
+  /************************************************************
+  *
+  *   DEBUG
+  *
+  ************************************************************/
+  std::string debugString() const;
 
-    static Vector2 normalize(Vector2 &v);
+  static Vector2 normalize(Vector2& v);
 
-    void normalize();
+  void normalize();
 
-    void setX(double x);
+  void setX(double x);
 
-    void setY(double y);
+  void setY(double y);
 
-    int getSignX();
+  int getSignX();
 
-    int getSignY();
+  int getSignY();
 
-    /*
-    *  PRIVATE IMPLEMENTATIONS
-    */
+  /*
+  *  PRIVATE IMPLEMENTATIONS
+  */
 private:
-    double _x, _y, _angle, _magnitude;
+  double _x, _y, _angle, _magnitude;
 
-    void update_XY();
+  void update_XY();
 
-    void update_PhiRad();
+  void update_PhiRad();
 
-    int getSign(double x);
+  int getSign(double x);
 };

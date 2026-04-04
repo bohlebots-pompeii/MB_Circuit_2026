@@ -1,10 +1,9 @@
-#ifndef MOVINGAVERAGE_H
-#define MOVINGAVERAGE_H
+#pragma once
 
 #include <array>
 #include <cstddef>
 
-template<typename T, std::size_t N>
+template <typename T, std::size_t N>
 class MovingAverage {
 public:
   MovingAverage();
@@ -23,5 +22,3 @@ private:
 };
 
 #include "util/MovingAverage.tpp"
-
-#endif // MOVINGAVERAGE_H

@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <elapsedMillis.h>
 #include "util/MovingAverage.h"
-#include <../include/config/config.h>
+#include <config/config.h>
 
 elapsedMillis rotationDeltaTimer;
 elapsedMillis velocityTimer;
@@ -40,7 +40,7 @@ std::vector Field = {
   Vector2(-75, 125)
  */
 
-Positioning::Positioning(const std::shared_ptr<CM5> &cm5) {
+Positioning::Positioning(const std::shared_ptr<CM5>& cm5) {
   _cm5 = cm5;
 }
 
@@ -98,7 +98,6 @@ void Positioning::updateVelocity() {
 }
 
 void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
-
   const float x = _cm5->getGlobalX();
   const float y = _cm5->getGlobalY();
 
@@ -122,8 +121,10 @@ void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
 
   if (futureDist > SpeedLimiting::maxDistance) {
     factor = 0.0;
-  } else if (futureDist > SpeedLimiting::slowingDistance) {
-    const double normalizedDist = (futureDist - SpeedLimiting::slowingDistance) / (SpeedLimiting::maxDistance - SpeedLimiting::slowingDistance);
+  }
+  else if (futureDist > SpeedLimiting::slowingDistance) {
+    const double normalizedDist = (futureDist - SpeedLimiting::slowingDistance) / (SpeedLimiting::maxDistance -
+      SpeedLimiting::slowingDistance);
     factor = 1.0 - normalizedDist * normalizedDist;
   }
 
@@ -137,6 +138,3 @@ void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
     vy = std::abs(newVy) < minSpeed ? (vy > 0 ? minSpeed : -minSpeed) : newVy;
   }
 }
-
-
-

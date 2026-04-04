@@ -2,7 +2,7 @@
 // Created by julius on 22.02.2026.
 //
 
-#include "../include/GameStateHandler.h"
+#include <GameStateHandler.h>
 #include <Arduino.h>
 #include "util/GameStateStore.h"
 

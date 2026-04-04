@@ -2,39 +2,25 @@
 #include <WorldState.h>
 #include <MotionController.h>
 #include <motor_mb.h>
-#include <config/config.h>
-#include <util/helper.h>
-#include <cmath>
-#include <algorithm>
 
-namespace HoldNeutral {
-  static Vector2 _lastTarget(0, 0);
-
-
-  void execute(const WorldState& ws, MotionController* motion) {
-    if (ws.lastBallSeenTime > 500) {
-      return;
-    }
-    Serial.println(ws.lastBallSeenTime);
-
-    Vector2 target = _lastTarget;
-    constexpr int rotInput = 0;
-    bool usePID = false;
-
-    _lastTarget = target;
-
-    /* // disabled for testing
-    if (ws.peerRunning && ws.globalX < -70) {
-       Vector2 mv(-ws.globalX, -ws.globalY);
-       mv.normalize();
-       target = mv * 20.0f;
-       usePID = false;
-    }
-    */
-
-    constexpr int drib = 100;
-
-    auto [vx, vy, rot] = motion->compute(target, rotInput, usePID);
-    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
+void HoldNeutral::execute(const WorldState& ws, MotionController* motion) {
+  if (ws.lastBallSeenTime < 30) {
+    _lastDriveVec = motion->getLastTarget();
   }
+
+  if (_lastDriveVec.getMagnitude() < 1e-3) {
+    _lastDriveVec = Vector2(0.0, 0.0);
+  }
+
+  constexpr float rotInput = 0.0f;
+  constexpr bool usePID = true;
+  constexpr int dribSpeed = 100;
+
+  auto [vx, vy, rot] = motion->compute(_lastDriveVec, rotInput, usePID);
+  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribSpeed, true);
+}
+
+void executeHoldNeutral(const WorldState& ws, MotionController* motion) {
+  static HoldNeutral action;
+  action.execute(ws, motion);
 }

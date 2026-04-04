@@ -2,8 +2,7 @@
 // Created by julius on 21.12.2025.
 //
 
-#ifndef BOHLEBOTS_2026_SERIAL_H
-#define BOHLEBOTS_2026_SERIAL_H
+#pragma once
 
 #include <Arduino.h>
 #include <elapsedMillis.h>
@@ -66,7 +65,7 @@ public:
   [[nodiscard]] double getGlobalX() const { return g_x; }
   [[nodiscard]] double getGlobalY() const { return g_y; }
 
-  [[nodiscard]] bool getCM5Running() const { return lastUpdateTimer < 50.0;}
+  [[nodiscard]] bool getCM5Running() const { return lastUpdateTimer < 50;}
 
   [[nodiscard]] double getAwayFromOwnGoalAngle() const { return awayFromOwnGoalAngle; }
 
@@ -117,4 +116,3 @@ private:
   void computeHeadingAndPosition(const Detection* det, int num_det);
 };
 
-#endif //BOHLEBOTS_2026_SERIAL_H

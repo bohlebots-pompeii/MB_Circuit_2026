@@ -23,7 +23,6 @@ namespace ObjectHeights {
 // pins
 namespace PINS {
   constexpr int buttonPIN = 19;
-  constexpr int piezoPIN = 23;
   constexpr int communicationModulePIN = 36;
   constexpr int lightGatePIN = 39;
 }

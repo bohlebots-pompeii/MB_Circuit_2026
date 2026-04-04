@@ -10,7 +10,7 @@
 
 class Positioning {
 public:
-  explicit Positioning(const std::shared_ptr<CM5> &cm5);
+  explicit Positioning(const std::shared_ptr<CM5>& cm5);
 
   void update();
 
@@ -18,6 +18,7 @@ public:
   void speedLimit(float& vx, float& vy, Vector2 _driveVector) const;
   [[nodiscard]] double getRotationDelta() const { return _rotationDelta; }
   [[nodiscard]] Vector2 getVelocity() const { return _velocity; }
+
 private:
   std::shared_ptr<CM5> _cm5;
   Vector2 _middlePointVector;

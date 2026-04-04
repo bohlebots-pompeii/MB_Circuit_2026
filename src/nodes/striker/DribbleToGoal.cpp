@@ -5,35 +5,28 @@
 #include <util/helper.h>
 #include <config/config.h>
 
-namespace DribbleToGoal {
-  Vector2 getBallAlignedVec(const WorldState& ws, int speed);
+void DribbleToGoal::execute(const WorldState& ws, MotionController* motion) {
+  constexpr bool useRotDelta = true;
+  float rotInput = 0;
 
-  void execute(const WorldState& ws, MotionController* motion) {
-    if (!ws.hasBall) {
-      return;
-    }
+  rotInput = static_cast<float>(ws.targetGoalRot) / 2;
+  const Vector2 target = getBallAlignedVec(ws, 50);
 
-    if (ws.hasBallTime <= GeneralConfig::HasBallValidTime) {
-      return;
-    }
+  auto [vx, vy, rot] = motion->compute(target, rotInput, true);
 
-    constexpr bool useRotDelta = true;
-    float rotInput = 0;
+  //const int dribblerSpeed = target.getX() > 10 ? 50 : 100;
+  constexpr int dribblerSpeed = 100;
 
-    rotInput = static_cast<float>(ws.targetGoalRot) / 2;
-    const Vector2 target = getBallAlignedVec(ws, 50);
+  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, useRotDelta);
+}
 
-    auto [vx, vy, rot] = motion->compute(target, rotInput, true);
+Vector2 DribbleToGoal::getBallAlignedVec(const WorldState& ws, int speed) {
+  Vector2 target = degToVec(ws.targetGoalRot);
+  target.normalize();
+  return target * speed;
+}
 
-    //const int dribblerSpeed = target.getX() > 10 ? 50 : 100;
-    constexpr int dribblerSpeed = 100;
-
-    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, useRotDelta);
-  }
-
-  Vector2 getBallAlignedVec(const WorldState& ws, int speed) {
-    Vector2 target = degToVec(ws.targetGoalRot);
-    target.normalize();
-    return target * speed;
-  }
+void executeDribbleToGoal(const WorldState& ws, MotionController* motion) {
+  static DribbleToGoal action;
+  action.execute(ws, motion);
 }

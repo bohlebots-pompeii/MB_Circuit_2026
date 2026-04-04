@@ -6,6 +6,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <memory>
+#include <cmath>
 #include <motor_mb.h>
 #include <comms/esp-now.h>
 #include <config/config.h>
@@ -21,8 +22,7 @@
 #include <nodes/goalie/HalfCircleGuard.h>
 #include <nodes/goalie/EmergencyPosition.h>
 #include <nodes/goalie/GoalNeutral.h>
-#include "nodes/striker/HiddenBallNPocket.h"
-#include "nodes/PassBetween.h"
+#include <nodes/striker/HiddenBallNPocket.h>
 
 Bot::Bot() {
   Wire.begin();
@@ -83,7 +83,7 @@ void Bot::tick() {
     return;
   }
 
-  if (ledTimer > 200.0 && _gameState->isRunning()) {
+  if (ledTimer > 200 && _gameState->isRunning()) {
     // disable leds after short time so we dont confuse the enemy
     _sensors->allLEDsOff();
   }
@@ -102,43 +102,20 @@ void Bot::tick() {
   }
 
   // Action decider
-  Action actionToExecute = decideAction(ws);
+  decideAndExecute(ws);
 
-  switch (actionToExecute) {
-  case Action::LINE_ESCAPE:
-    LineEscape::execute(ws, _motion.get());
-    break;
-  case Action::HIDDEN_BALL_N_POCKET:
-    HiddenBallNPocket::execute(ws, _motion.get());
-    break;
-  case Action::DRIBBLE_TO_GOAL:
-    DribbleToGoal::execute(ws, _motion.get());
-    break;
-  case Action::GET_BEHIND_BALL:
-    GetBehindBall::execute(ws, _motion.get());
-    break;
-  case Action::HOLD_NEUTRAL:
-    HoldNeutral::execute(ws, _motion.get());
-    break;
-  case Action::DRIVE_TO_NEUTRAL:
-    DriveToNeutral::execute(ws, _motion.get());
-    break;
-  case Action::INTERCEPT_BALL:
-    InterceptBall::execute(ws, _motion.get());
-    break;
-  case Action::HALF_CIRCLE_GUARD:
-    HalfCircleGuard::execute(ws, _motion.get());
-    break;
-  case Action::EMERGENCY_POSITION:
-    EmergencyPosition::execute(ws, _motion.get());
-    break;
-  case Action::GOAL_NEUTRAL:
-    GoalNeutral::execute(ws, _motion.get());
-    break;
+  // Kick decider (centralized)
+  setKick(false);
+  bool kickWanted = false;
+  if (ws.hasBall && ws.hasBallTime >= GeneralConfig::HasBallValidTime &&
+    ws.targetGoalDist > 0.0 && ws.targetGoalDist < FieldConfig::kickDistance) {
+    const double theta = std::atan(FieldConfig::GoalSizeX / ws.targetGoalDist);
+    const double windowDeg = toDeg(theta);
+    kickWanted = std::abs(ws.targetGoalRot) < windowDeg;
   }
-
-  // kick (internal decider)
-  Kick::execute(ws, _motion.get());
+  if (kickWanted) {
+    _kick.pFuncExec(ws, _motion.get());
+  }
 
   if (!_gameState->isRunning()) {
     // halt if the bot state is not running. !(called after main decider for debugging)!
@@ -150,37 +127,58 @@ void Bot::tick() {
   sendData(); // send data to the bottom pcb
 }
 
-Bot::Action Bot::decideAction(const WorldState& ws) {
-  if (ws.lineSeen) return Action::LINE_ESCAPE;
+void Bot::decideAndExecute(const WorldState& ws) {
+  if (ws.lineSeen) {
+    _lineEscape.pFuncExec(ws, _motion.get());
+    return;
+  }
 
   // Striker logic
   if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
     if (ws.hasBall && ws.hasBallTime >= GeneralConfig::HasBallValidTime) {
-      return Action::HIDDEN_BALL_N_POCKET;
+      /*
+      if (std::abs(ws.targetGoalRot) < 25.0 && ws.targetGoalDist > FieldConfig::kickDistance + 20.0) {
+        _dribbleToGoal.pFuncExec(ws, _motion.get());
+      }
+      else {
+        _hiddenBallNPocket.pFuncExec(ws, _motion.get());
+      }
+      */
+      _hiddenBallNPocket.pFuncExec(ws, _motion.get());
+      return;
     }
+
     if (ws.ballExists && !ws.hasBall) {
-      return Action::GET_BEHIND_BALL;
+      _getBehindBall.pFuncExec(ws, _motion.get());
+      return;
     }
+
     if (ws.lastBallSeenTime <= 500) {
-      return Action::HOLD_NEUTRAL;
+      _holdNeutral.pFuncExec(ws, _motion.get());
+      return;
     }
-    return Action::DRIVE_TO_NEUTRAL;
+
+    _driveToNeutral.pFuncExec(ws, _motion.get());
+    return;
   }
 
   // Goalie logic
   if (!ws.ballExists && ws.peerBallValid && ws.peerAlive) {
-    return Action::EMERGENCY_POSITION;
+    _emergencyPosition.pFuncExec(ws, _motion.get());
+    return;
   }
 
-  if (ws.ballExists && InterceptBall::isDrivingToBall(ws)) {
-    return Action::INTERCEPT_BALL;
+  if (ws.ballExists && canExecuteInterceptBall(ws)) {
+    _interceptBall.pFuncExec(ws, _motion.get());
+    return;
   }
 
   if (ws.ballExists && !ws.hasBall) {
-    return Action::HALF_CIRCLE_GUARD;
+    _halfCircleGuard.pFuncExec(ws, _motion.get());
+    return;
   }
 
-  return Action::GOAL_NEUTRAL;
+  _goalNeutral.pFuncExec(ws, _motion.get());
 }
 
 bool Bot::getSwitchWanted(const WorldState& ws) {

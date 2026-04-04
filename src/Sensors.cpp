@@ -5,16 +5,16 @@
 #include "../include/Sensors.h"
 #include <Arduino.h>
 #include <config/config.h>
-#include <iostream>
+
 #include <Wire.h>
 #include <elapsedMillis.h>
 
 elapsedMillis ledBlinkTimer;
 
-Sensors::Sensors(const std::shared_ptr<CM5> &cm5) {
+Sensors::Sensors(const std::shared_ptr<CM5>& cm5) {
   // Check if the shared pointer for CM5 is valid
   if (cm5 == nullptr) {
-    std::cout << "cm5 not existent" << std::endl;
+    Serial.println("[Sensors] ERROR: cm5 is null");
   }
 
   _cm5 = cm5;
@@ -40,9 +40,9 @@ void Sensors::updateLineSensor() {
   // Request 4 bytes from the line sensor via I2C
   Wire.requestFrom(I2C_ADDRESSES::lineSensorAddress, len);
   if (Wire.available() >= len) {
-    const uint8_t progressLow  = Wire.read();
+    const uint8_t progressLow = Wire.read();
     const uint8_t progressHigh = Wire.read();
-    const uint8_t lineRotLow  = Wire.read();
+    const uint8_t lineRotLow = Wire.read();
     const uint8_t lineRotHigh = Wire.read();
 
     // Reconstruct 16-bit unsigned integers from high and low bytes
@@ -63,7 +63,8 @@ void Sensors::updateLineSensor() {
       if (progress >= 16) {
         line_rot += 180;
       }
-    } else {
+    }
+    else {
       if (progress > 16) {
         line_rot += 180;
       }
@@ -75,42 +76,11 @@ void Sensors::updateLineSensor() {
 
     lastLineRot = line_rot;
     lastLineProgress = progress;
-  } else {
+  }
+  else {
     // Reset values if communication fails preventing stuck values
     line_rot = -1;
     progress = -1;
-  }
-}
-
-void Sensors::updateUS() {
-  constexpr uint8_t numBytes = 4;
-  // Request 4 bytes containing coordinate data from US sensor
-  Wire.requestFrom(I2C_ADDRESSES::usAddress, numBytes);
-
-  if (Wire.available() >= numBytes) {
-    const uint8_t xLow  = Wire.read();
-    const uint8_t xHigh = Wire.read();
-    const uint8_t yLow  = Wire.read();
-    const uint8_t yHigh = Wire.read();
-
-    const uint16_t x_u = (static_cast<uint16_t>(xHigh) << 8) | static_cast<uint16_t>(xLow);
-    const uint16_t y_u = (static_cast<uint16_t>(yHigh) << 8) | static_cast<uint16_t>(yLow);
-
-    const auto x = static_cast<int16_t>(x_u);
-    const auto y = static_cast<int16_t>(y_u);
-
-    constexpr float scale = 100.0f;
-    const float local_x = static_cast<float>(x) / scale;
-    const float local_y = static_cast<float>(y) / scale;
-
-    //float g_x;
-    //float g_y;
-    //const float heading = _cm5->getHeading();
-
-    //localToWorld(local_x, local_y, heading, g_x, g_y);
-
-    position.setX(local_x);
-    position.setY(local_y);
   }
 }
 
@@ -133,6 +103,7 @@ void Sensors::allLEDsOff() {
 }
 
 void Sensors::haltLEDs() {
+  // cycles Sensors::GREEN(1) through Sensors::WHITE(7)
   static uint8_t LEDColorCounter = 1;
   if (ledBlinkTimer < 250) {
     for (int i = 0; i < 8; ++i) {
@@ -149,7 +120,7 @@ void Sensors::haltLEDs() {
   }
 }
 
-void Sensors::localToWorld(const float lx, const float ly,const float heading_deg, float &gx, float &gy) {
+void Sensors::localToWorld(const float lx, const float ly, const float heading_deg, float& gx, float& gy) {
   // Convert heading to radians for trigonometric functions
   const auto theta = static_cast<float>(heading_deg * (PI / 180.0f));
   // Apply rotation matrix to convert local point (lx, ly) to global point (gx, gy)
@@ -176,7 +147,8 @@ void Sensors::setLED(const int device, const int nr, int color) {
   }
   if (nr == 1) {
     led1Array[device] = color * 2;
-  } else if (nr == 2) {
+  }
+  else if (nr == 2) {
     color *= 16;
     if (color > 63) {
       color += 64;
