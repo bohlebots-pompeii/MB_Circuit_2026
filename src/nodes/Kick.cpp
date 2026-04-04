@@ -5,19 +5,17 @@
 #include <cmath>
 #include <config/config.h>
 
-Kick::Kick()
-    : BehaviorNode("Kick") {}
-
-// decider if the bot should kick or not
-BT::Status Kick::tick(const WorldState& ws) {
+namespace Kick {
+  // decider if the bot should kick or not
+  void execute(const WorldState& ws, MotionController* motion) {
     setKick(false);
 
     if (!ws.hasBall) {
-        return BT::Status::FAILURE; // do nothing
+      return; // do nothing
     }
 
     if (ws.hasBallTime < GeneralConfig::HasBallValidTime) {
-        return BT::Status::FAILURE; // do nothing
+      return; // do nothing
     }
 
     // compute dynamic kick window depending on distance
@@ -27,10 +25,9 @@ BT::Status Kick::tick(const WorldState& ws) {
     const double window_deg = toDeg(window);
 
     if (!(std::abs(ws.targetGoalRot) < window_deg && ws.targetGoalDist < FieldConfig::kickDistance)) {
-        return BT::Status::FAILURE;
+      return;
     }
 
     setKick(true); // queue kick
-
-    return BT::Status::SUCCESS;
+  }
 }

@@ -7,12 +7,14 @@
 #include <cmath>
 #include <numbers>
 
-LineEscape::LineEscape(std::shared_ptr<MotionController> motion)
-    : BT::BehaviorNode("LineEscape"), _motion(std::move(motion)) {}
+namespace LineEscape {
+  Vector2 getAwayFromLineVec(const WorldState& ws, int speed);
+  bool checkBallOnLine(const WorldState& ws);
 
-BT::Status LineEscape::tick(const WorldState& ws) {
+
+  void execute(const WorldState& ws, MotionController* motion) {
     if (!ws.lineSeen) {
-        return BT::Status::FAILURE;
+      return;
     }
 
     const Vector2 target = getAwayFromLineVec(ws, 30);
@@ -23,28 +25,28 @@ BT::Status LineEscape::tick(const WorldState& ws) {
     while (globalBallDir < -180) globalBallDir += 360;
 
     if (checkBallOnLine(ws)) {
-        if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
-            rotInput = ws.ballRot;
-        } else {
-            rotInput = 0.0;
-        }
-    } else {
+      if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
+        rotInput = ws.ballRot;
+      }
+      else {
         rotInput = 0.0;
+      }
+    }
+    else {
+      rotInput = 0.0;
     }
 
     bool kick = false;
     if (std::abs(ws.targetGoalRot) < 15.0 && ws.ena && ws.hasBall) {
-        kick = true;
+      kick = true;
     }
 
-    auto [vx, vy, rot] = _motion->compute(target, rotInput, false);
+    auto [vx, vy, rot] = motion->compute(target, rotInput, false);
 
     pushData(ws.ena, kick, static_cast<int>(vx), static_cast<int>(vy), rot, 100, true);
+  }
 
-    return BT::Status::RUNNING;
-}
-
-Vector2 LineEscape::getAwayFromLineVec(const WorldState& ws, const int speed) const {
+  Vector2 getAwayFromLineVec(const WorldState& ws, const int speed) {
     Vector2 line = degToVec(ws.lineRot);
     line.rotate(std::numbers::pi);
 
@@ -55,9 +57,9 @@ Vector2 LineEscape::getAwayFromLineVec(const WorldState& ws, const int speed) co
     line.normalize();
 
     return line * speed;
-}
+  }
 
-bool LineEscape::checkBallOnLine(const WorldState& ws) const {
+  bool checkBallOnLine(const WorldState& ws) {
     const double globalY = ws.globalY;
     const double ballDist = ws.ballDist;
 
@@ -69,13 +71,13 @@ bool LineEscape::checkBallOnLine(const WorldState& ws) const {
     const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
 
     if (globalY > FieldConfig::FieldLinePositionY && ballGlobalY > globalY) {
-        return true;
+      return true;
     }
 
     if (globalY < -FieldConfig::FieldLinePositionY && ballGlobalY < globalY) {
-        return true;
+      return true;
     }
 
     return false;
+  }
 }
-

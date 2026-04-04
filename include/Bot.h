@@ -10,16 +10,26 @@
 #include "GameStateHandler.h"
 #include "MotionController.h"
 #include "WorldState.h"
-#include <bt/BehaviorNode.h>
 #include <memory>
 #include <elapsedMillis.h>
-
-class Kick;
 
 class Bot {
 public:
   Bot();
   ~Bot();
+
+  enum class Action {
+    LINE_ESCAPE,
+    HIDDEN_BALL_N_POCKET,
+    DRIBBLE_TO_GOAL,
+    GET_BEHIND_BALL,
+    HOLD_NEUTRAL,
+    DRIVE_TO_NEUTRAL,
+    INTERCEPT_BALL,
+    HALF_CIRCLE_GUARD,
+    EMERGENCY_POSITION,
+    GOAL_NEUTRAL
+  };
 
   void tick();
 
@@ -30,13 +40,12 @@ private:
   std::shared_ptr<MotionController> _motion;
   std::shared_ptr<GameStateHandler> _gameState;
 
-  std::unique_ptr<BT::BehaviorNode> _tree;
-  std::unique_ptr<Kick> _kick;
-
   elapsedMillis ledTimer;
   elapsedMillis switchWantedCooldownTimer;
 
   bool getSwitchWanted(const WorldState& ws);
+
+  Action decideAction(const WorldState& ws);
 
   static void halt();
 };

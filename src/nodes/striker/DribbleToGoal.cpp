@@ -5,16 +5,16 @@
 #include <util/helper.h>
 #include <config/config.h>
 
-DribbleToGoal::DribbleToGoal(std::shared_ptr<MotionController> motion)
-    : BehaviorNode("DribbleToGoal"), _motion(std::move(motion)) {}
+namespace DribbleToGoal {
+  Vector2 getBallAlignedVec(const WorldState& ws, int speed);
 
-BT::Status DribbleToGoal::tick(const WorldState& ws) {
+  void execute(const WorldState& ws, MotionController* motion) {
     if (!ws.hasBall) {
-        return BT::Status::FAILURE;
+      return;
     }
 
     if (ws.hasBallTime <= GeneralConfig::HasBallValidTime) {
-        return BT::Status::FAILURE;
+      return;
     }
 
     constexpr bool useRotDelta = true;
@@ -23,19 +23,17 @@ BT::Status DribbleToGoal::tick(const WorldState& ws) {
     rotInput = static_cast<float>(ws.targetGoalRot) / 2;
     const Vector2 target = getBallAlignedVec(ws, 50);
 
-    auto [vx, vy, rot] = _motion->compute(target, rotInput, true);
+    auto [vx, vy, rot] = motion->compute(target, rotInput, true);
 
     //const int dribblerSpeed = target.getX() > 10 ? 50 : 100;
     constexpr int dribblerSpeed = 100;
 
     pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, useRotDelta);
+  }
 
-    return BT::Status::RUNNING;
-}
-
-Vector2 DribbleToGoal::getBallAlignedVec(const WorldState& ws, int speed) const {
+  Vector2 getBallAlignedVec(const WorldState& ws, int speed) {
     Vector2 target = degToVec(ws.targetGoalRot);
     target.normalize();
     return target * speed;
+  }
 }
-
