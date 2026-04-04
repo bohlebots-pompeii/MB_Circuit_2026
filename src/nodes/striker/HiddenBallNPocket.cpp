@@ -36,11 +36,13 @@ BT::Status HiddenBallNPocket::tick(const WorldState& ws) {
   const bool closeToGoal = ws.targetGoalDist < FieldConfig::kickDistance - 4.0;
   const bool farFromGoal = ws.targetGoalDist > FieldConfig::kickDistance + 20.0;
 
+  // align
   if (!inPocket && closeToGoal) {
     rotIn = clampRot(-(ws.targetGoalRot - 5.0) / 3.0);
     target = Vector2(0, 0);
   }
 
+  // get out of pocket
   else if (inPocket) {
     rotIn = clampRot(-ws.awayFromOwnGoalAngle / 5.0);
     target = ws.ownGoalVec;
@@ -74,7 +76,6 @@ BT::Status HiddenBallNPocket::tick(const WorldState& ws) {
   constexpr int dribblerSpeed = 100;
 
   pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, false);
-
   return BT::Status::RUNNING;
 }
 

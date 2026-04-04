@@ -7,8 +7,6 @@
 #include <bt/BehaviorNode.h>
 #include <memory>
 
-#include "util/Vector2.hpp"
-
 class MotionController;
 
 class HiddenBallNPocket final : public BT::BehaviorNode {
