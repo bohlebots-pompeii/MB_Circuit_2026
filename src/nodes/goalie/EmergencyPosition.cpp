@@ -8,27 +8,14 @@
 #include <motor_mb.h>
 #include <config/config.h>
 #include <util/helper.h>
+#include <util/MovingAverage.h>
+#include <util/Vector2.hpp>
 #include <cmath>
 
-void EmergencyPosition::execute(const WorldState& ws, MotionController* motion) {
-  const Vector2 emergencyBall = getEmergencyBallVec(ws);
-  Vector2 target;
-  double rotInput = ws.awayFromOwnGoalAngle;
-  bool usePID = true;
+static MovingAverage<double, 10> g_emergencyBallAvgX;
+static MovingAverage<double, 10> g_emergencyBallAvgY;
 
-  if (emergencyBall.getMagnitude() > 1.0) {
-    target = getHalfCircleTarget(ws, emergencyBall);
-  }
-  else {
-    target = getToPointVec(ws.globalX, ws.globalY, FieldConfig::GoalNeutralPointPositionX, 0);
-    rotInput = ws.heading;
-  }
-
-  auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID);
-  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, 0, true);
-}
-
-Vector2 EmergencyPosition::getEmergencyBallVec(const WorldState& ws) {
+static Vector2 getEmergencyBallVec(const WorldState& ws) {
   if constexpr (!GeneralConfig::USE_COMMUNICATION) {
     return Vector2(0, 0);
   }
@@ -48,13 +35,13 @@ Vector2 EmergencyPosition::getEmergencyBallVec(const WorldState& ws) {
   const double localX = diffGlobalX * cos(-myHeadingRad) - diffGlobalY * sin(-myHeadingRad);
   const double localY = diffGlobalX * sin(-myHeadingRad) + diffGlobalY * cos(-myHeadingRad);
 
-  emergencyBallAvgX.addValue(localX);
-  emergencyBallAvgY.addValue(localY);
+  g_emergencyBallAvgX.addValue(localX);
+  g_emergencyBallAvgY.addValue(localY);
 
-  return Vector2(emergencyBallAvgX.getAverage(), emergencyBallAvgY.getAverage());
+  return Vector2(g_emergencyBallAvgX.getAverage(), g_emergencyBallAvgY.getAverage());
 }
 
-Vector2 EmergencyPosition::getHalfCircleTarget(const WorldState& ws, const Vector2& ballVec) const {
+static Vector2 getHalfCircleTarget(const WorldState& ws, const Vector2& ballVec) {
   const Vector2 ownGoalVec = ws.ownGoalVec;
 
   Vector2 goalToBall = ballVec - ownGoalVec;
@@ -76,6 +63,19 @@ Vector2 EmergencyPosition::getHalfCircleTarget(const WorldState& ws, const Vecto
 }
 
 void executeEmergencyPosition(const WorldState& ws, MotionController* motion) {
-  static EmergencyPosition action;
-  action.execute(ws, motion);
+  const Vector2 emergencyBall = getEmergencyBallVec(ws);
+  Vector2 target;
+  double rotInput = ws.awayFromOwnGoalAngle;
+  bool usePID = true;
+
+  if (emergencyBall.getMagnitude() > 1.0) {
+    target = getHalfCircleTarget(ws, emergencyBall);
+  }
+  else {
+    target = getToPointVec(ws.globalX, ws.globalY, FieldConfig::GoalNeutralPointPositionX, 0);
+    rotInput = ws.heading;
+  }
+
+  auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID);
+  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, 0, true);
 }

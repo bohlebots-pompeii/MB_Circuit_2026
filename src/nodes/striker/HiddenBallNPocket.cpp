@@ -7,9 +7,18 @@
 #include <WorldState.h>
 #include <config/config.h>
 #include <motor_mb.h>
+#include <util/Vector2.hpp>
 #include <cmath>
 
-void HiddenBallNPocket::execute(const WorldState& ws, MotionController* motion) {
+static bool checkBallInPocket(const WorldState& ws) {
+  double absoluteGoalDir = ws.targetGoalRot - ws.heading;
+  while (absoluteGoalDir > 180.0) absoluteGoalDir -= 360.0;
+  while (absoluteGoalDir < -180.0) absoluteGoalDir += 360.0;
+
+  return std::abs(absoluteGoalDir) > FieldConfig::FieldPocketAngle;
+}
+
+void executeHiddenBallNPocket(const WorldState& ws, MotionController* motion) {
   double rotIn = 0.0;
   Vector2 target(0, 0);
 
@@ -51,17 +60,4 @@ void HiddenBallNPocket::execute(const WorldState& ws, MotionController* motion) 
 
   constexpr int dribblerSpeed = 100;
   pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, false);
-}
-
-bool HiddenBallNPocket::checkBallInPocket(const WorldState& ws) const {
-  double absoluteGoalDir = ws.targetGoalRot - ws.heading;
-  while (absoluteGoalDir > 180.0) absoluteGoalDir -= 360.0;
-  while (absoluteGoalDir < -180.0) absoluteGoalDir += 360.0;
-
-  return std::abs(absoluteGoalDir) > FieldConfig::FieldPocketAngle;
-}
-
-void executeHiddenBallNPocket(const WorldState& ws, MotionController* motion) {
-  static HiddenBallNPocket action;
-  action.execute(ws, motion);
 }

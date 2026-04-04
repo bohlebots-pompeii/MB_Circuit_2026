@@ -4,10 +4,8 @@
 struct WorldState;
 class MotionController;
 
-namespace PassBetween {
-  void execute(const WorldState& ws, MotionController* motion);
-}
+void executePassBetween(const WorldState& ws, MotionController* motion);
 
 struct ActionPassBetween {
-  ACTION_EXEC_FUNC pFuncExec = &PassBetween::execute;
+  ACTION_EXEC_FUNC pFuncExec = &executePassBetween;
 };

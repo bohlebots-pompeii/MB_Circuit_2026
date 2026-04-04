@@ -2,9 +2,8 @@
 
 #include <nodes/ActionTypes.h>
 
-struct GoalNeutral {
-  void execute(const WorldState& ws, MotionController* motion);
-};
+struct WorldState;
+class MotionController;
 
 void executeGoalNeutral(const WorldState& ws, MotionController* motion);
 

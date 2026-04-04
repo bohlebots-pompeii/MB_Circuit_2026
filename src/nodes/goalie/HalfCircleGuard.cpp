@@ -4,36 +4,15 @@
 #include <motor_mb.h>
 #include <config/config.h>
 #include <util/helper.h>
+#include <util/Vector2.hpp>
+#include <util/MovingAverage.h>
 #include <cmath>
 #include <numbers>
 
-void HalfCircleGuard::execute(const WorldState& ws, MotionController* motion) {
-  Vector2 target;
-  const float rotInput = static_cast<float>(ws.awayFromOwnGoalAngle);
-  constexpr bool usePID = true;
+static MovingAverage<double, 10> g_strikerAvgX;
+static MovingAverage<double, 10> g_strikerAvgY;
 
-  if (ws.lineSeen) {
-    if (ws.lineProgress < 16) {
-      const Vector2 desiredTarget = getHalfCircleTarget(ws);
-      target = driveOnLine(ws, desiredTarget);
-    }
-    else {
-      target = getAwayFromLineVec(ws);
-    }
-  }
-  else {
-    target = getHalfCircleTarget(ws);
-  }
-
-  applyBallAvoidance(ws, target);
-  applyStrikerAvoidance(ws, target);
-
-  const int drib = (ws.ballDist < 40 && ws.ballDist != 0) ? 100 : 0;
-  auto [vx, vy, rot] = motion->compute(target, rotInput, usePID);
-  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
-}
-
-Vector2 HalfCircleGuard::getHalfCircleTarget(const WorldState& ws) const {
+static Vector2 getHalfCircleTarget(const WorldState& ws) {
   const Vector2 ownGoalVec = ws.ownGoalVec;
   const Vector2 ballVec = ws.ballVec;
 
@@ -55,7 +34,7 @@ Vector2 HalfCircleGuard::getHalfCircleTarget(const WorldState& ws) const {
   return ownGoalVec + goalToBall * Goalie::HALF_CIRCLE_RADIUS;
 }
 
-Vector2 HalfCircleGuard::getAwayFromLineVec(const WorldState& ws) const {
+static Vector2 getAwayFromLineVec(const WorldState& ws) {
   Vector2 lineVec = degToVec(ws.lineRot);
   lineVec.rotate(std::numbers::pi);
   lineVec.normalize();
@@ -70,7 +49,7 @@ Vector2 HalfCircleGuard::getAwayFromLineVec(const WorldState& ws) const {
   return target * 30.0;
 }
 
-Vector2 HalfCircleGuard::driveOnLine(const WorldState& ws, const Vector2& target) const {
+static Vector2 driveOnLine(const WorldState& ws, const Vector2& target) {
   Vector2 lineNormal = degToVec(ws.lineRot);
   lineNormal.rotate(std::numbers::pi);
   lineNormal.normalize();
@@ -86,7 +65,7 @@ Vector2 HalfCircleGuard::driveOnLine(const WorldState& ws, const Vector2& target
   return target;
 }
 
-void HalfCircleGuard::applyBallAvoidance(const WorldState& ws, Vector2& target) const {
+static void applyBallAvoidance(const WorldState& ws, Vector2& target) {
   const double ballDist = ws.ballDist;
   if (!(ballDist > 0 && ballDist < Goalie::BALL_AVOID_DIST && std::abs(ws.ballRot) > 90.0)) {
     return;
@@ -111,7 +90,7 @@ void HalfCircleGuard::applyBallAvoidance(const WorldState& ws, Vector2& target) 
   target = blended * speed;
 }
 
-void HalfCircleGuard::applyStrikerAvoidance(const WorldState& ws, Vector2& target) {
+static void applyStrikerAvoidance(const WorldState& ws, Vector2& target) {
   if (!ws.peerAlive) {
     return;
   }
@@ -122,10 +101,10 @@ void HalfCircleGuard::applyStrikerAvoidance(const WorldState& ws, Vector2& targe
   const double localX = diffX * cos(-headingRad) - diffY * sin(-headingRad);
   const double localY = diffX * sin(-headingRad) + diffY * cos(-headingRad);
 
-  strikerAvgX.addValue(localX);
-  strikerAvgY.addValue(localY);
+  g_strikerAvgX.addValue(localX);
+  g_strikerAvgY.addValue(localY);
 
-  const Vector2 strikerLocal(strikerAvgX.getAverage(), strikerAvgY.getAverage());
+  const Vector2 strikerLocal(g_strikerAvgX.getAverage(), g_strikerAvgY.getAverage());
   const double strikerDist = strikerLocal.getMagnitude();
   constexpr double STRIKER_AVOID_DIST = 40.0;
   if (!(strikerDist > 1e-3 && strikerDist < STRIKER_AVOID_DIST)) {
@@ -152,6 +131,27 @@ void HalfCircleGuard::applyStrikerAvoidance(const WorldState& ws, Vector2& targe
 }
 
 void executeHalfCircleGuard(const WorldState& ws, MotionController* motion) {
-  static HalfCircleGuard action;
-  action.execute(ws, motion);
+  Vector2 target;
+  const float rotInput = static_cast<float>(ws.awayFromOwnGoalAngle);
+  constexpr bool usePID = true;
+
+  if (ws.lineSeen) {
+    if (ws.lineProgress < 16) {
+      const Vector2 desiredTarget = getHalfCircleTarget(ws);
+      target = driveOnLine(ws, desiredTarget);
+    }
+    else {
+      target = getAwayFromLineVec(ws);
+    }
+  }
+  else {
+    target = getHalfCircleTarget(ws);
+  }
+
+  applyBallAvoidance(ws, target);
+  applyStrikerAvoidance(ws, target);
+
+  const int drib = (ws.ballDist < 40 && ws.ballDist != 0) ? 100 : 0;
+  auto [vx, vy, rot] = motion->compute(target, rotInput, usePID);
+  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
 }
