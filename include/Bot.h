@@ -58,6 +58,7 @@ private:
   ActionGoalNeutral _goalNeutral;
 
   void decideAndExecute(const WorldState& ws);
+  void decideKickAndExecute(const WorldState& ws);
 
   bool getSwitchWanted(const WorldState& ws);
 

@@ -59,7 +59,7 @@ void sendData() {
     const double rotDeltaRad = MotionController::getInstance()
                                  ? MotionController::getInstance()->getRotDeltaRad()
                                  : 0.0;
-    global_drive.rotate(-rotDeltaRad * 2.0f);
+    global_drive.rotate(-rotDeltaRad * 2.0f); // compensate for rotation
   }
 
   const int vx_rot = constrain(global_drive.getX(), -70, 70);
@@ -76,7 +76,7 @@ void sendData() {
   cmd.rot = static_cast<int8_t>(rot_final);
   cmd.drib = static_cast<int8_t>(dribbler_final);
 
-  Wire.beginTransmission(I2C_ADDRESSES::motorMBAddress);
+  Wire.beginTransmission(I2C_ADDRESSES::motorMBAddress); // final send to execute
   Wire.write(reinterpret_cast<uint8_t*>(&cmd), sizeof(cmd));
   Wire.endTransmission();
   _kick = false;

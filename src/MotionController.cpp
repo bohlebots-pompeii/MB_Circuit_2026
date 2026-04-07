@@ -18,6 +18,7 @@ void MotionController::init() {
     _xSet = 0.0;
     _rotSet = 0.0;
 
+    // built PID's from config
     _rotPID.SetMode(AUTOMATIC);
     _rotPID.SetOutputLimits(PIDConfig::Rot_OutputMin, PIDConfig::Rot_OutputMax);
     _rotPID.SetSampleTime(PIDConfig::Rot_SampleTime);
@@ -41,6 +42,7 @@ MotionController::Output MotionController::compute(const Vector2& target, const 
 
   _rotIn = rotInput;
   if (std::abs(_rotIn) < PIDConfig::Rot_deadline) {
+    // low pass filter
     _rotIn = 0;
   }
   _rotPID.Compute();
@@ -48,7 +50,7 @@ MotionController::Output MotionController::compute(const Vector2& target, const 
 
   if (usePID) {
     _xIn = target.getX();
-    if (std::isnan(_xIn)) _xIn = 0;
+    if (std::isnan(_xIn)) _xIn = 0; // init check
     _xPID.Compute();
     out.vx = -static_cast<float>(_xOut);
 
@@ -58,11 +60,11 @@ MotionController::Output MotionController::compute(const Vector2& target, const 
     out.vy = -static_cast<float>(_yOut);
   }
   else {
-    out.vx = static_cast<float>(target.getX());
+    out.vx = static_cast<float>(target.getX()); // linear motion
     out.vy = static_cast<float>(target.getY());
   }
 
-  _positioning->speedLimit(out.vx, out.vy, target); // @FIXME
+  _positioning->speedLimit(out.vx, out.vy, target); // speed limiting to prevent out of bounds @FIXME
 
   return out;
 }

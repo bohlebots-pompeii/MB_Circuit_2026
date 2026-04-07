@@ -2,6 +2,7 @@
 // Created by julius on 11.11.2025.
 //
 
+// std includes
 #include <Bot.h>
 #include <Arduino.h>
 #include <Wire.h>
@@ -25,22 +26,24 @@
 #include <nodes/striker/HiddenBallNPocket.h>
 
 Bot::Bot() {
-  Wire.begin();
-  Serial.begin(115200);
-  Serial2.begin(115200, SERIAL_8N2, 16, 17);
+  Wire.begin(); // pcb communication
+  Serial.begin(115200); // debugging
+  Serial2.begin(115200, SERIAL_8N2, 16, 17); // cm5 communication
 
+  // handlers
   _cm5 = std::make_shared<CM5>();
   _sensors = std::make_shared<Sensors>(_cm5);
   _positioning = std::make_shared<Positioning>(_cm5);
   _gameState = std::make_shared<GameStateHandler>(_sensors, _cm5);
 
+  // motion controller
   _motion = std::make_shared<MotionController>(_positioning);
-  MotionController::setInstance(_motion.get());
+  MotionController::setInstance(_motion.get()); // @TODO different solution than singleton
 
-  pinMode(PINS::buttonPIN, INPUT);
+  pinMode(PINS::buttonPIN, INPUT); // AI PCB button pin
 }
 
-Bot::~Bot() = default; // default
+Bot::~Bot() = default;
 
 void Bot::tick() {
   static bool CM5_initialized = false;
@@ -78,7 +81,7 @@ void Bot::tick() {
   _gameState->update();
 
   if (Sensors::getForceHalt()) {
-    // forced halt (communication module)
+    // force halt from communication module
     halt();
     return;
   }
@@ -88,10 +91,10 @@ void Bot::tick() {
     _sensors->allLEDsOff();
   }
 
-  // ally logic
+  // ally logic ---
   const bool switchWanted = getSwitchWanted(ws);
 
-  EspNow::getInstance().tick(ws, *_gameState, switchWanted);
+  EspNow::getInstance().tick(ws, *_gameState, switchWanted); // update espnow
 
   if (switchWanted) {
     _gameState->setRole(GameStateHandler::Role::STRIKER);
@@ -100,30 +103,21 @@ void Bot::tick() {
   if (ws.peerSwitchWanted) {
     _gameState->setRole(GameStateHandler::Role::GOALIE);
   }
+  // ally logic end ---
 
   // Action decider
   decideAndExecute(ws);
 
-  // Kick decider (centralized)
-  setKick(false);
-  bool kickWanted = false;
-  if (ws.hasBall && ws.hasBallTime >= GeneralConfig::HasBallValidTime &&
-    ws.targetGoalDist > 0.0 && ws.targetGoalDist < FieldConfig::kickDistance) {
-    const double theta = std::atan(FieldConfig::GoalSizeX / ws.targetGoalDist);
-    const double windowDeg = toDeg(theta);
-    kickWanted = std::abs(ws.targetGoalRot) < windowDeg;
-  }
-  if (kickWanted) {
-    _kick.pFuncExec(ws, _motion.get());
-  }
+  // Kick decider
+  decideKickAndExecute(ws);
+
 
   if (!_gameState->isRunning()) {
     // halt if the bot state is not running. !(called after main decider for debugging)!
     halt();
     return;
   }
-
-  // executing
+  
   sendData(); // send data to the bottom pcb
 }
 
@@ -179,6 +173,32 @@ void Bot::decideAndExecute(const WorldState& ws) {
   }
 
   _goalNeutral.pFuncExec(ws, _motion.get());
+}
+
+void Bot::decideKickAndExecute(const WorldState& ws) {
+  // default
+  setKick(false);
+
+  // base conditions
+  if (!(ws.hasBall && ws.hasBallTime >= GeneralConfig::HasBallValidTime)) {
+    return;
+  }
+
+  // distance condition
+  if (!(ws.targetGoalDist > 0.0 && ws.targetGoalDist < FieldConfig::kickDistance)) {
+    return;
+  }
+
+  // dynamic angle condition
+  const double theta = std::atan(FieldConfig::GoalSizeX / ws.targetGoalDist);
+  const double windowDeg = toDeg(theta);
+
+  if (!(std::abs(ws.targetGoalRot) < windowDeg)) {
+    return;
+  }
+
+  // execution
+  _kick.pFuncExec(ws, _motion.get());
 }
 
 bool Bot::getSwitchWanted(const WorldState& ws) {
