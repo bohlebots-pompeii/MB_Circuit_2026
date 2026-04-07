@@ -1,5 +1,5 @@
 //
-// GameStateStore.cpp – EEPROM persistence for role + target goal.
+// EEPROM persistence for role + target goal.
 //
 
 #include "util/GameStateStore.h"

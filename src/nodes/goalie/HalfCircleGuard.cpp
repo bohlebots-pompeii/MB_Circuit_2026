@@ -132,7 +132,7 @@ static void applyStrikerAvoidance(const WorldState& ws, Vector2& target) {
 
 void executeHalfCircleGuard(const WorldState& ws, MotionController* motion) {
   Vector2 target;
-  const float rotInput = static_cast<float>(ws.awayFromOwnGoalAngle);
+  const auto rotInput = static_cast<float>(ws.awayFromOwnGoalAngle);
   constexpr bool usePID = true;
 
   if (ws.lineSeen) {

@@ -98,15 +98,15 @@ void Positioning::updateVelocity() {
 }
 
 void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
-  const float x = _cm5->getGlobalX();
-  const float y = _cm5->getGlobalY();
+  const double x = _cm5->getGlobalX();
+  const double y = _cm5->getGlobalY();
 
-  constexpr float lookAheadFrames = 20.0f;
+  constexpr double lookAheadFrames = 20.0f;
 
   _driveVector.normalize();
 
-  const float futureX = x + static_cast<float>(_driveVector.getX() * lookAheadFrames);
-  const float futureY = y + static_cast<float>(_driveVector.getY() * lookAheadFrames);
+  const double futureX = x + _driveVector.getX() * lookAheadFrames;
+  const double futureY = y + _driveVector.getY() * lookAheadFrames;
 
   const double currentDist = std::hypot(x, y);
   const double futureDist = std::hypot(futureX, futureY);
@@ -118,7 +118,6 @@ void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
   constexpr float minSpeed = 20.0f;
 
   double factor = 1.0;
-
   if (futureDist > SpeedLimiting::maxDistance) {
     factor = 0.0;
   }
@@ -128,8 +127,8 @@ void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
     factor = 1.0 - normalizedDist * normalizedDist;
   }
 
-  const float newVx = vx * static_cast<float>(factor);
-  const float newVy = vy * static_cast<float>(factor);
+  const double newVx = vx * factor;
+  const double newVy = vy * factor;
 
   if (std::abs(vx) >= minSpeed) {
     vx = std::abs(newVx) < minSpeed ? (vx > 0 ? minSpeed : -minSpeed) : newVx;

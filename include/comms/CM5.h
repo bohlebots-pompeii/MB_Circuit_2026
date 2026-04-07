@@ -3,7 +3,6 @@
 //
 
 #pragma once
-
 #include <Arduino.h>
 #include <elapsedMillis.h>
 #include <util/Vector2.hpp>
@@ -32,7 +31,7 @@ public:
 
   [[nodiscard]] double getHeading() const { return heading; }
 
-  // Target goal (goal to attack)
+  // Target goal
   [[nodiscard]] double getTargetGoalRot() const { return targetGoalRot; }
   [[nodiscard]] double getTargetGoalDist() const { return targetGoalDist; }
   [[nodiscard]] Vector2 getTargetGoalVec() const {
@@ -41,7 +40,7 @@ public:
     return {cos(angle_rad) * targetGoalDist, sin(angle_rad) * targetGoalDist};
   }
 
-  // Own goal (goal to defend)
+  // Own goal
   [[nodiscard]] double getOwnGoalRot() const { return ownGoalRot; }
   [[nodiscard]] double getOwnGoalDist() const { return ownGoalDist; }
   [[nodiscard]] Vector2 getOwnGoalVec() const {
@@ -50,6 +49,7 @@ public:
     return {cos(angle_rad) * ownGoalDist, sin(angle_rad) * ownGoalDist};
   }
 
+  // ball
   [[nodiscard]] double getBallRot() const { return ballRot; }
   [[nodiscard]] double getBallDist() const { return ballDist; }
   [[nodiscard]] bool getBallExists() const { return ballDist != 0; }
@@ -62,13 +62,17 @@ public:
   [[nodiscard]] const Object* getObjects() const { return objects; }
   [[nodiscard]] int getNumDetections() const { return num_detections; }
 
+  // bot position
   [[nodiscard]] double getGlobalX() const { return g_x; }
   [[nodiscard]] double getGlobalY() const { return g_y; }
 
+  // cm5 alive
   [[nodiscard]] bool getCM5Running() const { return lastUpdateTimer < 50;}
 
+  // helper for goalie
   [[nodiscard]] double getAwayFromOwnGoalAngle() const { return awayFromOwnGoalAngle; }
 
+  // for target goal select
   enum COLOR {
     BLUE = 1,
     YELLOW = 2

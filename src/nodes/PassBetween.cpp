@@ -38,5 +38,5 @@ void executePassBetween(const WorldState& ws, MotionController* motion) {
   const auto target = Vector2(0, 0);
 
   auto [vx, vy, rot] = motion->compute(target, rotInput);
-  pushData(ws.ena, false, vx, vy, rot, 0, true);
+  pushData(ws.ena, false, static_cast<int>(round(vx)), static_cast<int>(round(vy)), rot, 0, true);
 }
