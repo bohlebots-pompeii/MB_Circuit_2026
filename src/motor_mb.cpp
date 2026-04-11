@@ -54,7 +54,6 @@ void sendData() {
 
   const int rotCalc = _rot * -1;
 
-  // IMPORTANT: First rotate raw drive command into robot frame, then apply any speed limits.
   Vector2 global_drive(_vx, _vy);
   if (_useRotDelta) {
     const double rotDeltaRad = MotionController::getInstance()
@@ -63,18 +62,8 @@ void sendData() {
     global_drive.rotate(-rotDeltaRad * 2.0f);
   }
 
-  // Limit translational speed after rotation so compensation cannot push commands out of range.
-  double gx = global_drive.getX();
-  double gy = global_drive.getY();
-  const double speed = sqrt(gx * gx + gy * gy);
-  if (speed > 70.0 && speed > 0.0) {
-    const double scale = 70.0 / speed;
-    gx *= scale;
-    gy *= scale;
-  }
-
-  const int vx_rot = constrain(static_cast<int>(gx), -70, 70);
-  const int vy_rot = constrain(static_cast<int>(gy), -70, 70);
+  const int vx_rot = constrain(static_cast<int>(global_drive.getX()), -70, 70);
+  const int vy_rot = constrain(static_cast<int>(global_drive.getY()), -70, 70);
   const int rot_final = constrain(rotCalc, -50, 50);
   const int dribbler_final = constrain(_drib, -100, 100);
 

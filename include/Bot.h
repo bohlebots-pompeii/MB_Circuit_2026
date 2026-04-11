@@ -57,8 +57,8 @@ private:
   ActionEmergencyPosition _emergencyPosition;
   ActionGoalNeutral _goalNeutral;
 
-  void decideAndExecute(const WorldState& ws);
-  void decideKickAndExecute(const WorldState& ws);
+  void decideAndExecute(const WorldState& ws) const;
+  void decideKickAndExecute(const WorldState& ws) const;
 
   bool getSwitchWanted(const WorldState& ws);
 

@@ -121,7 +121,7 @@ void Bot::tick() {
   sendData(); // send data to the bottom pcb
 }
 
-void Bot::decideAndExecute(const WorldState& ws) {
+void Bot::decideAndExecute(const WorldState& ws) const {
   if (ws.lineSeen) {
     _lineEscape.pFuncExec(ws, _motion.get());
     return;
@@ -175,7 +175,7 @@ void Bot::decideAndExecute(const WorldState& ws) {
   _goalNeutral.pFuncExec(ws, _motion.get());
 }
 
-void Bot::decideKickAndExecute(const WorldState& ws) {
+void Bot::decideKickAndExecute(const WorldState& ws) const {
   // default
   setKick(false);
 
@@ -191,9 +191,8 @@ void Bot::decideKickAndExecute(const WorldState& ws) {
 
   // dynamic angle condition
   const double theta = std::atan(FieldConfig::GoalSizeX / ws.targetGoalDist);
-  const double windowDeg = toDeg(theta);
 
-  if (!(std::abs(ws.targetGoalRot) < windowDeg)) {
+  if (const double windowDeg = toDeg(theta); !(std::abs(ws.targetGoalRot) < windowDeg)) {
     return;
   }
 
