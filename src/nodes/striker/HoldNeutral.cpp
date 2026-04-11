@@ -2,39 +2,23 @@
 #include <WorldState.h>
 #include <MotionController.h>
 #include <motor_mb.h>
-#include <config/config.h>
-#include <util/helper.h>
-#include <cmath>
-#include <algorithm>
+#include <util/Vector2.hpp>
 
-HoldNeutral::HoldNeutral(std::shared_ptr<MotionController> motion) : BehaviorNode("HoldNeutral"),
-                                                                     _motion(std::move(motion)), _lastTarget(0, 0) {}
+static Vector2 g_lastDriveVec{0, 0};
 
-BT::Status HoldNeutral::tick(const WorldState& ws) {
-  if (ws.lastBallSeenTime > 500) {
-    return BT::Status::FAILURE;
+void executeHoldNeutral(const WorldState& ws, MotionController* motion) {
+  if (ws.lastBallSeenTime < 30) {
+    g_lastDriveVec = motion->getLastTarget();
   }
-  Serial.println(ws.lastBallSeenTime);
 
-  Vector2 target = _lastTarget;
-  constexpr int rotInput = 0;
-  bool usePID = false;
-
-  _lastTarget = target;
-
-  /* // disabled for testing
-  if (ws.peerRunning && ws.globalX < -70) {
-     Vector2 mv(-ws.globalX, -ws.globalY);
-     mv.normalize();
-     target = mv * 20.0f;
-     usePID = false;
+  if (g_lastDriveVec.getMagnitude() < 1e-3) {
+    g_lastDriveVec = Vector2(0.0, 0.0);
   }
-  */
 
-  constexpr int drib = 100;
+  constexpr float rotInput = 0.0f;
+  constexpr bool usePID = true;
+  constexpr int dribSpeed = 100;
 
-  auto [vx, vy, rot] = _motion->compute(target, rotInput, usePID);
-  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
-
-  return BT::Status::RUNNING;
+  auto [vx, vy, rot] = motion->compute(g_lastDriveVec, rotInput, usePID);
+  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribSpeed, true);
 }

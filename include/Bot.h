@@ -10,11 +10,22 @@
 #include "GameStateHandler.h"
 #include "MotionController.h"
 #include "WorldState.h"
-#include <bt/BehaviorNode.h>
 #include <memory>
 #include <elapsedMillis.h>
 
-class Kick;
+
+// nodes
+#include <nodes/Kick.h>
+#include <nodes/LineEscape.h>
+#include <nodes/DriveToNeutral.h>
+#include <nodes/striker/DribbleToGoal.h>
+#include <nodes/striker/GetBehindBall.h>
+#include <nodes/striker/HoldNeutral.h>
+#include <nodes/striker/HiddenBallNPocket.h>
+#include <nodes/goalie/InterceptBall.h>
+#include <nodes/goalie/HalfCircleGuard.h>
+#include <nodes/goalie/EmergencyPosition.h>
+#include <nodes/goalie/GoalNeutral.h>
 
 class Bot {
 public:
@@ -30,11 +41,24 @@ private:
   std::shared_ptr<MotionController> _motion;
   std::shared_ptr<GameStateHandler> _gameState;
 
-  std::unique_ptr<BT::BehaviorNode> _tree;
-  std::unique_ptr<Kick> _kick;
-
   elapsedMillis ledTimer;
   elapsedMillis switchWantedCooldownTimer;
+
+  // Action bindings (function-pointer based)
+  ActionLineEscape _lineEscape;
+  ActionDriveToNeutral _driveToNeutral;
+  ActionKick _kick;
+  ActionHiddenBallNPocket _hiddenBallNPocket;
+  ActionDribbleToGoal _dribbleToGoal;
+  ActionGetBehindBall _getBehindBall;
+  ActionHoldNeutral _holdNeutral;
+  ActionInterceptBall _interceptBall;
+  ActionHalfCircleGuard _halfCircleGuard;
+  ActionEmergencyPosition _emergencyPosition;
+  ActionGoalNeutral _goalNeutral;
+
+  void decideAndExecute(const WorldState& ws) const;
+  void decideKickAndExecute(const WorldState& ws) const;
 
   bool getSwitchWanted(const WorldState& ws);
 

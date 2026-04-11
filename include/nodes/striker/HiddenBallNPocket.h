@@ -1,21 +1,11 @@
-//
-// Created by julius on 17.03.2026.
-//
-
 #pragma once
+#include <nodes/ActionTypes.h>
 
-#include <bt/BehaviorNode.h>
-#include <memory>
-
+struct WorldState;
 class MotionController;
 
-class HiddenBallNPocket final : public BT::BehaviorNode {
-public:
-  explicit HiddenBallNPocket(std::shared_ptr<MotionController> motion);
-  BT::Status tick(const WorldState& ws) override;
+void executeHiddenBallNPocket(const WorldState& ws, MotionController* motion);
 
-private:
-  std::shared_ptr<MotionController> _motion;
-
-  static bool checkBallInPocket(const WorldState& ws);
+struct ActionHiddenBallNPocket {
+  ACTION_EXEC_FUNC pFuncExec = &executeHiddenBallNPocket;
 };

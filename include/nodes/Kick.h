@@ -1,8 +1,11 @@
 #pragma once
-#include <bt/BehaviorNode.h>
+#include <nodes/ActionTypes.h>
 
-class Kick final : public BT::BehaviorNode {
-public:
-    explicit Kick();
-    BT::Status tick(const WorldState& ws) override;
+struct WorldState;
+class MotionController;
+
+void executeKick(const WorldState& ws, const MotionController* motion);
+
+struct ActionKick {
+  void (*pFuncExec)(const WorldState&, const MotionController*) = &executeKick;
 };

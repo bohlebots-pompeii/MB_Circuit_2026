@@ -1,15 +1,12 @@
 #pragma once
-#include <bt/BehaviorNode.h>
-#include <memory>
 
+#include <nodes/ActionTypes.h>
+
+struct WorldState;
 class MotionController;
 
-class GoalNeutral final : public BT::BehaviorNode {
-public:
-    explicit GoalNeutral(std::shared_ptr<MotionController> motion);
-    BT::Status tick(const WorldState& ws) override;
+void executeGoalNeutral(const WorldState& ws, MotionController* motion);
 
-private:
-    std::shared_ptr<MotionController> _motion;
+struct ActionGoalNeutral {
+  ACTION_EXEC_FUNC pFuncExec = &executeGoalNeutral;
 };
-

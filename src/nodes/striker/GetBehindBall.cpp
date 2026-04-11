@@ -3,73 +3,15 @@
 #include <MotionController.h>
 #include <motor_mb.h>
 #include <util/helper.h>
+#include <util/Vector2.hpp>
 #include <config/config.h>
 #include <cmath>
 #include <algorithm>
 
-GetBehindBall::GetBehindBall(std::shared_ptr<MotionController> motion)
-  : BehaviorNode("GetBehindBall"), _motion(std::move(motion)) {}
-
-BT::Status GetBehindBall::tick(const WorldState& ws) {
-  if (!(ws.ballExists && !ws.hasBall)) {
-    return BT::Status::FAILURE;
-  }
-
-  Vector2 target;
-  float rotInput = 0;
-  bool usePID;
-
-  double globalBallDir = ws.ballRot - ws.heading;
-  while (globalBallDir > 180) globalBallDir -= 360;
-  while (globalBallDir < -180) globalBallDir += 360;
-
-  const bool ballAligned = std::abs(globalBallDir) < FieldConfig::rotateToBallAngle;
-  const bool ballInEdgeCase = checkBallOnLine(ws) || checkBallInPocket(ws);
-
-  if (std::abs(ws.ballRot) < 15.0) {
-    int speed = 50;
-    // ball is straight ahead — direct approach
-    target = getBallApproachVec(ws, ws.ballDist > 30.0 ? speed : 30);
-    rotInput = ballAligned ? ws.ballRot : ws.heading;
-    usePID = false;
-  }
-  else if (ballInEdgeCase && ballAligned) {
-    // ball near line or pocket — careful approach
-    target = getBallApproachVec(ws, ws.ballDist < 20.0 ? 15 : 30);
-    rotInput = ws.ballRot;
-    usePID = false;
-  }
-  else {
-    // normal pursuit
-    target = getBallPursuitVec(ws);
-    rotInput = ws.heading;
-    usePID = true;
-  }
-
-  if (ws.peerRunning && ws.globalX < -70) {
-    // prevent crashing into each other
-    Vector2 mv(-ws.globalX, -ws.globalY);
-    mv.normalize();
-    target = mv * 20.0f;
-    usePID = false;
-  }
-
-  //const int drib = target.getX() > 10 ? 50 : 100;
-  constexpr int dribblerSpeed = 100;
-
-  // MotionController compute
-  auto [vx, vy, rot] = _motion->compute(target, rotInput, usePID);
-
-  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, true);
-
-  return BT::Status::RUNNING;
-}
-
-Vector2 GetBehindBall::getBallPursuitVec(const WorldState& ws) {
+static Vector2 getBallPursuitVec(const WorldState& ws) {
   const auto ballVec = ws.ballVec;
   const auto targetGoalVec = ws.targetGoalVec;
 
-  // ball pursuit on straight between ball and goal
   Vector2 ballToGoal = targetGoalVec - ballVec;
   ballToGoal.normalize();
 
@@ -95,27 +37,17 @@ Vector2 GetBehindBall::getBallPursuitVec(const WorldState& ws) {
     idealPos = idealPos + perpendicular * (side * maxShift * shiftStrength);
   }
 
-  Vector2 target = idealPos;
-  if (target.getMagnitude() < 10.0) {
-    target.normalize();
-    target *= 10;
-  }
+  const Vector2 target = idealPos;
   return target;
 }
 
-Vector2 GetBehindBall::getBallApproachVec(const WorldState& ws, const int speed) {
+static Vector2 getBallApproachVec(const WorldState& ws, const int speed) {
   auto target = ws.ballVec;
   target.normalize();
   return target * speed;
 }
 
-Vector2 GetBehindBall::getBallAlignedVec(const WorldState& ws, const int speed) {
-  Vector2 target = degToVec(ws.targetGoalRot);
-  target.normalize();
-  return target * speed;
-}
-
-bool GetBehindBall::checkBallOnLine(const WorldState& ws) {
+static bool checkBallOnLine(const WorldState& ws) {
   const double globalY = ws.globalY;
   const double ballDist = ws.ballDist;
 
@@ -137,16 +69,54 @@ bool GetBehindBall::checkBallOnLine(const WorldState& ws) {
   return false;
 }
 
-bool GetBehindBall::checkBallInPocket(const WorldState& ws) {
-  const double ballX = ws.ballVec.getX();
+static bool checkBallInPocket(const WorldState& ws) {
+  double absoluteGoalDir = ws.targetGoalRot - ws.heading;
+  while (absoluteGoalDir > 180.0) absoluteGoalDir -= 360.0;
+  while (absoluteGoalDir < -180.0) absoluteGoalDir += 360.0;
 
-  float globalGoalDir = ws.targetGoalRot - ws.heading;
-  while (globalGoalDir > 180) globalGoalDir -= 360;
-  while (globalGoalDir < -180) globalGoalDir += 360;
+  return std::abs(absoluteGoalDir) > FieldConfig::FieldPocketAngle;
+}
 
-  if (ballX > 0 && (globalGoalDir > FieldConfig::FieldPocketAngle || globalGoalDir < -FieldConfig::FieldPocketAngle)) {
-    return true;
+void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
+  Vector2 target;
+  double rotInput = 0;
+  bool usePID;
+
+  double globalBallDir = ws.ballRot - ws.heading;
+  while (globalBallDir > 180) globalBallDir -= 360;
+  while (globalBallDir < -180) globalBallDir += 360;
+
+  const bool ballAligned = std::abs(globalBallDir) < FieldConfig::rotateToBallAngle;
+  const bool ballInEdgeCase = checkBallOnLine(ws) || checkBallInPocket(ws);
+
+  if (ballAligned) {
+    target = getBallApproachVec(ws, ws.ballDist > 30.0 ? 50 : 30);
+    rotInput = ws.ballRot;
+    usePID = false;
+  }
+  else if (ballInEdgeCase) {
+    target = getBallApproachVec(ws, ws.ballDist < 20.0 ? 15 : 30);
+    rotInput = ws.ballRot;
+    usePID = false;
+  }
+  else {
+    // normal pursuit
+    target = getBallPursuitVec(ws);
+    rotInput = ws.heading;
+    usePID = true;
   }
 
-  return false;
+  if (ws.peerRunning && ws.globalX < -70) {
+    // prevent crashing into each other
+    Vector2 avoidVec(-ws.globalX, -ws.globalY);
+    avoidVec.normalize();
+    target = avoidVec * 20.0f;
+    usePID = false;
+  }
+
+  constexpr int dribblerSpeed = 100;
+
+  auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID);
+
+  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, true);
 }

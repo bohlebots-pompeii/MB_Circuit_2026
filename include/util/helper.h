@@ -2,8 +2,7 @@
 // Created by julius on 17.02.2026.
 //
 
-#ifndef BOHLEBOTS_2026_HELPER_H
-#define BOHLEBOTS_2026_HELPER_H
+#pragma once
 
 #include <util/Vector2.hpp>
 
@@ -19,5 +18,3 @@ float pythagoreanf(float a, float b);
 // Vector helper
 Vector2 getToPointVec(double x1, double y1, double x2, double y2);
 bool getPointReached(double x1, double y1, double x2, double y2);
-
-#endif //BOHLEBOTS_2026_HELPER_H

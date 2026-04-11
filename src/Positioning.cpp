@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <elapsedMillis.h>
 #include "util/MovingAverage.h"
-#include <../include/config/config.h>
+#include <config/config.h>
 
 elapsedMillis rotationDeltaTimer;
 elapsedMillis velocityTimer;
@@ -40,7 +40,7 @@ std::vector Field = {
   Vector2(-75, 125)
  */
 
-Positioning::Positioning(const std::shared_ptr<CM5> &cm5) {
+Positioning::Positioning(const std::shared_ptr<CM5>& cm5) {
   _cm5 = cm5;
 }
 
@@ -98,16 +98,15 @@ void Positioning::updateVelocity() {
 }
 
 void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
+  const double x = _cm5->getGlobalX();
+  const double y = _cm5->getGlobalY();
 
-  const float x = _cm5->getGlobalX();
-  const float y = _cm5->getGlobalY();
-
-  constexpr float lookAheadFrames = 20.0f;
+  constexpr double lookAheadFrames = 20.0f;
 
   _driveVector.normalize();
 
-  const float futureX = x + static_cast<float>(_driveVector.getX() * lookAheadFrames);
-  const float futureY = y + static_cast<float>(_driveVector.getY() * lookAheadFrames);
+  const double futureX = x + _driveVector.getX() * lookAheadFrames;
+  const double futureY = y + _driveVector.getY() * lookAheadFrames;
 
   const double currentDist = std::hypot(x, y);
   const double futureDist = std::hypot(futureX, futureY);
@@ -119,16 +118,17 @@ void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
   constexpr float minSpeed = 20.0f;
 
   double factor = 1.0;
-
   if (futureDist > SpeedLimiting::maxDistance) {
     factor = 0.0;
-  } else if (futureDist > SpeedLimiting::slowingDistance) {
-    const double normalizedDist = (futureDist - SpeedLimiting::slowingDistance) / (SpeedLimiting::maxDistance - SpeedLimiting::slowingDistance);
+  }
+  else if (futureDist > SpeedLimiting::slowingDistance) {
+    const double normalizedDist = (futureDist - SpeedLimiting::slowingDistance) / (SpeedLimiting::maxDistance -
+      SpeedLimiting::slowingDistance);
     factor = 1.0 - normalizedDist * normalizedDist;
   }
 
-  const float newVx = vx * static_cast<float>(factor);
-  const float newVy = vy * static_cast<float>(factor);
+  const double newVx = vx * factor;
+  const double newVy = vy * factor;
 
   if (std::abs(vx) >= minSpeed) {
     vx = std::abs(newVx) < minSpeed ? (vx > 0 ? minSpeed : -minSpeed) : newVx;
@@ -137,6 +137,3 @@ void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
     vy = std::abs(newVy) < minSpeed ? (vy > 0 ? minSpeed : -minSpeed) : newVy;
   }
 }
-
-
-

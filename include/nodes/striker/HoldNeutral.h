@@ -1,16 +1,12 @@
 #pragma once
-#include <bt/BehaviorNode.h>
-#include <memory>
-#include <util/Vector2.hpp>
 
+#include <nodes/ActionTypes.h>
+
+struct WorldState;
 class MotionController;
 
-class HoldNeutral final : public BT::BehaviorNode {
-public:
-    explicit HoldNeutral(std::shared_ptr<MotionController> motion);
-    BT::Status tick(const WorldState& ws) override;
+void executeHoldNeutral(const WorldState& ws, MotionController* motion);
 
-private:
-    std::shared_ptr<MotionController> _motion;
-    Vector2 _lastTarget;
+struct ActionHoldNeutral {
+  ACTION_EXEC_FUNC pFuncExec = &executeHoldNeutral;
 };

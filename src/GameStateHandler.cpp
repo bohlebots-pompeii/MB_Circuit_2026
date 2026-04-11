@@ -2,7 +2,7 @@
 // Created by julius on 22.02.2026.
 //
 
-#include "../include/GameStateHandler.h"
+#include <GameStateHandler.h>
 #include <Arduino.h>
 #include "util/GameStateStore.h"
 
@@ -108,7 +108,7 @@ void GameStateHandler::handleRunning() {
     _state = State::ROLE_SELECT;
     _sensors->allLEDsOff();
     applyRoleLED();
-    GameStateStore::clear(); // deliberate stop – don't auto-resume
+    GameStateStore::clear(); // clear EEPROM for no autoresume
     _lastLeft = left;
     _lastRight = right;
     return;

@@ -1,22 +1,11 @@
-//
-// Created by julius on 02.04.2026.
-//
-
 #pragma once
+#include <nodes/ActionTypes.h>
 
-#include <memory>
-#include <bt/BehaviorNode.h>
-
-#include "util/Vector2.hpp"
-
+struct WorldState;
 class MotionController;
 
-class PassBetween final : public BT::BehaviorNode {
-public:
-  explicit PassBetween(std::shared_ptr<MotionController> motion);
-  BT::Status tick(const WorldState& ws) override;
+void executePassBetween(const WorldState& ws, MotionController* motion);
 
-private:
-  std::shared_ptr<MotionController> _motion;
-  static double calculateShotAngle(const WorldState& ws, const Vector2& targetPos);
+struct ActionPassBetween {
+  ACTION_EXEC_FUNC pFuncExec = &executePassBetween;
 };
