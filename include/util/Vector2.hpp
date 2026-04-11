@@ -3,8 +3,8 @@
 /**
 *    BOHLEBOTS VECTOR HEADER-FILE
 *   
-*    Version: 0.1.0
-*    Date: 7. Mai 2023
+*    Version: 0.1.1
+*    Date: 11.04.26
 *     
 *    Users Guide:
 *       this header can do everything of the basic vector math 
@@ -61,27 +61,27 @@ public:
 
   Vector2(const double& a, const double& b);
 
-  Vector2(const std::uint8_t v[2]);
+  explicit Vector2(const std::uint8_t v[2]);
 
   /************************************************************
   *
   *   GETTER FUNCTIONS
   *
   ************************************************************/
-  double getX() const;
+  [[nodiscard]] double getX() const;
 
-  double getY() const;
+  [[nodiscard]] double getY() const;
 
-  double getAngle() const;
+  [[nodiscard]] double getAngle() const;
 
-  double getMagnitude() const;
+  [[nodiscard]] double getMagnitude() const;
 
   /************************************************************
   *
   *   CLONING
   *
   ************************************************************/
-  Vector2 clone() const;
+  [[nodiscard]] Vector2 clone() const;
 
   static Vector2 clone(const Vector2& v);
 
@@ -185,7 +185,7 @@ public:
   *   ANGLES
   *
   ************************************************************/
-  double angleOffsetTo(const Vector2& v) const;
+  [[nodiscard]] double angleOffsetTo(const Vector2& v) const;
 
   static double angleOffsetBetween(const Vector2& v1, const Vector2& v2);
 
@@ -194,16 +194,23 @@ public:
   *   SECTORS
   *
   ************************************************************/
-  bool isBetween(const Vector2& v1, const Vector2& v2) const;
+  [[nodiscard]] bool isBetween(const Vector2& v1, const Vector2& v2) const;
 
   static bool vectorIsInSector(const Vector2& v, const Vector2& a, const Vector2& b);
+
+  /************************************************************
+   *
+   *  Interpolation
+   *
+  ************************************************************/
+  static Vector2 lerp(const Vector2& a, const Vector2& b, const double& t);
 
   /************************************************************
   *
   *   DEBUG
   *
   ************************************************************/
-  std::string debugString() const;
+  [[nodiscard]] std::string debugString() const;
 
   static Vector2 normalize(Vector2& v);
 

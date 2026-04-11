@@ -8,36 +8,95 @@
 #include <cmath>
 #include <algorithm>
 
+// helper
+inline double wrapAngleRad(double a) {
+  while (a > std::numbers::pi) a -= std::numbers::pi * 2;
+  while (a < -std::numbers::pi) a += std::numbers::pi * 2;
+  return a;
+}
+
 static Vector2 getBallPursuitVec(const WorldState& ws) {
-  const auto ballVec = ws.ballVec;
-  const auto targetGoalVec = ws.targetGoalVec;
+  const Vector2 ballVec = ws.ballVec;
+  Vector2 ballToGoalVec = ws.targetGoalVec - ws.ballVec;
+  ballToGoalVec.normalize();
 
-  Vector2 ballToGoal = targetGoalVec - ballVec;
-  ballToGoal.normalize();
+  const auto axisBack = ballToGoalVec * -1.0;
+  const auto axisSide = Vector2(-ballToGoalVec.getY(), ballToGoalVec.getX());
 
-  constexpr double offsetDist = 20.0;
-  Vector2 idealPos = ballVec - ballToGoal * offsetDist;
+  Vector2 ballToRobotVec = ballVec * -1.0;
+  ballToRobotVec.normalize();
 
-  Vector2 robotToIdeal = idealPos;
-  robotToIdeal.normalize();
+  const double backComp = Vector2::dotProduct(ballToRobotVec, axisBack);
+  const double sideComp = Vector2::dotProduct(ballToRobotVec, axisSide);
 
-  Vector2 robotToBall = ballVec;
-  robotToBall.normalize();
+  const double sideSign = sideComp >= 0.0 ? 1.0 : -1.0;
 
-  if (const double dot = robotToIdeal.getX() * robotToBall.getX() + robotToIdeal.getY() * robotToBall.getY();
-    std::abs(ws.ballRot) > 60.0 && std::abs(dot) > 0.6) {
-    const Vector2 perpendicular(-ballToGoal.getY(), ballToGoal.getX());
+  // tight and far limit
+  constexpr double angleWide = 90 * std::numbers::pi / 180.0;
+  constexpr double angleTight = 45.0 * std::numbers::pi / 180.0;
 
-    const double cross = ballVec.getX() * targetGoalVec.getY() - ballVec.getY() * targetGoalVec.getX();
-    const double side = cross > 0 ? 1.0 : -1.0;
+  // determine how far behind the ball we are
+  const double behindFactor = std::clamp((backComp + 0.5) / 1.5, 0.0, 1.0);
 
-    const double shiftStrength = std::clamp((dot - 0.5) * 2.0, 0.0, 1.0);
-    constexpr double maxShift = 30.0;
+  // linear interpolation
+  const double dynamicLimit = angleTight + behindFactor * (angleWide - angleTight);
 
-    idealPos = idealPos + perpendicular * (side * maxShift * shiftStrength);
+  // hemisphere angle clamping
+  double currentAngle = std::atan2(std::abs(sideComp), backComp);
+  if (currentAngle > dynamicLimit) {
+    currentAngle = dynamicLimit;
   }
 
-  const Vector2 target = idealPos;
+  const double nb = std::cos(currentAngle);
+  const double ns = std::sin(currentAngle) * sideSign;
+
+  // ideal circle direction
+  Vector2 circleDirVec = axisBack * nb + axisSide * ns;
+  circleDirVec.normalize();
+
+  constexpr double circleRadius = 25.0;
+  const Vector2 idealCirclePoint = ballVec + circleDirVec * circleRadius;
+  const double distToCircle = idealCirclePoint.getMagnitude();
+
+  const double idealAngle = std::atan2(circleDirVec.getY(), circleDirVec.getX());
+  const double backAngle = std::atan2(axisBack.getY(), axisBack.getX());
+
+  double angleDiff = wrapAngleRad(backAngle - idealAngle);
+
+  angleDiff *= sideSign;
+  angleDiff = std::max(0.0, angleDiff);
+  angleDiff *= sideSign;
+
+  constexpr double slideStart = 20.0;
+  const double slideT = std::clamp(1.0 - distToCircle / slideStart, 0.0, 1.0);
+  const double arcAdvance = slideT * angleDiff;
+
+  const double targetAngle = idealAngle + arcAdvance;
+  const Vector2 circlePoint = ballVec + Vector2(std::cos(targetAngle), std::sin(targetAngle)) * circleRadius;
+
+  double effectiveSideComp = std::abs(sideComp);
+  if (ws.ballDist < circleRadius) {
+    effectiveSideComp *= ws.ballDist / circleRadius;
+  }
+  const double alignment = backComp * (1.0 - effectiveSideComp);
+
+  // blending
+  constexpr double alignStart = 0.70;
+  constexpr double alignFull = 0.90;
+  constexpr double throughDist = 20.0;
+
+  const double tAlign = std::clamp((alignment - alignStart) / (alignFull - alignStart), 0.0, 1.0);
+
+  const double tProxRaw = std::clamp(1.0 - (distToCircle - 8.0) / (slideStart - 8.0), 0.0, 1.0);
+  const double tProx = tProxRaw * tAlign;
+
+  const double t = std::max(tAlign, tProx);
+
+  const Vector2 throughPoint = ballVec + ballToGoalVec * throughDist;
+
+  // linear interpolation
+  const Vector2 target = Vector2::lerp(circlePoint, throughPoint, t);
+
   return target;
 }
 
@@ -78,16 +137,17 @@ static bool checkBallInPocket(const WorldState& ws) {
 }
 
 void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
-  Vector2 target;
-  double rotInput = 0;
-  bool usePID;
-
+  /*
   double globalBallDir = ws.ballRot - ws.heading;
   while (globalBallDir > 180) globalBallDir -= 360;
   while (globalBallDir < -180) globalBallDir += 360;
 
   const bool ballAligned = std::abs(globalBallDir) < FieldConfig::rotateToBallAngle;
   const bool ballInEdgeCase = checkBallOnLine(ws) || checkBallInPocket(ws);
+
+  Vector2 target;
+  double rotInput = 0;
+  bool usePID;
 
   if (ballAligned) {
     target = getBallApproachVec(ws, ws.ballDist > 30.0 ? 50 : 30);
@@ -106,15 +166,18 @@ void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
     usePID = true;
   }
 
-  if (ws.peerRunning && ws.globalX < -70) {
-    // prevent crashing into each other
-    Vector2 avoidVec(-ws.globalX, -ws.globalY);
-    avoidVec.normalize();
-    target = avoidVec * 20.0f;
-    usePID = false;
-  }
-
   constexpr int dribblerSpeed = 100;
+  */
+
+  const double rotInput = ws.heading;
+  const Vector2 target = getBallPursuitVec(ws);
+
+  Serial.print(target.getX());
+  Serial.print(" ");
+  Serial.println(target.getY());
+
+  const bool usePID = true;
+  const int dribblerSpeed = 100;
 
   auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID);
 
