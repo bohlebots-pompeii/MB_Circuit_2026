@@ -6,6 +6,7 @@
 
 #include "comms/esp-now.h"
 #include <config/config_esp_now.h>
+#include <config/config.h>
 #include <esp_now.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
@@ -71,7 +72,23 @@ EspNow& EspNow::getInstance() {
 
 void EspNow::init() {
     WiFiClass::mode(WIFI_STA);
-    WiFi.disconnect();
+    WiFi.setAutoReconnect(true);
+    WiFi.persistent(false);
+
+    WiFi.begin(NetworkConfig::WIFI_SSID, NetworkConfig::WIFI_PASSWORD);
+    const unsigned long connectStart = millis();
+    while (WiFi.status() != WL_CONNECTED && (millis() - connectStart) < NetworkConfig::WIFI_CONNECT_TIMEOUT_MS) {
+        delay(20);
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.printf("[WIFI] Connected to %s, IP=%s\n",
+                      NetworkConfig::WIFI_SSID,
+                      WiFi.localIP().toString().c_str());
+    } else {
+        Serial.printf("[WIFI] Connect timeout for SSID %s (continuing with ESP-NOW)\n",
+                      NetworkConfig::WIFI_SSID);
+    }
 
     // Change between long range and high throughput PHY modes as needed; See docs for details.
     // Set long-range / high-throughput PHY -> See Docs

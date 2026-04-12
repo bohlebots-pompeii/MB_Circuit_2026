@@ -14,6 +14,12 @@ namespace GeneralConfig {
   constexpr bool DISABLE_WARNINGS = true;
 }
 
+namespace NetworkConfig {
+  constexpr const char* WIFI_SSID = "bohlebots";
+  constexpr const char* WIFI_PASSWORD = "soccer2018";
+  constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS = 5000;
+}
+
 namespace ObjectHeights {
   constexpr double BALL = 2.1;
   constexpr double GOAL = 6.0;

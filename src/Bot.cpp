@@ -11,6 +11,7 @@
 #include <motor_mb.h>
 #include <comms/esp-now.h>
 #include <config/config.h>
+#include <util/PIDTuner.h>
 
 // nodes
 #include <nodes/Kick.h>

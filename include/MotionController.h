@@ -12,6 +12,29 @@ public:
     int rot;
   };
 
+  struct TunerPtrs {
+    PID* xPID;
+    double* xIn;
+    double* xOut;
+    double* xSet;
+    PID* yPID;
+    double* yIn;
+    double* yOut;
+    double* ySet;
+    PID* rotPID;
+    double* rotIn;
+    double* rotOut;
+    double* rotSet;
+  };
+
+  TunerPtrs getTunerPtrs() {
+    return {
+      &_xPID, &_xIn, &_xOut, &_xSet,
+      &_yPID, &_yIn, &_yOut, &_ySet,
+      &_rotPID, &_rotIn, &_rotOut, &_rotSet
+    };
+  }
+
   explicit MotionController(std::shared_ptr<Positioning> positioning);
 
   Output compute(const Vector2& target, float rotInput, bool usePID = false);
