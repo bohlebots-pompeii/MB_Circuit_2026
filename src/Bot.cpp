@@ -139,7 +139,8 @@ void Bot::decideAndExecute(const WorldState& ws) const {
         _hiddenBallNPocket.pFuncExec(ws, _motion.get());
       }
       */
-      _hiddenBallNPocket.pFuncExec(ws, _motion.get());
+      //_hiddenBallNPocket.pFuncExec(ws, _motion.get());
+      _dribbleToGoal.pFuncExec(ws, _motion.get());
       return;
     }
 

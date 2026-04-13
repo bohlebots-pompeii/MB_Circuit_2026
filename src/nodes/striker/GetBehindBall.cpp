@@ -72,7 +72,8 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
 
   double tAlign = 0.0;
   if (lonDist > -5.0) {
-    const double lateralAlignment = 1.0 - std::clamp((latDist - corridorInner) / (corridorOuter - corridorInner), 0.0, 1.0);
+    const double lateralAlignment = 1.0 - std::clamp((latDist - corridorInner) / (corridorOuter - corridorInner), 0.0,
+                                                     1.0);
     const double depthBlend = std::clamp((lonDist + 5.0) / 15.0, 0.0, 1.0);
     tAlign = lateralAlignment * depthBlend;
   }
@@ -126,26 +127,29 @@ static bool checkBallInPocket(const WorldState& ws) {
 }
 
 void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
-  /*
-  double globalBallDir = ws.ballRot - ws.heading;
-  while (globalBallDir > 180) globalBallDir -= 360;
-  while (globalBallDir < -180) globalBallDir += 360;
-
-  const bool ballAligned = std::abs(globalBallDir) < FieldConfig::rotateToBallAngle;
   const bool ballInEdgeCase = checkBallOnLine(ws) || checkBallInPocket(ws);
 
   Vector2 target;
   double rotInput = 0;
   bool usePID;
 
-  if (ballAligned) {
-    target = getBallApproachVec(ws, ws.ballDist > 30.0 ? 50 : 30);
-    rotInput = ws.ballRot;
-    usePID = false;
-  }
-  else if (ballInEdgeCase) {
+  if (ballInEdgeCase) {
     target = getBallApproachVec(ws, ws.ballDist < 20.0 ? 15 : 30);
+
     rotInput = ws.ballRot;
+
+    constexpr double kHeadingLimitDeg = 45.0;
+
+    if (ws.heading >= kHeadingLimitDeg && rotInput > 0.0) {
+      rotInput = ws.heading + kHeadingLimitDeg;
+    }
+    else if (ws.heading <= -kHeadingLimitDeg && rotInput < 0.0) {
+      rotInput = ws.heading - kHeadingLimitDeg;
+    }
+    else {
+      rotInput = ws.ballRot;
+    }
+
     usePID = false;
   }
   else {
@@ -156,19 +160,8 @@ void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
   }
 
   constexpr int dribblerSpeed = 100;
-  */
 
-  const double rotInput = ws.heading;
-  const Vector2 target = getBallPursuitVec(ws);
-
-  Serial.print(target.getX());
-  Serial.print(" ");
-  Serial.println(target.getY());
-
-  const bool usePID = true;
-  const int dribblerSpeed = 100;
-
-  auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID);
+  const auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID);
 
   pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, true);
 }
