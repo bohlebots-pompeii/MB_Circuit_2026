@@ -106,9 +106,8 @@ private:
   double g_x = 0;
   double g_y = 0;
 
-  static double distanceFunction(double x);
-
-  static double toRealLifeDistance(double pixel, int label);
+  static double distanceFunctionBall(double x);
+  static double distanceFunctionGoal(double x);
 
   static double halfToFloat(uint16_t h);
 

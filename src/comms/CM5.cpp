@@ -12,33 +12,31 @@
 constexpr double mirror_cx = 320.0;
 constexpr double mirror_cy = 320.0;
 
-double CM5::distanceFunction(const double x) {
-  const double xc = std::max(97.0, std::min(x, 214.0));
-  const double xn = (xc - 184.294872) / 31.994735;
-  return  1.6715534999e+00 * pow(xn, 9)
-        + 1.3376102010e+01 * pow(xn, 8)
-        + 3.6139788395e+01 * pow(xn, 7)
-        + 2.8784078503e+01 * pow(xn, 6)
-        + -2.2945215557e+01 * pow(xn, 5)
-        + -2.2580204450e+01 * pow(xn, 4)
-        + 3.6218671956e+01 * pow(xn, 3)
-        + 4.0181055143e+01 * pow(xn, 2)
-        + 4.3030558229e+01 * pow(xn, 1)
-        + 8.6984088433e+01;
+double CM5::distanceFunctionBall(const double x) {
+  if (x < 70) return 10.0;
+  if (x > 35) return 250.0;
+
+  return
+      -2.6935371893632066e+02
+      + 1.1973576303885302e+01 * x
+      - 2.0428550504472429e-01 * x * x
+      + 1.7299131498039267e-03 * x * x * x
+      - 7.0957614492572805e-06 * x * x * x * x
+      + 1.1411888587287121e-08 * x * x * x * x * x;
 }
 
-// take object heights into account
-double CM5::toRealLifeDistance(const double pixel, const int label) {
-  const double projectedDistance = distanceFunction(pixel);
-  double objectHeight = 0.0;
-  if (label == 1 || label == 2) {
-    objectHeight = ObjectHeights::GOAL;
-  }
-  else if (label == 3) {
-    objectHeight = ObjectHeights::BALL;
-  }
+double CM5::distanceFunctionGoal(const double x)
+{
+  if (x < 78) return 10.0;
+  if (x > 242) return 225.0;
 
-  return projectedDistance * (ObjectHeights::MIRROR - objectHeight) / (ObjectHeights::MIRROR - ObjectHeights::BALL);
+  return
+      -4.7116022519053649e+02
+      + 2.0509237406625694e+01 * x
+      - 3.4042589603176654e-01 * x * x
+      + 2.7337786762314385e-03 * x * x * x
+      - 1.0535352217327996e-05 * x * x * x * x
+      + 1.5757400667181950e-08 * x * x * x * x * x;
 }
 
 // convert from half-float to float32 (wikipedia)
@@ -107,9 +105,13 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
 
     // compute distances of object from image center and estimate cm
     const double dist_px = pythagorean(dx, dy);
-    //Serial.println(dist_px);
-    //const double dist_cm = toRealLifeDistance(dist_px, objects[i].label);
-    const double dist_cm = distanceFunction(dist_px);
+    double dist_cm = -1.0;
+    if (objects[i].label == 3) {
+      dist_cm = distanceFunctionBall(dist_px);
+    }
+    else {
+      dist_cm = distanceFunctionGoal(dist_px);
+    }
     objects[i].dist_cm = dist_cm;
 
     objects[i].label = det[i].label;
@@ -162,10 +164,10 @@ void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
     const double mx = (x1 + x2) * 0.5f;
     const double my = (y1 + y2) * 0.5f;
 
-    const double x = mx * cos(-h) - my * sin(-h);
-    const double y = mx * sin(-h) + my * cos(-h);
-    g_x = -x;
-    g_y = -y;
+    auto position = Vector2(mx, my);
+    position.rotate(-h);
+    g_x = -position.getX();
+    g_y = -position.getY();
   }
   else if (!foundOwnGoal && foundTargetGoal) {
     heading = targetGoalRot;

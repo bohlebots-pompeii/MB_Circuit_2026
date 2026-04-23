@@ -12,15 +12,13 @@ static Vector2 getAwayFromLineVec(const WorldState& ws, int speed) {
   Vector2 line = degToVec(ws.lineRot);
   line.rotate(std::numbers::pi);
 
-  Vector2 midVec(-ws.globalX, -ws.globalY);
-  if (midVec.getMagnitude() > 1e-3) {
-    midVec.normalize();
-  }
+  //Vector2 away = line * 0.3 + midVec * 0.7;
+  Vector2 target = {-ws.globalX, -ws.globalY};
+  target.normalize();
+  target.rotate(toRad(ws.heading));
+  target *= speed;
 
-  line = line * 0.3f + midVec * 0.7f;
-  line.normalize();
-
-  return line * speed;
+  return target;
 }
 
 static bool checkBallOnLine(const WorldState& ws) {
