@@ -32,7 +32,7 @@ void executeHiddenBallNPocket(const WorldState& ws, MotionController* motion) {
   else if (inPocket) {
     rotIn = -ws.awayFromOwnGoalAngle / 5.0;
     target = ws.ownGoalVec;
-    target.setY(target.getY() * 4.0);
+    target.setY(0 - ws.globalY * 3);
   }
   else if (farFromGoal) {
     double awayFromTargetGoalRot = ws.targetGoalRot - 180.0;

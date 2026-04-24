@@ -39,6 +39,7 @@ private:
   std::shared_ptr<Sensors> _sensors;
   std::shared_ptr<Positioning> _positioning;
   std::shared_ptr<MotionController> _motion;
+  std::shared_ptr<MotionController> _motionG;
   std::shared_ptr<GameStateHandler> _gameState;
 
   elapsedMillis ledTimer;

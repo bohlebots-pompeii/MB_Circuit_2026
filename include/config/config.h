@@ -58,9 +58,9 @@ namespace Goalie {
 // PID Configuration
 namespace PIDConfig {
   // Y-axis motion PID
-  constexpr double Y_Kp = 2.0;
+  constexpr double Y_Kp = 1.6;
   constexpr double Y_Ki = 0.07;
-  constexpr double Y_Kd = 0.065;
+  constexpr double Y_Kd = 0.08;
   constexpr double Y_OutputMin = -70.0;
   constexpr double Y_OutputMax = 70.0;
   constexpr int Y_SampleTime = 21;
@@ -68,7 +68,37 @@ namespace PIDConfig {
   // X-axis motion PID
   constexpr double X_Kp = 2.0;
   constexpr double X_Ki = 0.07;
-  constexpr double X_Kd = 0.065;
+  constexpr double X_Kd = 0.08;
+  constexpr double X_OutputMin = -70.0;
+  constexpr double X_OutputMax = 70.0;
+  constexpr int X_SampleTime = 21;
+
+  // Rotation PID
+  constexpr double Rot_Kp = 0.5;
+  constexpr double Rot_Ki = 0.0;
+  constexpr double Rot_Kd = 0.05;
+  constexpr double Rot_OutputMin = -50.0;
+  constexpr double Rot_OutputMax = 50.0;
+  constexpr int Rot_SampleTime = 21;
+
+  // Rotation deadline
+  constexpr double Rot_deadline = 1.0;
+}
+
+// Goalie PID configuration
+namespace GoaliePIDConfig {
+  // Y-axis motion PID
+  constexpr double Y_Kp = 2.2;
+  constexpr double Y_Ki = 0.07;
+  constexpr double Y_Kd = 0.08;
+  constexpr double Y_OutputMin = -70.0;
+  constexpr double Y_OutputMax = 70.0;
+  constexpr int Y_SampleTime = 21;
+
+  // X-axis motion PID
+  constexpr double X_Kp = 2.0;
+  constexpr double X_Ki = 0.07;
+  constexpr double X_Kd = 0.08;
   constexpr double X_OutputMin = -70.0;
   constexpr double X_OutputMax = 70.0;
   constexpr int X_SampleTime = 21;
@@ -91,7 +121,7 @@ namespace FieldConfig {
 
   constexpr double GoalHalfWidth = 40.0;
 
-  constexpr double GoalSizeX = 30.0; // cm half hoal
+  constexpr double GoalSizeX = 30.0;
 
   constexpr double FieldLinePositionY = 80.0;
 

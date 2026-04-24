@@ -4,12 +4,13 @@
 
 MotionController* MotionController::_instance = nullptr;
 
-MotionController::MotionController(std::shared_ptr<Positioning> positioning)
+MotionController::MotionController(std::shared_ptr<Positioning> positioning, bool goalie)
   : _xPID(&_xIn, &_xOut, &_xSet, PIDConfig::X_Kp, PIDConfig::X_Ki, PIDConfig::X_Kd, DIRECT),
     _yPID(&_yIn, &_yOut, &_ySet, PIDConfig::Y_Kp, PIDConfig::Y_Ki, PIDConfig::Y_Kd, DIRECT),
     _rotPID(&_rotIn, &_rotOut, &_rotSet, PIDConfig::Rot_Kp, PIDConfig::Rot_Ki, PIDConfig::Rot_Kd, DIRECT),
     _positioning(std::move(positioning)) {
-  init();
+  if (!goalie) { init(); }
+  else { initGoalie(); }
 }
 
 void MotionController::init() {
@@ -30,6 +31,29 @@ void MotionController::init() {
     _xPID.SetMode(AUTOMATIC);
     _xPID.SetOutputLimits(PIDConfig::X_OutputMin, PIDConfig::X_OutputMax);
     _xPID.SetSampleTime(PIDConfig::X_SampleTime);
+
+    _initialized = true;
+  }
+}
+
+void MotionController::initGoalie() {
+  if (!_initialized) {
+    _ySet = 0.0;
+    _xSet = 0.0;
+    _rotSet = 0.0;
+
+    // built PID's from config
+    _rotPID.SetMode(AUTOMATIC);
+    _rotPID.SetOutputLimits(GoaliePIDConfig::Rot_OutputMin, GoaliePIDConfig::Rot_OutputMax);
+    _rotPID.SetSampleTime(GoaliePIDConfig::Rot_SampleTime);
+
+    _yPID.SetMode(AUTOMATIC);
+    _yPID.SetOutputLimits(GoaliePIDConfig::Y_OutputMin, GoaliePIDConfig::Y_OutputMax);
+    _yPID.SetSampleTime(GoaliePIDConfig::Y_SampleTime);
+
+    _xPID.SetMode(AUTOMATIC);
+    _xPID.SetOutputLimits(GoaliePIDConfig::X_OutputMin, GoaliePIDConfig::X_OutputMax);
+    _xPID.SetSampleTime(GoaliePIDConfig::X_SampleTime);
 
     _initialized = true;
   }

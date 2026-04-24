@@ -37,9 +37,12 @@ Bot::Bot() {
   _positioning = std::make_shared<Positioning>(_cm5);
   _gameState = std::make_shared<GameStateHandler>(_sensors, _cm5);
 
-  // motion controller
-  _motion = std::make_shared<MotionController>(_positioning);
+  // motion controller normal
+  _motion = std::make_shared<MotionController>(_positioning, false);
   MotionController::setInstance(_motion.get());
+
+  _motionG = std::make_shared<MotionController>(_positioning, true);
+  MotionController::setInstance(_motionG.get());
 
   pinMode(PINS::buttonPIN, INPUT); // AI PCB button pin
 }
@@ -62,10 +65,6 @@ void Bot::tick() {
 
   // build world state frame
   const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
-
-  Serial.println(ws.heading);
-  Serial.println(ws.globalX);
-  Serial.println(ws.globalY);
 
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
@@ -160,21 +159,21 @@ void Bot::decideAndExecute(const WorldState& ws) const {
 
   // Goalie logic
   if (!ws.ballExists && ws.peerBallValid && ws.peerAlive) {
-    _emergencyPosition.pFuncExec(ws, _motion.get());
+    _emergencyPosition.pFuncExec(ws, _motionG.get());
     return;
   }
 
   if (ws.ballExists && canExecuteInterceptBall(ws)) {
-    _interceptBall.pFuncExec(ws, _motion.get());
+    _interceptBall.pFuncExec(ws, _motionG.get());
     return;
   }
 
   if (ws.ballExists && !ws.hasBall) {
-    _halfCircleGuard.pFuncExec(ws, _motion.get());
+    _halfCircleGuard.pFuncExec(ws, _motionG.get());
     return;
   }
 
-  _goalNeutral.pFuncExec(ws, _motion.get());
+  _goalNeutral.pFuncExec(ws, _motionG.get());
 }
 
 void Bot::decideKickAndExecute(const WorldState& ws) const {

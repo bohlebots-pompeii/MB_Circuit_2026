@@ -35,7 +35,7 @@ public:
     };
   }
 
-  explicit MotionController(std::shared_ptr<Positioning> positioning);
+  explicit MotionController(std::shared_ptr<Positioning> positioning, bool goalie);
 
   Output compute(const Vector2& target, float rotInput, bool usePID = false);
 
@@ -65,6 +65,7 @@ private:
 
   bool _initialized = false;
   void init();
+  void initGoalie();
 
   static MotionController* _instance;
 };
