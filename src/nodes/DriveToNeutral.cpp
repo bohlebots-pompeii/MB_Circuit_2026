@@ -11,9 +11,11 @@
 #include <util/Vector2.hpp>
 
 static Vector2 getMoveToCenterVec(const WorldState& ws) {
+  /*
   if (!ws.peerAlive || !ws.peerRunning) {
     return getToPointVec(ws.globalX, ws.globalY, FieldConfig::GoalNeutralPointPositionX, 0);
   }
+  */
 
   return {-ws.globalX, -ws.globalY};
 }

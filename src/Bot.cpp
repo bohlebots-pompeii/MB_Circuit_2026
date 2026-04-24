@@ -11,6 +11,7 @@
 #include <motor_mb.h>
 #include <comms/esp-now.h>
 #include <config/config.h>
+#include <util/PIDTuner.h>
 
 // nodes
 #include <nodes/Kick.h>
@@ -36,9 +37,12 @@ Bot::Bot() {
   _positioning = std::make_shared<Positioning>(_cm5);
   _gameState = std::make_shared<GameStateHandler>(_sensors, _cm5);
 
-  // motion controller
-  _motion = std::make_shared<MotionController>(_positioning);
-  MotionController::setInstance(_motion.get()); // @TODO different solution than singleton
+  // motion controller normal
+  _motion = std::make_shared<MotionController>(_positioning, false);
+  MotionController::setInstance(_motion.get());
+
+  _motionG = std::make_shared<MotionController>(_positioning, true);
+  MotionController::setInstance(_motionG.get());
 
   pinMode(PINS::buttonPIN, INPUT); // AI PCB button pin
 }
@@ -117,7 +121,7 @@ void Bot::tick() {
     halt();
     return;
   }
-  
+
   sendData(); // send data to the bottom pcb
 }
 
@@ -130,15 +134,12 @@ void Bot::decideAndExecute(const WorldState& ws) const {
   // Striker logic
   if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
     if (ws.hasBall && ws.hasBallTime >= GeneralConfig::HasBallValidTime) {
-      /*
-      if (std::abs(ws.targetGoalRot) < 25.0 && ws.targetGoalDist > FieldConfig::kickDistance + 20.0) {
+      if (std::abs(ws.targetGoalRot) < 20.0) {
         _dribbleToGoal.pFuncExec(ws, _motion.get());
       }
       else {
         _hiddenBallNPocket.pFuncExec(ws, _motion.get());
       }
-      */
-      _hiddenBallNPocket.pFuncExec(ws, _motion.get());
       return;
     }
 
@@ -158,21 +159,21 @@ void Bot::decideAndExecute(const WorldState& ws) const {
 
   // Goalie logic
   if (!ws.ballExists && ws.peerBallValid && ws.peerAlive) {
-    _emergencyPosition.pFuncExec(ws, _motion.get());
+    _emergencyPosition.pFuncExec(ws, _motionG.get());
     return;
   }
 
   if (ws.ballExists && canExecuteInterceptBall(ws)) {
-    _interceptBall.pFuncExec(ws, _motion.get());
+    _interceptBall.pFuncExec(ws, _motionG.get());
     return;
   }
 
   if (ws.ballExists && !ws.hasBall) {
-    _halfCircleGuard.pFuncExec(ws, _motion.get());
+    _halfCircleGuard.pFuncExec(ws, _motionG.get());
     return;
   }
 
-  _goalNeutral.pFuncExec(ws, _motion.get());
+  _goalNeutral.pFuncExec(ws, _motionG.get());
 }
 
 void Bot::decideKickAndExecute(const WorldState& ws) const {

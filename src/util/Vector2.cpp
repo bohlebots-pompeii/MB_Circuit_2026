@@ -198,7 +198,16 @@ bool Vector2::vectorIsInSector(const Vector2& v, const Vector2& a, const Vector2
   int av = (int)(Vector2::angleOffsetBetween(a, v) * 1000);
   int vb = (int)(Vector2::angleOffsetBetween(v, b) * 1000);
   int ab = (int)(Vector2::angleOffsetBetween(a, b) * 1000);
-  return ((av + vb) == ab);
+  return (av + vb) == ab;
+}
+
+////////////////////////////////////////////////////////////////
+//--- Interpolation ------------------------------------------//
+////////////////////////////////////////////////////////////////
+Vector2 Vector2::lerp(const Vector2& a, const Vector2& b, const double& t) {
+  const double x = a.getX() + (b.getX() - a.getX()) * t;
+  const double y = a.getY() + (b.getY() - a.getY()) * t;
+  return {x, y};
 }
 
 ////////////////////////////////////////////////////////////////

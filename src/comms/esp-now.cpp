@@ -6,6 +6,7 @@
 
 #include "comms/esp-now.h"
 #include <config/config_esp_now.h>
+#include <config/config.h>
 #include <esp_now.h>
 #include <WiFi.h>
 #include <esp_wifi.h>
