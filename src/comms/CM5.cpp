@@ -71,7 +71,8 @@ double CM5::halfToFloat(const uint16_t h) {
     f_sig = h_sig << 13;
   }
 
-  const uint32_t f = f_sgn | (f_exp << 23) | f_sig; // we need to keep the parentheses to force the compiler to keep them for saftey
+  const uint32_t f = f_sgn | (f_exp << 23) | f_sig;
+  // we need to keep the parentheses to force the compiler to keep them for saftey
   float result;
   memcpy(&result, &f, sizeof(result));
   return result;
@@ -79,8 +80,9 @@ double CM5::halfToFloat(const uint16_t h) {
 
 void CM5::computeCenters(Detection* det, const int num_det) {
   for (int i = 0; i < num_det; ++i) {
-    det[i].center[0] = (det[i].bbox[0] + det[i].bbox[2]) * 0.5;
-    det[i].center[1] = (det[i].bbox[1] + det[i].bbox[3]) * 0.5;
+    // we need to swap centers because the camera is reverse mounted (POV: you let the hardware cook ^^)
+    det[i].center[1] = (det[i].bbox[0] + det[i].bbox[2]) * 0.5;
+    det[i].center[0] = (det[i].bbox[1] + det[i].bbox[3]) * 0.5;
   }
 }
 
@@ -167,7 +169,7 @@ void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
     auto position = Vector2(mx, my);
     position.rotate(-h);
     g_x = -position.getX();
-    g_y = position.getY();
+    g_y = -position.getY();
   }
   else if (!foundOwnGoal && foundTargetGoal) {
     heading = targetGoalRot;

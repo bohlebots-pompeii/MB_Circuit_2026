@@ -14,7 +14,6 @@ static Vector2 getAwayFromLineVec(const WorldState& ws, int speed) {
 
   auto midVec = Vector2(-ws.globalX, -ws.globalY);
   midVec.normalize();
-  midVec.rotate(ws.heading);
 
   Vector2 target = line * 0.0 + midVec * 1.0;
   target.normalize();

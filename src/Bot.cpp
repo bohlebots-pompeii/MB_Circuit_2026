@@ -63,6 +63,10 @@ void Bot::tick() {
   // build world state frame
   const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
 
+  Serial.println(ws.heading);
+  Serial.println(ws.globalX);
+  Serial.println(ws.globalY);
+
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
 
@@ -118,7 +122,7 @@ void Bot::tick() {
     halt();
     return;
   }
-  
+
   sendData(); // send data to the bottom pcb
 }
 

@@ -63,6 +63,4 @@ private:
 
   void updateLineSensor();
   void updateButtons();
-
-  static void localToWorld(float lx, float ly, float heading_deg, float& gx, float& gy);
 };

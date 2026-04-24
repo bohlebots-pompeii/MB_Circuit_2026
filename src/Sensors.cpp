@@ -105,27 +105,24 @@ void Sensors::allLEDsOff() {
 void Sensors::haltLEDs() {
   // cycles Sensors::GREEN(1) through Sensors::WHITE(7)
   static uint8_t LEDColorCounter = 1;
+  static boolean ledOn = true;
   if (ledBlinkTimer < 250) {
+    if (ledOn) {
+      for (int i = 0; i < 8; ++i) {
+        setLED(i, 1, LEDColorCounter);
+        setLED(i, 2, LEDColorCounter);
+      }
+      return;
+    }
     for (int i = 0; i < 8; ++i) {
-      setLED(i, 1, LEDColorCounter);
-      setLED(i, 2, LEDColorCounter);
+      setLED(i, 1, OFF);
+      setLED(i, 2, OFF);
     }
   }
   else {
     ledBlinkTimer = 0;
-    LEDColorCounter++;
+    ledOn = !ledOn;
   }
-  if (LEDColorCounter >= 8) {
-    LEDColorCounter = 1;
-  }
-}
-
-void Sensors::localToWorld(const float lx, const float ly, const float heading_deg, float& gx, float& gy) {
-  // Convert heading to radians for trigonometric functions
-  const auto theta = static_cast<float>(heading_deg * (PI / 180.0f));
-  // Apply rotation matrix to convert local point (lx, ly) to global point (gx, gy)
-  gx = cosf(theta) * lx - sinf(theta) * ly;
-  gy = sinf(theta) * lx + cosf(theta) * ly;
 }
 
 bool Sensors::getButtonState(const int device, const int nr) const {
