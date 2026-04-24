@@ -12,10 +12,12 @@ static Vector2 getAwayFromLineVec(const WorldState& ws, int speed) {
   Vector2 line = degToVec(ws.lineRot);
   line.rotate(std::numbers::pi);
 
-  //Vector2 away = line * 0.3 + midVec * 0.7;
-  Vector2 target = {-ws.globalX, -ws.globalY};
+  auto midVec = Vector2(-ws.globalX, -ws.globalY);
+  midVec.normalize();
+  midVec.rotate(ws.heading);
+
+  Vector2 target = line * 0.0 + midVec * 1.0;
   target.normalize();
-  target.rotate(toRad(ws.heading));
   target *= speed;
 
   return target;
@@ -45,6 +47,8 @@ static bool checkBallOnLine(const WorldState& ws) {
 
 void executeLineEscape(const WorldState& ws, MotionController* motion) {
   const Vector2 target = getAwayFromLineVec(ws, 30);
+  Serial.println(target.getX());
+  Serial.println(target.getY());
   float rotInput = 0;
 
   double globalBallDir = ws.ballRot - ws.heading;
@@ -52,15 +56,15 @@ void executeLineEscape(const WorldState& ws, MotionController* motion) {
   while (globalBallDir < -180) globalBallDir += 360;
 
   if (checkBallOnLine(ws)) {
-    if (std::abs(globalBallDir) < FieldConfig::rotateToBallAngle) {
+    if (ws.heading < FieldConfig::rotateToBallAngle) {
       rotInput = static_cast<float>(ws.ballRot);
     }
     else {
-      rotInput = 0.0;
+      rotInput = ws.heading - std::copysign(ws.ballRot, FieldConfig::rotateToBallAngle);
     }
   }
   else {
-    rotInput = 0.0;
+    rotInput = ws.heading;
   }
 
   auto [vx, vy, rot] = motion->compute(target, rotInput, false);

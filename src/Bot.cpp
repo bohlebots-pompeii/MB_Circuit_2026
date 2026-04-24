@@ -39,7 +39,7 @@ Bot::Bot() {
 
   // motion controller
   _motion = std::make_shared<MotionController>(_positioning);
-  MotionController::setInstance(_motion.get()); // @TODO different solution than singleton
+  MotionController::setInstance(_motion.get());
 
   pinMode(PINS::buttonPIN, INPUT); // AI PCB button pin
 }
@@ -62,9 +62,6 @@ void Bot::tick() {
 
   // build world state frame
   const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
-
-  Serial.println(ws.globalX);
-  Serial.println(ws.globalY);
 
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
