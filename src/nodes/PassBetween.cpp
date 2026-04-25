@@ -24,16 +24,22 @@ static double calculateShotAngle(const WorldState& ws, const Vector2& targetPos)
   Serial.print(targetPos.getY());
   Serial.print(") ");
 
-  const Vector2 dir = targetPos - position;
+  Vector2 dir = targetPos - position;
+  dir.rotate(toRad(ws.heading));
+
   const double angleRad = atan2(dir.getY(), dir.getX());
   const double angle = toDeg(angleRad);
   Serial.println(angle);
 
-  return 0;
+  return angle;
 }
 
 void executePassBetween(const WorldState& ws, MotionController* motion) {
-  const double angleSetpoint = calculateShotAngle(ws, Vector2(0, 0));
+  if (!ws.peerAlive) {
+    pushData(false, false, 0, 0, 0, 0, false);
+  }
+  const auto targetPosition = Vector2(ws.peerGlobalX, ws.peerGlobalY);
+  const double angleSetpoint = calculateShotAngle(ws, targetPosition);
   const double rotInput = angleSetpoint;
   const auto target = Vector2(0, 0);
 

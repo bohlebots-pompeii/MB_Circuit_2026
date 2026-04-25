@@ -25,6 +25,7 @@
 #include <nodes/goalie/EmergencyPosition.h>
 #include <nodes/goalie/GoalNeutral.h>
 #include <nodes/striker/HiddenBallNPocket.h>
+#include <nodes/passBetween.h>
 
 Bot::Bot() {
   Wire.begin(); // pcb communication
@@ -126,6 +127,7 @@ void Bot::tick() {
 }
 
 void Bot::decideAndExecute(const WorldState& ws) const {
+  //_passBetween.pFuncExec(ws, _motion.get());
   if (ws.lineSeen) {
     _lineEscape.pFuncExec(ws, _motion.get());
     return;
