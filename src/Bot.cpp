@@ -10,8 +10,8 @@
 #include <cmath>
 #include <motor_mb.h>
 #include <comms/esp-now.h>
+#include <comms/UdpRC.h>
 #include <config/config.h>
-#include <util/PIDTuner.h>
 
 // nodes
 #include <nodes/Kick.h>
@@ -93,6 +93,17 @@ void Bot::tick() {
   if (ledTimer > 200 && _gameState->isRunning()) {
     // disable leds after short time so we dont confuse the enemy
     _sensors->allLEDsOff();
+  }
+
+  // Handle UdpRC override
+  UdpRC::getInstance().update();
+  if (UdpRC::getInstance().hasRecentCommand()) {
+      auto cmd = UdpRC::getInstance().getCommand();
+      setData(cmd.moveX, cmd.moveY, cmd.rotation, false);
+      setKick(cmd.kick);
+      setDribbler(cmd.dribblerSpeed);
+      sendData();
+      return;
   }
 
   // ally logic ---
