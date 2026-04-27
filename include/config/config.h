@@ -9,15 +9,11 @@
 namespace GeneralConfig {
   constexpr int HasBallValidTime = 200;
 
+  constexpr double HeadingLimitDeg = 45.0;
+
   constexpr bool USE_COMMUNICATION = false;
 
   constexpr bool DISABLE_WARNINGS = true;
-}
-
-namespace NetworkConfig {
-  constexpr const char* WIFI_SSID = "bohlebots";
-  constexpr const char* WIFI_PASSWORD = "soccer2018";
-  constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS = 5000;
 }
 
 namespace ObjectHeights {
@@ -116,27 +112,17 @@ namespace GoaliePIDConfig {
 }
 
 namespace FieldConfig {
-  constexpr double FieldHalfWidth = 100.0;
-  constexpr double FieldHalfHeight = 100.0;
-
   constexpr double GoalHalfWidth = 40.0;
 
   constexpr double GoalSizeX = 30.0;
 
   constexpr double FieldLinePositionY = 80.0;
 
-  constexpr double FieldPocketPositionX = 60.0;
-  constexpr double FieldPocketFinalX = 40.0;
-  constexpr double FieldPocketFinalY = 50.0;
   constexpr double FieldPocketAngle = 40.0;
-
-  constexpr double NeutralPointPositionX = 70.0;
-  constexpr double NeutralPointPositionY = 40.0;
 
   constexpr double GoalNeutralPointPositionX = -50.0;
 
   constexpr double PointReachedDistance = 11.0;
 
   constexpr double kickDistance = 100.0;
-  constexpr double rotateToBallAngle = 70.0;
 }

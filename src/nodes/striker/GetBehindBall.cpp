@@ -134,29 +134,21 @@ void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
   bool usePID;
 
   if (ballInEdgeCase) {
+    usePID = false;
     target = getBallApproachVec(ws, ws.ballDist < 20.0 ? 15 : 30);
 
-    rotInput = ws.ballRot;
-
-    constexpr double kHeadingLimitDeg = 45.0;
-
-    if (ws.heading >= kHeadingLimitDeg && rotInput > 0.0) {
-      rotInput = ws.heading + kHeadingLimitDeg;
-    }
-    else if (ws.heading <= -kHeadingLimitDeg && rotInput < 0.0) {
-      rotInput = ws.heading - kHeadingLimitDeg;
+    if (std::abs(ws.heading) >= GeneralConfig::HeadingLimitDeg) {
+      rotInput = 0.0;
     }
     else {
       rotInput = ws.ballRot;
     }
-
-    usePID = false;
   }
   else {
     // normal pursuit
+    usePID = true;
     target = getBallPursuitVec(ws);
     rotInput = ws.heading;
-    usePID = true;
   }
 
   constexpr int dribblerSpeed = 100;

@@ -55,15 +55,15 @@ void executeLineEscape(const WorldState& ws, MotionController* motion) {
   while (globalBallDir < -180) globalBallDir += 360;
 
   if (checkBallOnLine(ws)) {
-    if (ws.heading < FieldConfig::rotateToBallAngle) {
+    if (ws.heading < GeneralConfig::HeadingLimitDeg) {
       rotInput = static_cast<float>(ws.ballRot);
     }
     else {
-      rotInput = ws.heading - std::copysign(ws.ballRot, FieldConfig::rotateToBallAngle);
+      rotInput = static_cast<float>(ws.heading);
     }
   }
   else {
-    rotInput = ws.heading;
+    rotInput = static_cast<float>(ws.heading);
   }
 
   auto [vx, vy, rot] = motion->compute(target, rotInput, false);
