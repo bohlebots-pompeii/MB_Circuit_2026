@@ -7,8 +7,13 @@ UdpRC& UdpRC::getInstance() {
 
 void UdpRC::init() {
     // Enable both Station (for ESP-NOW) and Access Point
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.softAP("Zeus", "12345678", 1);
+    WiFi.begin("BohleBots-Backrooms", "soccer2018");
+
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+    }
+
+    Serial.println(WiFi.localIP().toString().c_str());
     // Start UDP server on port 1337
     _udp.begin(1337);
 
