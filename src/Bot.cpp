@@ -66,6 +66,9 @@ void Bot::tick() {
   // build world state frame
   const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
 
+  Serial.println(ws.globalX);
+  Serial.println(ws.globalY);
+
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
 
@@ -192,7 +195,7 @@ void Bot::decideKickAndExecute(const WorldState& ws) const {
   }
 
   // dynamic angle condition
-  const double theta = std::atan(FieldConfig::GoalSizeX / ws.targetGoalDist);
+  const double theta = std::atan(30.0 / ws.targetGoalDist);
 
   if (const double windowDeg = toDeg(theta); !(std::abs(ws.targetGoalRot) < windowDeg)) {
     return;

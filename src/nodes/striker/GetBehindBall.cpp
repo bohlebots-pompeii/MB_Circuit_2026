@@ -47,7 +47,7 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
   Vector2 circleDirVec = axisBack * nb + axisSide * ns;
   circleDirVec.normalize();
 
-  constexpr double circleRadius = 30.0;
+  constexpr double circleRadius = 22.0;
   const Vector2 idealCirclePoint = ballVec + circleDirVec * circleRadius;
   const double distToCircle = idealCirclePoint.getMagnitude();
 
@@ -60,7 +60,7 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
   angleDiff = std::max(0.0, angleDiff + arcLookahead);
   angleDiff *= sideSign;
 
-  constexpr double slideStart = 25.0;
+  constexpr double slideStart = 20.0;
   const double slideT = std::clamp(1.0 - distToCircle / slideStart, 0.0, 1.0);
   const double arcAdvance = slideT * angleDiff;
 
@@ -107,11 +107,11 @@ static bool checkBallOnLine(const WorldState& ws) {
   const double ballRadians = toRad(globalBallRot);
   const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
 
-  if (globalY > FieldConfig::FieldLinePositionY && ballGlobalY > globalY) {
+  if (globalY > FieldConfig::LinePositionY && ballGlobalY > globalY) {
     return true;
   }
 
-  if (globalY < -FieldConfig::FieldLinePositionY && ballGlobalY < globalY) {
+  if (globalY < -FieldConfig::LinePositionY && ballGlobalY < globalY) {
     return true;
   }
 
@@ -123,7 +123,7 @@ static bool checkBallInPocket(const WorldState& ws) {
   while (absoluteGoalDir > 180.0) absoluteGoalDir -= 360.0;
   while (absoluteGoalDir < -180.0) absoluteGoalDir += 360.0;
 
-  return std::abs(absoluteGoalDir) > FieldConfig::FieldPocketAngle;
+  return std::abs(absoluteGoalDir) > FieldConfig::PocketAngle;
 }
 
 void executeGetBehindBall(const WorldState& ws, MotionController* motion) {

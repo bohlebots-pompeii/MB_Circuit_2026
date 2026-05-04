@@ -15,7 +15,7 @@ static bool checkBallInPocket(const WorldState& ws) {
   while (absoluteGoalDir > 180.0) absoluteGoalDir -= 360.0;
   while (absoluteGoalDir < -180.0) absoluteGoalDir += 360.0;
 
-  return std::abs(absoluteGoalDir) > FieldConfig::FieldPocketAngle;
+  return std::abs(absoluteGoalDir) > FieldConfig::PocketAngle;
 }
 
 void executeHiddenBallNPocket(const WorldState& ws, MotionController* motion) {

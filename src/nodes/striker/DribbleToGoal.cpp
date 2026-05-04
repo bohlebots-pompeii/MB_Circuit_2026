@@ -13,7 +13,7 @@ static Vector2 getBallAlignedVec(const WorldState& ws, int speed) {
 
 void executeDribbleToGoal(const WorldState& ws, MotionController* motion) {
   constexpr bool useRotDelta = true;
-  const float rotInput = static_cast<float>(ws.targetGoalRot);
+  const auto rotInput = static_cast<float>(ws.targetGoalRot);
   const Vector2 target = getBallAlignedVec(ws, 50);
 
   auto [vx, vy, rot] = motion->compute(target, rotInput, true);
