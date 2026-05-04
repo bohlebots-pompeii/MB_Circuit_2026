@@ -53,11 +53,19 @@ void executeLineEscape(const WorldState& ws, MotionController* motion) {
   while (globalBallDir < -180) globalBallDir += 360;
 
   if (checkBallOnLine(ws)) {
-    if (ws.heading < GeneralConfig::HeadingLimitDeg) {
-      rotInput = static_cast<float>(ws.ballRot);
+    if (std::abs(ws.heading) >= GeneralConfig::HeadingLimitDeg) {
+      if (ws.ballRot > 0.0) {
+        rotInput = static_cast<float>(ws.heading + GeneralConfig::HeadingLimitDeg);
+      }
+      else {
+        rotInput = static_cast<float>(ws.heading - GeneralConfig::HeadingLimitDeg);
+      }
+    }
+    else if (std::abs(ws.ballRot) > GeneralConfig::HeadingLimitDeg) {
+      rotInput = static_cast<float>(ws.heading);
     }
     else {
-      rotInput = static_cast<float>(ws.heading);
+      rotInput = static_cast<float>(ws.ballRot);
     }
   }
   else {

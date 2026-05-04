@@ -138,7 +138,15 @@ void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
     target = getBallApproachVec(ws, ws.ballDist < 20.0 ? 15 : 30);
 
     if (std::abs(ws.heading) >= GeneralConfig::HeadingLimitDeg) {
-      rotInput = 0.0;
+      if (ws.ballRot > 0.0) {
+        rotInput = ws.heading + GeneralConfig::HeadingLimitDeg;
+      }
+      else {
+        rotInput = ws.heading - GeneralConfig::HeadingLimitDeg;
+      }
+    }
+    else if (std::abs(ws.ballRot) > GeneralConfig::HeadingLimitDeg) {
+      rotInput = ws.heading;
     }
     else {
       rotInput = ws.ballRot;
