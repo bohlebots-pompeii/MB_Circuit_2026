@@ -21,8 +21,6 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
   const auto axisBack = Vector2(-1.0, 0.0);
   const auto axisSide = Vector2(0.0, 1.0);
 
-  // lonDist: How far we are behind the ball on the X axis
-  // latDist: How far we are from the ball's X-line on the Y axis
   const double lonDist = Vector2::dotProduct(ballVec * -1.0, axisBack);
   const double latDist = std::abs(Vector2::dotProduct(ballVec * -1.0, axisSide));
 
@@ -54,10 +52,14 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
   const double idealAngle = std::atan2(circleDirVec.getY(), circleDirVec.getX());
   const double backAngle = std::atan2(axisBack.getY(), axisBack.getX());
 
-  constexpr double arcLookahead = 45.0 * std::numbers::pi / 180.0;
+  constexpr double arcLookahead = 40.0 * std::numbers::pi / 180.0;
   double angleDiff = wrapAngleRad(backAngle - idealAngle);
   angleDiff *= sideSign;
   angleDiff = std::max(0.0, angleDiff + arcLookahead);
+
+  const double lookaheadScale = behindFactor * behindFactor; // quadratic ease-in
+  angleDiff *= lookaheadScale;
+
   angleDiff *= sideSign;
 
   constexpr double slideStart = 20.0;
@@ -72,8 +74,8 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
 
   double tAlign = 0.0;
   if (lonDist > -5.0) {
-    const double lateralAlignment = 1.0 - std::clamp((latDist - corridorInner) / (corridorOuter - corridorInner), 0.0,
-                                                     1.0);
+    const double lateralAlignment = 1.0 - std::clamp(
+      (latDist - corridorInner) / (corridorOuter - corridorInner), 0.0, 1.0);
     const double depthBlend = std::clamp((lonDist + 5.0) / 15.0, 0.0, 1.0);
     tAlign = lateralAlignment * depthBlend;
   }
@@ -86,7 +88,6 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
   const Vector2 throughPoint = ballVec + Vector2(throughDist, 0.0);
 
   const Vector2 target = Vector2::lerp(circlePoint, throughPoint, t);
-
   return target;
 }
 

@@ -116,5 +116,5 @@ namespace FieldConfig {
   constexpr double PocketAngle = 40.0;
   constexpr double GoalNeutralPointPositionX = -50.0;
   constexpr double PointReachedDistance = 11.0;
-  constexpr double kickDistance = 55.0;
+  constexpr double kickDistance = 65.0;
 }
