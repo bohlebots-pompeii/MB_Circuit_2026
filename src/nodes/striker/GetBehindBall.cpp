@@ -21,8 +21,6 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
   const auto axisBack = Vector2(-1.0, 0.0);
   const auto axisSide = Vector2(0.0, 1.0);
 
-  // lonDist: How far we are behind the ball on the X axis
-  // latDist: How far we are from the ball's X-line on the Y axis
   const double lonDist = Vector2::dotProduct(ballVec * -1.0, axisBack);
   const double latDist = std::abs(Vector2::dotProduct(ballVec * -1.0, axisSide));
 
@@ -47,20 +45,24 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
   Vector2 circleDirVec = axisBack * nb + axisSide * ns;
   circleDirVec.normalize();
 
-  constexpr double circleRadius = 30.0;
+  constexpr double circleRadius = 22.0;
   const Vector2 idealCirclePoint = ballVec + circleDirVec * circleRadius;
   const double distToCircle = idealCirclePoint.getMagnitude();
 
   const double idealAngle = std::atan2(circleDirVec.getY(), circleDirVec.getX());
   const double backAngle = std::atan2(axisBack.getY(), axisBack.getX());
 
-  constexpr double arcLookahead = 45.0 * std::numbers::pi / 180.0;
+  constexpr double arcLookahead = 40.0 * std::numbers::pi / 180.0;
   double angleDiff = wrapAngleRad(backAngle - idealAngle);
   angleDiff *= sideSign;
   angleDiff = std::max(0.0, angleDiff + arcLookahead);
+
+  const double lookaheadScale = behindFactor * behindFactor; // quadratic ease-in
+  angleDiff *= lookaheadScale;
+
   angleDiff *= sideSign;
 
-  constexpr double slideStart = 25.0;
+  constexpr double slideStart = 20.0;
   const double slideT = std::clamp(1.0 - distToCircle / slideStart, 0.0, 1.0);
   const double arcAdvance = slideT * angleDiff;
 
@@ -72,8 +74,8 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
 
   double tAlign = 0.0;
   if (lonDist > -5.0) {
-    const double lateralAlignment = 1.0 - std::clamp((latDist - corridorInner) / (corridorOuter - corridorInner), 0.0,
-                                                     1.0);
+    const double lateralAlignment = 1.0 - std::clamp(
+      (latDist - corridorInner) / (corridorOuter - corridorInner), 0.0, 1.0);
     const double depthBlend = std::clamp((lonDist + 5.0) / 15.0, 0.0, 1.0);
     tAlign = lateralAlignment * depthBlend;
   }
@@ -86,7 +88,6 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
   const Vector2 throughPoint = ballVec + Vector2(throughDist, 0.0);
 
   const Vector2 target = Vector2::lerp(circlePoint, throughPoint, t);
-
   return target;
 }
 
@@ -107,11 +108,11 @@ static bool checkBallOnLine(const WorldState& ws) {
   const double ballRadians = toRad(globalBallRot);
   const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
 
-  if (globalY > FieldConfig::FieldLinePositionY && ballGlobalY > globalY) {
+  if (globalY > FieldConfig::LinePositionY && ballGlobalY > globalY) {
     return true;
   }
 
-  if (globalY < -FieldConfig::FieldLinePositionY && ballGlobalY < globalY) {
+  if (globalY < -FieldConfig::LinePositionY && ballGlobalY < globalY) {
     return true;
   }
 
@@ -123,7 +124,7 @@ static bool checkBallInPocket(const WorldState& ws) {
   while (absoluteGoalDir > 180.0) absoluteGoalDir -= 360.0;
   while (absoluteGoalDir < -180.0) absoluteGoalDir += 360.0;
 
-  return std::abs(absoluteGoalDir) > FieldConfig::FieldPocketAngle;
+  return std::abs(absoluteGoalDir) > FieldConfig::PocketAngle;
 }
 
 void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
@@ -134,29 +135,29 @@ void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
   bool usePID;
 
   if (ballInEdgeCase) {
+    usePID = false;
     target = getBallApproachVec(ws, ws.ballDist < 20.0 ? 15 : 30);
 
-    rotInput = ws.ballRot;
-
-    constexpr double kHeadingLimitDeg = 45.0;
-
-    if (ws.heading >= kHeadingLimitDeg && rotInput > 0.0) {
-      rotInput = ws.heading + kHeadingLimitDeg;
+    if (std::abs(ws.heading) >= GeneralConfig::HeadingLimitDeg) {
+      if (ws.ballRot > 0.0) {
+        rotInput = ws.heading + GeneralConfig::HeadingLimitDeg;
+      }
+      else {
+        rotInput = ws.heading - GeneralConfig::HeadingLimitDeg;
+      }
     }
-    else if (ws.heading <= -kHeadingLimitDeg && rotInput < 0.0) {
-      rotInput = ws.heading - kHeadingLimitDeg;
+    else if (std::abs(ws.ballRot) > GeneralConfig::HeadingLimitDeg) {
+      rotInput = ws.heading;
     }
     else {
       rotInput = ws.ballRot;
     }
-
-    usePID = false;
   }
   else {
     // normal pursuit
+    usePID = true;
     target = getBallPursuitVec(ws);
     rotInput = ws.heading;
-    usePID = true;
   }
 
   constexpr int dribblerSpeed = 100;

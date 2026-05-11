@@ -101,7 +101,7 @@ void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
   const double x = _cm5->getGlobalX();
   const double y = _cm5->getGlobalY();
 
-  constexpr double lookAheadFrames = 20.0f;
+  constexpr double lookAheadFrames = 15.0f;
 
   _driveVector.normalize();
 

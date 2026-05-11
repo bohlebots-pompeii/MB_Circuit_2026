@@ -11,7 +11,6 @@
 #include <motor_mb.h>
 #include <comms/esp-now.h>
 #include <config/config.h>
-#include <util/PIDTuner.h>
 
 // nodes
 #include <nodes/Kick.h>
@@ -25,6 +24,7 @@
 #include <nodes/goalie/EmergencyPosition.h>
 #include <nodes/goalie/GoalNeutral.h>
 #include <nodes/striker/HiddenBallNPocket.h>
+#include <nodes/passBetween.h>
 
 Bot::Bot() {
   Wire.begin(); // pcb communication
@@ -65,6 +65,9 @@ void Bot::tick() {
 
   // build world state frame
   const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
+
+  Serial.println(ws.globalX);
+  Serial.println(ws.globalY);
 
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
@@ -126,6 +129,7 @@ void Bot::tick() {
 }
 
 void Bot::decideAndExecute(const WorldState& ws) const {
+  //_passBetween.pFuncExec(ws, _motion.get());
   if (ws.lineSeen) {
     _lineEscape.pFuncExec(ws, _motion.get());
     return;
@@ -191,7 +195,7 @@ void Bot::decideKickAndExecute(const WorldState& ws) const {
   }
 
   // dynamic angle condition
-  const double theta = std::atan(FieldConfig::GoalSizeX / ws.targetGoalDist);
+  const double theta = std::atan(30.0 / ws.targetGoalDist);
 
   if (const double windowDeg = toDeg(theta); !(std::abs(ws.targetGoalRot) < windowDeg)) {
     return;

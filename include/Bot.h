@@ -26,6 +26,7 @@
 #include <nodes/goalie/HalfCircleGuard.h>
 #include <nodes/goalie/EmergencyPosition.h>
 #include <nodes/goalie/GoalNeutral.h>
+#include <nodes/passBetween.h>
 
 class Bot {
 public:
@@ -57,6 +58,7 @@ private:
   ActionHalfCircleGuard _halfCircleGuard;
   ActionEmergencyPosition _emergencyPosition;
   ActionGoalNeutral _goalNeutral;
+  ActionPassBetween _passBetween;
 
   void decideAndExecute(const WorldState& ws) const;
   void decideKickAndExecute(const WorldState& ws) const;

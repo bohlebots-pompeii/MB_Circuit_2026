@@ -33,11 +33,11 @@ static bool checkBallOnLine(const WorldState& ws) {
   const double ballRadians = toRad(globalBallRot);
   const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
 
-  if (globalY > FieldConfig::FieldLinePositionY && ballGlobalY > globalY) {
+  if (globalY > FieldConfig::LinePositionY && ballGlobalY > globalY) {
     return true;
   }
 
-  if (globalY < -FieldConfig::FieldLinePositionY && ballGlobalY < globalY) {
+  if (globalY < -FieldConfig::LinePositionY && ballGlobalY < globalY) {
     return true;
   }
 
@@ -46,8 +46,6 @@ static bool checkBallOnLine(const WorldState& ws) {
 
 void executeLineEscape(const WorldState& ws, MotionController* motion) {
   const Vector2 target = getAwayFromLineVec(ws, 30);
-  Serial.println(target.getX());
-  Serial.println(target.getY());
   float rotInput = 0;
 
   double globalBallDir = ws.ballRot - ws.heading;
@@ -55,15 +53,23 @@ void executeLineEscape(const WorldState& ws, MotionController* motion) {
   while (globalBallDir < -180) globalBallDir += 360;
 
   if (checkBallOnLine(ws)) {
-    if (ws.heading < FieldConfig::rotateToBallAngle) {
-      rotInput = static_cast<float>(ws.ballRot);
+    if (std::abs(ws.heading) >= GeneralConfig::HeadingLimitDeg) {
+      if (ws.ballRot > 0.0) {
+        rotInput = static_cast<float>(ws.heading + GeneralConfig::HeadingLimitDeg);
+      }
+      else {
+        rotInput = static_cast<float>(ws.heading - GeneralConfig::HeadingLimitDeg);
+      }
+    }
+    else if (std::abs(ws.ballRot) > GeneralConfig::HeadingLimitDeg) {
+      rotInput = static_cast<float>(ws.heading);
     }
     else {
-      rotInput = ws.heading - std::copysign(ws.ballRot, FieldConfig::rotateToBallAngle);
+      rotInput = static_cast<float>(ws.ballRot);
     }
   }
   else {
-    rotInput = ws.heading;
+    rotInput = static_cast<float>(ws.heading);
   }
 
   auto [vx, vy, rot] = motion->compute(target, rotInput, false);
