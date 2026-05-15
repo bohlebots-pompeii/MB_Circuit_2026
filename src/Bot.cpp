@@ -138,8 +138,17 @@ void Bot::decideAndExecute(const WorldState& ws) const {
   // Striker logic
   if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
     if (ws.hasBall && ws.hasBallTime >= GeneralConfig::HasBallValidTime) {
-      if (std::abs(ws.targetGoalRot) < 20.0) {
-        _dribbleToGoal.pFuncExec(ws, _motion.get());
+      double globalTargetGoalRot = ws.targetGoalRot - ws.heading;
+      while (globalTargetGoalRot < -180.0) {globalTargetGoalRot += 360.0;}
+      while (globalTargetGoalRot > 180.0) {globalTargetGoalRot -= 360.0; }
+
+      if (globalTargetGoalRot < FieldConfig::PocketAngle) {
+        if (GeneralConfig::USE_HIDDEN_BALL && std::abs(ws.targetGoalRot) > 20.0) {
+          _hiddenBallNPocket.pFuncExec(ws, _motion.get());
+        }
+        else {
+          _dribbleToGoal.pFuncExec(ws, _motion.get());
+        }
       }
       else {
         _hiddenBallNPocket.pFuncExec(ws, _motion.get());
@@ -167,10 +176,12 @@ void Bot::decideAndExecute(const WorldState& ws) const {
     return;
   }
 
+  /*
   if (ws.ballExists && canExecuteInterceptBall(ws)) {
     _interceptBall.pFuncExec(ws, _motionG.get());
     return;
   }
+  */
 
   if (ws.ballExists && !ws.hasBall) {
     _halfCircleGuard.pFuncExec(ws, _motionG.get());

@@ -14,6 +14,8 @@ namespace GeneralConfig {
   constexpr bool USE_COMMUNICATION = false;
 
   constexpr bool DISABLE_WARNINGS = true;
+
+  constexpr bool USE_HIDDEN_BALL = false;
 }
 
 namespace ObjectHeights {
@@ -114,7 +116,7 @@ namespace GoaliePIDConfig {
 namespace FieldConfig {
   constexpr double LinePositionY = 60.0;
   constexpr double PocketAngle = 40.0;
-  constexpr double GoalNeutralPointPositionX = -50.0;
+  constexpr double GoalNeutralPointPositionX = -60.0;
   constexpr double PointReachedDistance = 11.0;
   constexpr double kickDistance = 65.0;
 }

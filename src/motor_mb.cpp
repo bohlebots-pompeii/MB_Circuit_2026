@@ -10,19 +10,26 @@
 
 #include "MotionController.h"
 
-// Buffers
-static int _vx = 0;
-static int _vy = 0;
+// Target Buffers
+static int _target_vx = 0;
+static int _target_vy = 0;
 static int _rot = 0;
 static int _drib = 0;
 static bool _ena = false;
 static bool _kick = false;
 static bool _useRotDelta = false;
 
+// Ramping Buffers
+static float _current_vx = 0.0f;
+static float _current_vy = 0.0f;
+
+// Ramping Factor (0.0 bis 1.0) - Kleiner = flachere Kurve, Größer = direktere Reaktion
+constexpr float RAMP_FACTOR = 0.15f;
+
 void pushData(const bool enable, const bool kick, const int vx, const int vy, const int rot, const int dribbler,
               const bool useRotDelta) {
-  _vx = vx;
-  _vy = vy;
+  _target_vx = vx;
+  _target_vy = vy;
   _rot = rot;
   _drib = dribbler;
   _ena = enable;
@@ -31,8 +38,8 @@ void pushData(const bool enable, const bool kick, const int vx, const int vy, co
 }
 
 void setData(const int vx, const int vy, const int rot, const bool useRotDelta) {
-  _vx = vx;
-  _vy = vy;
+  _target_vx = vx;
+  _target_vy = vy;
   _rot = rot;
   _useRotDelta = useRotDelta;
 }
@@ -52,13 +59,14 @@ void setEnable(const bool enable) {
 void sendData() {
   MotorCmd cmd{};
 
+  _current_vx += (static_cast<float>(_target_vx) - _current_vx) * RAMP_FACTOR;
+  _current_vy += (static_cast<float>(_target_vy) - _current_vy) * RAMP_FACTOR;
+
   const int rotCalc = _rot * -1;
 
-  Vector2 global_drive(_vx, _vy);
+  Vector2 global_drive(_current_vx, _current_vy);
   if (_useRotDelta) {
-    const double rotDeltaRad = MotionController::getInstance()
-                                 ? MotionController::getInstance()->getRotDeltaRad()
-                                 : 0.0;
+    const double rotDeltaRad = MotionController::getInstance() ? MotionController::getInstance()->getRotDeltaRad() : 0.0;
     global_drive.rotate(-rotDeltaRad * 2.0f);
   }
 

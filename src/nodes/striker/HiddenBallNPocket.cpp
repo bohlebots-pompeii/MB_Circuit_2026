@@ -26,6 +26,27 @@ void executeHiddenBallNPocket(const WorldState& ws, MotionController* motion) {
   const bool closeToGoal = ws.targetGoalDist < FieldConfig::kickDistance - 4.0;
   const bool farFromGoal = ws.targetGoalDist > FieldConfig::kickDistance + 20.0;
 
+  if (!GeneralConfig::USE_HIDDEN_BALL) {
+    if (inPocket) {
+      rotIn = -ws.awayFromOwnGoalAngle / 5.0;
+      target = ws.ownGoalVec;
+      target.setY(0 - ws.globalY * 3);
+    }
+
+    if (target.getMagnitude() > 0.001) {
+      target.normalize();
+      target *= 15.0;
+    }
+
+    auto [vx, vy, rot] = motion->compute(target, 0.0f, false);
+    rot = static_cast<int>(std::round(rotIn));
+
+    constexpr int dribblerSpeed = 100;
+    pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, false);
+
+    return;
+  }
+
   if (!inPocket && closeToGoal) {
     rotIn = -(ws.targetGoalRot - 5.0) / 3.0;
   }
