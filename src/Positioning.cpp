@@ -17,29 +17,6 @@ elapsedMillis velocityTimer;
 MovingAverage<float, 15> velocityXAvg;
 MovingAverage<float, 15> velocityYAvg;
 
-std::vector Field = {
-  Vector2(-70, -90),
-  Vector2(65, -100),
-  Vector2(67, 110),
-  Vector2(-63, 110)
-};
-
-/*
- Stored polygon
-  Vector2(-70, -95),
-  Vector2(-50, -110),
-  Vector2(-30, -94),
-  Vector2(40, -94),
-  Vector2(55, -120),
-  Vector2(88, -95),
-  Vector2(80, 110),
-  Vector2(60, 120),
-  Vector2(40, 100),
-  Vector2(-40, 104),
-  Vector2(-53, 125),
-  Vector2(-75, 125)
- */
-
 Positioning::Positioning(const std::shared_ptr<CM5>& cm5) {
   _cm5 = cm5;
 }

@@ -99,7 +99,10 @@ void Bot::tick() {
   }
 
   // ally logic ---
-  const bool switchWanted = getSwitchWanted(ws);
+  bool switchWanted = false;
+  if (ws.gameRunningTime > 500) {
+    switchWanted = getSwitchWanted(ws);
+  }
 
   EspNow::getInstance().tick(ws, *_gameState, switchWanted); // update espnow
 
@@ -139,8 +142,8 @@ void Bot::decideAndExecute(const WorldState& ws) const {
   if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
     if (ws.hasBall && ws.hasBallTime >= GeneralConfig::HasBallValidTime) {
       double globalTargetGoalRot = ws.targetGoalRot - ws.heading;
-      while (globalTargetGoalRot < -180.0) {globalTargetGoalRot += 360.0;}
-      while (globalTargetGoalRot > 180.0) {globalTargetGoalRot -= 360.0; }
+      while (globalTargetGoalRot < -180.0) { globalTargetGoalRot += 360.0; }
+      while (globalTargetGoalRot > 180.0) { globalTargetGoalRot -= 360.0; }
 
       if (globalTargetGoalRot < FieldConfig::PocketAngle) {
         if (GeneralConfig::USE_HIDDEN_BALL && std::abs(ws.targetGoalRot) > 20.0) {

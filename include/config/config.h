@@ -11,11 +11,13 @@ namespace GeneralConfig {
 
   constexpr double HeadingLimitDeg = 45.0;
 
-  constexpr bool USE_COMMUNICATION = false;
+  constexpr bool USE_COMMUNICATION = true;
 
   constexpr bool DISABLE_WARNINGS = true;
 
   constexpr bool USE_HIDDEN_BALL = false;
+
+  constexpr double BOT_DIAMETER = 22.0;
 }
 
 namespace ObjectHeights {
@@ -119,4 +121,27 @@ namespace FieldConfig {
   constexpr double GoalNeutralPointPositionX = -60.0;
   constexpr double PointReachedDistance = 11.0;
   constexpr double kickDistance = 65.0;
+
+  constexpr double PERFECT_FIELD_HEIGHT = 243.0 - GeneralConfig::BOT_DIAMETER;
+  constexpr double PERFECT_FIELD_WIDTH = 182.0 - GeneralConfig::BOT_DIAMETER;
+
+  constexpr double Hx = PERFECT_FIELD_HEIGHT / 2.0;
+  constexpr double Wy = PERFECT_FIELD_WIDTH / 2.0;
+  constexpr double GY = 40.0 + GeneralConfig::BOT_DIAMETER / 2.0;
+  constexpr double GX = PERFECT_FIELD_HEIGHT / 2.0 - 25.0;
+
+  const std::array FIELD_CONTOUR = {
+    Vector2( Hx,  Wy),  // top right
+    Vector2( Hx,  GY),  // down till right corner of penalty (enmy)
+    Vector2( GX,  GY),  // in
+    Vector2( GX, -GY),  // down till left corner of penalty (enemy)
+    Vector2( Hx, -GY),  // out
+    Vector2( Hx, -Wy),  // bottom right
+    Vector2(-Hx, -Wy),  // bottom left
+    Vector2(-Hx, -GY),  // up till right corner of penalty (own)
+    Vector2(-GX, -GY),  // in
+    Vector2(-GX,  GY),  // up till left corner of penalty (own)
+    Vector2(-Hx,  GY),  // out
+    Vector2(-Hx,  Wy)   // till top left
+  };
 }

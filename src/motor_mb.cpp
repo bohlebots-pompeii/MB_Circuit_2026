@@ -23,7 +23,7 @@ static bool _useRotDelta = false;
 static float _current_vx = 0.0f;
 static float _current_vy = 0.0f;
 
-// Ramping Factor (0.0 bis 1.0) - Kleiner = flachere Kurve, Größer = direktere Reaktion
+// Ramp factor
 constexpr float RAMP_FACTOR = 0.15f;
 
 void pushData(const bool enable, const bool kick, const int vx, const int vy, const int rot, const int dribbler,
