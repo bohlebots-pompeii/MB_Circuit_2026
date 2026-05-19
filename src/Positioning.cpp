@@ -14,8 +14,8 @@
 elapsedMillis rotationDeltaTimer;
 elapsedMillis velocityTimer;
 
-MovingAverage<float, 15> velocityXAvg;
-MovingAverage<float, 15> velocityYAvg;
+MovingAverage<double, 15> velocityXAvg;
+MovingAverage<double, 15> velocityYAvg;
 
 Positioning::Positioning(const std::shared_ptr<CM5>& cm5) {
   _cm5 = cm5;
@@ -28,8 +28,8 @@ void Positioning::update() {
 }
 
 void Positioning::updateMiddlePointVector() {
-  const float x = _cm5->getGlobalX();
-  const float y = _cm5->getGlobalY();
+  const double x = _cm5->getGlobalX();
+  const double y = _cm5->getGlobalY();
 
   // Vector from current pos to origin (0,0)
   Vector2 toMiddle(x, y);
@@ -59,11 +59,11 @@ void Positioning::updateVelocity() {
   }
   velocityTimer = 0;
 
-  const float x = _cm5->getGlobalX();
-  const float y = _cm5->getGlobalY();
+  const double x = _cm5->getGlobalX();
+  const double y = _cm5->getGlobalY();
 
-  const float dx = x - lastX;
-  const float dy = y - lastY;
+  const double dx = x - lastX;
+  const double dy = y - lastY;
 
   velocityXAvg.addValue(dx);
   velocityYAvg.addValue(dy);
@@ -95,12 +95,12 @@ void Positioning::speedLimit(float& vx, float& vy, Vector2 _driveVector) const {
   constexpr float minSpeed = 20.0f;
 
   double factor = 1.0;
-  if (futureDist > SpeedLimiting::maxDistance) {
+  if (futureDist > SpeedLimiting::MAX_DIST) {
     factor = 0.0;
   }
-  else if (futureDist > SpeedLimiting::slowingDistance) {
-    const double normalizedDist = (futureDist - SpeedLimiting::slowingDistance) / (SpeedLimiting::maxDistance -
-      SpeedLimiting::slowingDistance);
+  else if (futureDist > SpeedLimiting::SLOWING_DIST) {
+    const double normalizedDist = (futureDist - SpeedLimiting::SLOWING_DIST) / (SpeedLimiting::MAX_DIST -
+      SpeedLimiting::SLOWING_DIST);
     factor = 1.0 - normalizedDist * normalizedDist;
   }
 

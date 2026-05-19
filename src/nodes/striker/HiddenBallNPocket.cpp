@@ -15,7 +15,7 @@ static bool checkBallInPocket(const WorldState& ws) {
   while (absoluteGoalDir > 180.0) absoluteGoalDir -= 360.0;
   while (absoluteGoalDir < -180.0) absoluteGoalDir += 360.0;
 
-  return std::abs(absoluteGoalDir) > FieldConfig::PocketAngle;
+  return std::abs(absoluteGoalDir) > FieldConfig::IN_POCKET_ANGLE;
 }
 
 void executeHiddenBallNPocket(const WorldState& ws, MotionController* motion) {
@@ -23,8 +23,8 @@ void executeHiddenBallNPocket(const WorldState& ws, MotionController* motion) {
   Vector2 target(0, 0);
 
   const bool inPocket = checkBallInPocket(ws);
-  const bool closeToGoal = ws.targetGoalDist < FieldConfig::kickDistance - 4.0;
-  const bool farFromGoal = ws.targetGoalDist > FieldConfig::kickDistance + 20.0;
+  const bool closeToGoal = ws.targetGoalDist < FieldConfig::KICK_DISTANCE - 4.0;
+  const bool farFromGoal = ws.targetGoalDist > FieldConfig::KICK_DISTANCE + 20.0;
 
   if (!GeneralConfig::USE_HIDDEN_BALL) {
     if (inPocket) {

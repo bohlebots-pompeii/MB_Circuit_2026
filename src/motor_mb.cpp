@@ -84,7 +84,7 @@ void sendData() {
   cmd.rot = static_cast<int8_t>(rot_final);
   cmd.drib = static_cast<int8_t>(dribbler_final);
 
-  Wire.beginTransmission(I2C_ADDRESSES::motorMBAddress); // final send to execute
+  Wire.beginTransmission(I2C_ADDRESSES::MOTOR_MB_ADDR); // final send to execute
   Wire.write(reinterpret_cast<uint8_t*>(&cmd), sizeof(cmd));
   Wire.endTransmission();
   _kick = false;

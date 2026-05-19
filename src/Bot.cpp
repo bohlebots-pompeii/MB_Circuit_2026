@@ -44,7 +44,7 @@ Bot::Bot() {
   _motionG = std::make_shared<MotionController>(_positioning, true);
   MotionController::setInstance(_motionG.get());
 
-  pinMode(PINS::buttonPIN, INPUT); // AI PCB button pin
+  pinMode(PINS::SINGLE_BUTTON_PIN, INPUT); // AI PCB button pin
 }
 
 Bot::~Bot() = default;
@@ -52,7 +52,7 @@ Bot::~Bot() = default;
 void Bot::tick() {
   static bool CM5_initialized = false;
 
-  if (digitalRead(PINS::buttonPIN)) {
+  if (digitalRead(PINS::SINGLE_BUTTON_PIN)) {
     // kick test
     pushData(false, true, 0, 0, 0, 0, false);
     sendData();
@@ -140,12 +140,12 @@ void Bot::decideAndExecute(const WorldState& ws) const {
 
   // Striker logic
   if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
-    if (ws.hasBall && ws.hasBallTime >= GeneralConfig::HasBallValidTime) {
+    if (ws.hasBall && ws.hasBallTime >= GeneralConfig::HAS_BALL_VALID_TIME) {
       double globalTargetGoalRot = ws.targetGoalRot - ws.heading;
       while (globalTargetGoalRot < -180.0) { globalTargetGoalRot += 360.0; }
       while (globalTargetGoalRot > 180.0) { globalTargetGoalRot -= 360.0; }
 
-      if (globalTargetGoalRot < FieldConfig::PocketAngle) {
+      if (globalTargetGoalRot < FieldConfig::IN_POCKET_ANGLE) {
         if (GeneralConfig::USE_HIDDEN_BALL && std::abs(ws.targetGoalRot) > 20.0) {
           _hiddenBallNPocket.pFuncExec(ws, _motion.get());
         }
@@ -199,12 +199,12 @@ void Bot::decideKickAndExecute(const WorldState& ws) const {
   setKick(false);
 
   // base conditions
-  if (!(ws.hasBall && ws.hasBallTime >= GeneralConfig::HasBallValidTime)) {
+  if (!(ws.hasBall && ws.hasBallTime >= GeneralConfig::HAS_BALL_VALID_TIME)) {
     return;
   }
 
   // distance condition
-  if (!(ws.targetGoalDist > 0.0 && ws.targetGoalDist < FieldConfig::kickDistance)) {
+  if (!(ws.targetGoalDist > 0.0 && ws.targetGoalDist < FieldConfig::KICK_DISTANCE)) {
     return;
   }
 

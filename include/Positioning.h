@@ -26,8 +26,8 @@ private:
 
   double _rotationDelta = 0.0f;
   double lastHeading = 0.0f;
-  float lastX = 0.0f;
-  float lastY = 0.0f;
+  double lastX = 0.0f;
+  double lastY = 0.0f;
 
   void updateMiddlePointVector();
   void updateRotationDelta();
