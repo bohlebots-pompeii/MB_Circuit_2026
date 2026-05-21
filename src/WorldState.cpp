@@ -39,8 +39,16 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.lineProgress = sensors.getProgress();
 
   // position + motion
-  ws.globalX = cm5.getGlobalX();
-  ws.globalY = cm5.getGlobalY();
+  const double rawX = cm5.getGlobalX();
+  const double scaleX = FieldConfig::PERFECT_FIELD_HEIGHT / FieldConfig::REAL_FIELD_HEIGHT;
+  ws.globalX = rawX * scaleX;
+  //ws.globalX = cm5.getGlobalX();
+
+  const double rawY = cm5.getGlobalY();
+  const double scaleY = FieldConfig::PERFECT_FIELD_WIDTH / FieldConfig::REAL_FIELD_WIDTH;
+  ws.globalY = rawY * scaleY;
+  //ws.globalY = cm5.getGlobalY();
+
   ws.heading = cm5.getHeading();
   ws.velocity = positioning.getVelocity();
 

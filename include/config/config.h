@@ -4,6 +4,7 @@
 #pragma once
 
 #include <util/Vector2.hpp>
+#include <array>
 
 #define I2C_SDA 21 // I2C
 #define I2C_SCL 22
@@ -13,7 +14,7 @@ namespace GeneralConfig {
 
   constexpr double HEADING_HARD_LIMIT_DEG = 45.0;
 
-  constexpr bool USE_COMMUNICATION = true;
+  constexpr bool USE_COMMUNICATION = false;
 
   constexpr bool DISABLE_WARNINGS = true;
 
@@ -125,7 +126,7 @@ namespace FieldConfig {
   constexpr double KICK_DISTANCE = 65.0;
 
   // @ToDo needs tuning
-  const auto MAX_FIELD_MEASUREMENTS = Vector2(50, 50); // measure max x and max y
+  const auto MAX_FIELD_MEASUREMENTS = Vector2(112, 72); // measure max x and max y
 
   const double REAL_FIELD_HEIGHT = MAX_FIELD_MEASUREMENTS.getX() * 2;
   const double REAL_FIELD_WIDTH = MAX_FIELD_MEASUREMENTS.getY() * 2;
@@ -138,7 +139,7 @@ namespace FieldConfig {
   constexpr double GY = 40.0 + GeneralConfig::BOT_DIAMETER / 2.0;
   constexpr double GX = PERFECT_FIELD_HEIGHT / 2.0 - 25.0;
 
-  const std::array FIELD_CONTOUR = {
+  const std::array<Vector2, 12> FIELD_CONTOUR = {
     Vector2( Hx,  Wy),  // top right
     Vector2( Hx,  GY),  // down till right corner of penalty (enmy)
     Vector2( GX,  GY),  // in

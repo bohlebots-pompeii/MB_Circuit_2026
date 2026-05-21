@@ -66,9 +66,6 @@ void Bot::tick() {
   // build world state frame
   const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
 
-  Serial.println(ws.globalX);
-  Serial.println(ws.globalY);
-
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
 
@@ -145,7 +142,7 @@ void Bot::decideAndExecute(const WorldState& ws) const {
       while (globalTargetGoalRot < -180.0) { globalTargetGoalRot += 360.0; }
       while (globalTargetGoalRot > 180.0) { globalTargetGoalRot -= 360.0; }
 
-      if (globalTargetGoalRot < FieldConfig::IN_POCKET_ANGLE) {
+      if (std::abs(globalTargetGoalRot) < FieldConfig::IN_POCKET_ANGLE) {
         if (GeneralConfig::USE_HIDDEN_BALL && std::abs(ws.targetGoalRot) > 20.0) {
           _hiddenBallNPocket.pFuncExec(ws, _motion.get());
         }
