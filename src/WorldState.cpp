@@ -5,6 +5,7 @@
 #include <GameStateHandler.h>
 #include <comms/esp-now.h>
 #include <elapsedMillis.h>
+#include <config/config.h>
 
 WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Positioning& positioning,
                              const GameStateHandler& gameState) {
@@ -12,6 +13,7 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
 
   static elapsedMillis s_lastBallSeenTime;
   static elapsedMillis s_hasBallTime;
+  static elapsedMillis s_gameRunningTime;
 
   // ball
   ws.ballVec = cm5.getBallVec();
@@ -37,8 +39,16 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.lineProgress = sensors.getProgress();
 
   // position + motion
-  ws.globalX = cm5.getGlobalX();
-  ws.globalY = cm5.getGlobalY();
+  const double rawX = cm5.getGlobalX();
+  const double scaleX = FieldConfig::PERFECT_FIELD_HEIGHT / FieldConfig::REAL_FIELD_HEIGHT;
+  ws.globalX = rawX * scaleX;
+  //ws.globalX = cm5.getGlobalX();
+
+  const double rawY = cm5.getGlobalY();
+  const double scaleY = FieldConfig::PERFECT_FIELD_WIDTH / FieldConfig::REAL_FIELD_WIDTH;
+  ws.globalY = rawY * scaleY;
+  //ws.globalY = cm5.getGlobalY();
+
   ws.heading = cm5.getHeading();
   ws.velocity = positioning.getVelocity();
 
@@ -78,6 +88,19 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
     ws.peerBallValid = false;
     ws.peerSwitchWanted = false;
   }
+
+  // derive gameRunningTime
+  bool isGameRunning = false;
+  if (GeneralConfig::USE_COMMUNICATION && ws.peerAlive) {
+    isGameRunning = gameState.isRunning() || ws.peerRunning;
+  } else {
+    isGameRunning = gameState.isRunning();
+  }
+
+  if (!isGameRunning) {
+    s_gameRunningTime = 0;
+  }
+  ws.gameRunningTime = s_gameRunningTime;
 
   // game state
   ws.isGoalie = gameState.getRole() == GameStateHandler::Role::GOALIE;

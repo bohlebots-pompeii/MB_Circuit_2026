@@ -108,11 +108,11 @@ static bool checkBallOnLine(const WorldState& ws) {
   const double ballRadians = toRad(globalBallRot);
   const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
 
-  if (globalY > FieldConfig::LinePositionY && ballGlobalY > globalY) {
+  if (globalY > FieldConfig::LINE_POS_Y && ballGlobalY > globalY) {
     return true;
   }
 
-  if (globalY < -FieldConfig::LinePositionY && ballGlobalY < globalY) {
+  if (globalY < -FieldConfig::LINE_POS_Y && ballGlobalY < globalY) {
     return true;
   }
 
@@ -124,7 +124,7 @@ static bool checkBallInPocket(const WorldState& ws) {
   while (absoluteGoalDir > 180.0) absoluteGoalDir -= 360.0;
   while (absoluteGoalDir < -180.0) absoluteGoalDir += 360.0;
 
-  return std::abs(absoluteGoalDir) > FieldConfig::PocketAngle;
+  return std::abs(absoluteGoalDir) > FieldConfig::IN_POCKET_ANGLE;
 }
 
 void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
@@ -138,15 +138,15 @@ void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
     usePID = false;
     target = getBallApproachVec(ws, ws.ballDist < 20.0 ? 15 : 30);
 
-    if (std::abs(ws.heading) >= GeneralConfig::HeadingLimitDeg) {
+    if (std::abs(ws.heading) >= GeneralConfig::HEADING_HARD_LIMIT_DEG) {
       if (ws.ballRot > 0.0) {
-        rotInput = ws.heading + GeneralConfig::HeadingLimitDeg;
+        rotInput = ws.heading + GeneralConfig::HEADING_HARD_LIMIT_DEG;
       }
       else {
-        rotInput = ws.heading - GeneralConfig::HeadingLimitDeg;
+        rotInput = ws.heading - GeneralConfig::HEADING_HARD_LIMIT_DEG;
       }
     }
-    else if (std::abs(ws.ballRot) > GeneralConfig::HeadingLimitDeg) {
+    else if (std::abs(ws.ballRot) > GeneralConfig::HEADING_HARD_LIMIT_DEG) {
       rotInput = ws.heading;
     }
     else {

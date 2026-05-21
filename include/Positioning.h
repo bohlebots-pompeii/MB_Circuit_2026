@@ -15,7 +15,7 @@ public:
   void update();
 
   [[nodiscard]] Vector2 getMiddlePointVector() const { return _middlePointVector; }
-  void speedLimit(float& vx, float& vy, Vector2 _driveVector) const;
+  void speedLimit(float& vx, float& vy, const Vector2& _driveVector) const;
   [[nodiscard]] double getRotationDelta() const { return _rotationDelta; }
   [[nodiscard]] Vector2 getVelocity() const { return _velocity; }
 
@@ -26,8 +26,8 @@ private:
 
   double _rotationDelta = 0.0f;
   double lastHeading = 0.0f;
-  float lastX = 0.0f;
-  float lastY = 0.0f;
+  double lastX = 0.0f;
+  double lastY = 0.0f;
 
   void updateMiddlePointVector();
   void updateRotationDelta();

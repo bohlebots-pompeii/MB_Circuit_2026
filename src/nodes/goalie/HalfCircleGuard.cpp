@@ -24,12 +24,6 @@ static Vector2 getHalfCircleTarget(const WorldState& ws) {
 
   Vector2 awayFromGoal = ownGoalVec * -1.0;
   awayFromGoal.normalize();
-  const double dot = goalToBall.getX() * awayFromGoal.getX() + goalToBall.getY() * awayFromGoal.getY();
-  if (dot < 0) {
-    const Vector2 perp(-awayFromGoal.getY(), awayFromGoal.getX());
-    const double projPerp = goalToBall.getX() * perp.getX() + goalToBall.getY() * perp.getY();
-    goalToBall = perp * (projPerp >= 0 ? 1.0 : -1.0);
-  }
 
   return ownGoalVec + goalToBall * Goalie::HALF_CIRCLE_RADIUS;
 }
@@ -90,46 +84,6 @@ static void applyBallAvoidance(const WorldState& ws, Vector2& target) {
   target = blended * speed;
 }
 
-static void applyStrikerAvoidance(const WorldState& ws, Vector2& target) {
-  if (!ws.peerAlive) {
-    return;
-  }
-
-  const double diffX = ws.peerGlobalX - ws.globalX;
-  const double diffY = ws.peerGlobalY - ws.globalY;
-  const double headingRad = toRad(ws.heading);
-  const double localX = diffX * cos(-headingRad) - diffY * sin(-headingRad);
-  const double localY = diffX * sin(-headingRad) + diffY * cos(-headingRad);
-
-  g_strikerAvgX.addValue(localX);
-  g_strikerAvgY.addValue(localY);
-
-  const Vector2 strikerLocal(g_strikerAvgX.getAverage(), g_strikerAvgY.getAverage());
-  const double strikerDist = strikerLocal.getMagnitude();
-  constexpr double STRIKER_AVOID_DIST = 40.0;
-  if (!(strikerDist > 1e-3 && strikerDist < STRIKER_AVOID_DIST)) {
-    return;
-  }
-
-  Vector2 strikerDir = strikerLocal;
-  strikerDir.normalize();
-
-  const Vector2 tangentL(-strikerDir.getY(), strikerDir.getX());
-  const Vector2 tangentR(strikerDir.getY(), -strikerDir.getX());
-  const double dotL = target.getX() * tangentL.getX() + target.getY() * tangentL.getY();
-  const double dotR = target.getX() * tangentR.getX() + target.getY() * tangentR.getY();
-  const Vector2 tangent = dotL >= dotR ? tangentL : tangentR;
-
-  const double t = 1.0 - strikerDist / STRIKER_AVOID_DIST;
-  const double speed = target.getMagnitude();
-  Vector2 blended(
-    target.getX() / (speed > 1e-3 ? speed : 1.0) * (1.0 - t) + tangent.getX() * t,
-    target.getY() / (speed > 1e-3 ? speed : 1.0) * (1.0 - t) + tangent.getY() * t
-  );
-  blended.normalize();
-  target = blended * speed;
-}
-
 void executeHalfCircleGuard(const WorldState& ws, MotionController* motion) {
   Vector2 target;
   const auto rotInput = static_cast<float>(ws.awayFromOwnGoalAngle);
@@ -149,7 +103,6 @@ void executeHalfCircleGuard(const WorldState& ws, MotionController* motion) {
   }
 
   applyBallAvoidance(ws, target);
-  applyStrikerAvoidance(ws, target);
 
   const int drib = (ws.ballDist < 40 && ws.ballDist != 0) ? 100 : 0;
   auto [vx, vy, rot] = motion->compute(target, rotInput, usePID);

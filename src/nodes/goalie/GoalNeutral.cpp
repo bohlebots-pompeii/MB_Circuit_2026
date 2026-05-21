@@ -6,7 +6,7 @@
 #include <util/helper.h>
 
 void executeGoalNeutral(const WorldState& ws, MotionController* motion) {
-  const Vector2 target = getToPointVec(ws.globalX, ws.globalY, FieldConfig::GoalNeutralPointPositionX, 0);
+  const Vector2 target = getToPointVec(ws.globalX, ws.globalY, FieldConfig::GOAL_NEUTRAL_POS_X, 0);
   const auto rotInput = static_cast<float>(ws.heading);
   constexpr bool usePID = true;
 

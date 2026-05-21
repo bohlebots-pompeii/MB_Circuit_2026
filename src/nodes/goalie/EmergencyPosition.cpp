@@ -72,7 +72,7 @@ void executeEmergencyPosition(const WorldState& ws, MotionController* motion) {
     target = getHalfCircleTarget(ws, emergencyBall);
   }
   else {
-    target = getToPointVec(ws.globalX, ws.globalY, FieldConfig::GoalNeutralPointPositionX, 0);
+    target = getToPointVec(ws.globalX, ws.globalY, FieldConfig::GOAL_NEUTRAL_POS_X, 0);
     rotInput = ws.heading;
   }
 

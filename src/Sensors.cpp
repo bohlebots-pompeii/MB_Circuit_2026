@@ -20,11 +20,11 @@ Sensors::Sensors(const std::shared_ptr<CM5>& cm5) {
   _cm5 = cm5;
 
   // Initialize the button pin as input
-  pinMode(PINS::buttonPIN, INPUT);
+  pinMode(PINS::SINGLE_BUTTON_PIN, INPUT);
   // Light gate
-  pinMode(PINS::lightGatePIN, INPUT);
+  pinMode(PINS::LIGHT_GATE_PIN, INPUT);
   // comms module
-  pinMode(PINS::communicationModulePIN, INPUT);
+  pinMode(PINS::COMMS_MODULE_PIN, INPUT);
 }
 
 void Sensors::update() {
@@ -38,7 +38,7 @@ void Sensors::updateLineSensor() {
   static int16_t lastLineProgress = -1;
   constexpr uint8_t len = 4;
   // Request 4 bytes from the line sensor via I2C
-  Wire.requestFrom(I2C_ADDRESSES::lineSensorAddress, len);
+  Wire.requestFrom(I2C_ADDRESSES::LINE_ADDR, len);
   if (Wire.available() >= len) {
     const uint8_t progressLow = Wire.read();
     const uint8_t progressHigh = Wire.read();

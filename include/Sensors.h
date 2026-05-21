@@ -29,7 +29,7 @@ public:
   [[nodiscard]] bool getEna() const { return ena; }
   [[nodiscard]] static bool getHasBall() { return analogRead(39) > 3900; }
   [[nodiscard]] static int getBallLightGate() { return analogRead(39); }
-  [[nodiscard]] static bool getForceHalt() { return digitalRead(PINS::communicationModulePIN) == LOW; }
+  [[nodiscard]] static bool getForceHalt() { return digitalRead(PINS::COMMS_MODULE_PIN) == LOW; }
 
   enum COLOR {
     // for the LED colors
