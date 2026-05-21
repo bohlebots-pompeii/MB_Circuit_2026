@@ -157,21 +157,6 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector) 
   int hitEdge = -1;
   const double factor = computeSpeedScale(pos, globalDriveVec, lookaheadFactor, hitEdge);
 
-  constexpr bool DEBUG_SPEED_LIMIT = true; // Toggle for verbose debugging
-  if (DEBUG_SPEED_LIMIT) {
-    static elapsedMillis debugDelay;
-    if (debugDelay > 100) { // Limit output to every 100ms so we don't flood Serial
-      Serial.print("[SpeedLimit] Pos: ("); Serial.print(pos.getX()); Serial.print(", "); Serial.print(pos.getY());
-      Serial.print(") | GlobalDriveVec: ("); Serial.print(globalDriveVec.getX()); Serial.print(", "); Serial.print(globalDriveVec.getY());
-      Serial.print(") | Factor: "); Serial.print(factor);
-      if (hitEdge != -1) {
-        Serial.print(" | HIT Edge: "); Serial.print(hitEdge);
-      }
-      Serial.println();
-      debugDelay = 0;
-    }
-  }
-
   if (factor >= 1.0) {
     return;
   }

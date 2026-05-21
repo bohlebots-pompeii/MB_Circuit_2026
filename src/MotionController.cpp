@@ -88,7 +88,7 @@ MotionController::Output MotionController::compute(const Vector2& target, const 
     out.vy = static_cast<float>(target.getY());
   }
 
-  _positioning->speedLimit(out.vx, out.vy, target); // speed limiting to prevent out of bounds @FIXME
+  _positioning->speedLimit(out.vx, out.vy, target);
 
   return out;
 }
