@@ -136,11 +136,11 @@ namespace FieldConfig {
   };
 
   constexpr double GOAL_NEUTRAL_POS_X = -Hx + GeneralConfig::BOT_DIAMETER * 0.75;
-  constexpr double LINE_POS_Y = Wy - GeneralConfig::BOT_DIAMETER * 1.5;
+  constexpr double LINE_POS_Y = Wy - GeneralConfig::BOT_DIAMETER * 2;
 
   constexpr double IN_POCKET_ANGLE = 40.0;
   constexpr double POINT_REACHED_DIST = GeneralConfig::BOT_DIAMETER / 2.0;
-  constexpr double KICK_DISTANCE = GX + GeneralConfig::BOT_DIAMETER * 1.5;
+  constexpr double KICK_DISTANCE = GX + GeneralConfig::BOT_DIAMETER * 2;
 }
 
 namespace Goalie {
