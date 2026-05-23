@@ -96,10 +96,7 @@ void Bot::tick() {
   }
 
   // ally logic ---
-  bool switchWanted = false;
-  if (ws.gameRunningTime > 500) {
-    switchWanted = getSwitchWanted(ws);
-  }
+  const bool switchWanted = getSwitchWanted(ws);
 
   EspNow::getInstance().tick(ws, *_gameState, switchWanted); // update espnow
 
@@ -223,6 +220,7 @@ bool Bot::getSwitchWanted(const WorldState& ws) {
   }
 
   if (!ws.peerAlive) {
+    switchWantedCooldownTimer = 0;
     return true;
   }
 
@@ -231,17 +229,35 @@ bool Bot::getSwitchWanted(const WorldState& ws) {
     return true;
   }
 
+  if (ws.gameRunningTime < 500) { // prevent switches from not perfect button presses
+    return false;
+  }
+
   if (!ws.peerRunning) {
     switchWantedCooldownTimer = 0;
     return true;
   }
 
-  if (!ws.ballExists) {
+  if (switchWantedCooldownTimer < 2000) {
     return false;
   }
 
-  if (switchWantedCooldownTimer < 2000) {
-    return false;
+  const auto allyPosition = Vector2(ws.globalX, ws.globalY);
+  const auto allyBallVec = Vector2(std::cos(toRad(ws.peerBallRot)), std::sin(toRad(ws.peerBallRot))) * ws.peerBallDist;
+  const Vector2 allyBallPos = allyPosition - allyBallVec;
+
+  const bool teammateBehindBall = allyBallPos.getX() >= 0;
+  const bool ownBehindBall = ws.ballVec.getX() >= 0;
+  const bool muchBetterAngle = std::abs(ws.ballRot) < std::abs(ws.peerBallRot) / 2.0;
+  const bool muchBetterDistance = std::abs(ws.ballDist) < std::abs(ws.peerBallDist) / 2.0;
+
+  if (teammateBehindBall == ownBehindBall) {
+    return muchBetterDistance;
+  }
+
+  if (muchBetterDistance && muchBetterAngle) {
+    switchWantedCooldownTimer = 0;
+    return true;
   }
 
   return false;
