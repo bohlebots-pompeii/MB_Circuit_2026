@@ -135,12 +135,14 @@ namespace FieldConfig {
     Vector2(-Hx,  Wy)   // till top left
   };
 
-  constexpr double GOAL_NEUTRAL_POS_X = -Hx + GeneralConfig::BOT_DIAMETER * 0.75;
+  constexpr double GOAL_NEUTRAL_POS_X = -GX + GeneralConfig::BOT_DIAMETER;
   constexpr double LINE_POS_Y = Wy - GeneralConfig::BOT_DIAMETER * 2;
 
   constexpr double IN_POCKET_ANGLE = 40.0;
   constexpr double POINT_REACHED_DIST = GeneralConfig::BOT_DIAMETER / 2.0;
   constexpr double KICK_DISTANCE = GX + GeneralConfig::BOT_DIAMETER * 2;
+
+  constexpr double HARD_BARRIER = -GX + GeneralConfig::BOT_DIAMETER * 2;
 }
 
 namespace Goalie {
@@ -149,5 +151,5 @@ namespace Goalie {
   constexpr double BALL_MOVED_THRESH = 5.0;
 
   constexpr float BALL_AVOID_DIST = GeneralConfig::BOT_DIAMETER * 2.0;
-  constexpr double HALF_CIRCLE_RADIUS = FieldConfig::GY + GeneralConfig::BOT_DIAMETER * 1.5;
+  constexpr double HALF_CIRCLE_RADIUS = FieldConfig::GX + GeneralConfig::BOT_DIAMETER * 1.5;
 }

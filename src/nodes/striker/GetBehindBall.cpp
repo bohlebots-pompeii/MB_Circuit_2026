@@ -134,7 +134,14 @@ void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
   double rotInput = 0;
   bool usePID;
 
-  if (ballInEdgeCase) {
+  if (ws.peerRunning && ws.globalX < FieldConfig::HARD_BARRIER) {
+    target = getToPointVec(ws.globalX, ws.globalY, FieldConfig::HARD_BARRIER + GeneralConfig::BOT_DIAMETER / 2.0,
+                           ws.globalY);
+    rotInput = ws.heading;
+    usePID = false;
+  }
+
+  else if (ballInEdgeCase) {
     usePID = false;
     target = getBallApproachVec(ws, ws.ballDist < 20.0 ? 15 : 30);
 
