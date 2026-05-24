@@ -7,6 +7,7 @@
 #include "nodes/PassBetween.h"
 #include "motor_mb.h"
 #include "WorldState.h"
+#include "config/config.h"
 #include "util/Vector2.hpp"
 #include "util/helper.h"
 
@@ -40,9 +41,19 @@ void executePassBetween(const WorldState& ws, MotionController* motion) {
   }
   const auto targetPosition = Vector2(ws.peerGlobalX, ws.peerGlobalY);
   const double angleSetpoint = calculateShotAngle(ws, targetPosition);
-  const double rotInput = angleSetpoint;
-  const auto target = Vector2(0, 0);
+  const double a = ws.globalX - -60;
+  const double b = ws.globalY - 0;
+  double rotInput = 0;
+  if (std::hypot(a, b) < FieldConfig::POINT_REACHED_DIST) {
+    rotInput = angleSetpoint;
+  }
+  else {
+    rotInput = ws.heading;
+  }
 
-  auto [vx, vy, rot] = motion->compute(target, rotInput);
+  const auto target = getToPointVec(ws.globalX, ws.globalY, -60, 0);
+  //const auto target = Vector2(0,0);
+
+  auto [vx, vy, rot] = motion->compute(target, rotInput, true);
   pushData(ws.ena, false, static_cast<int>(round(vx)), static_cast<int>(round(vy)), rot, 0, true);
 }
