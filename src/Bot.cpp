@@ -129,8 +129,7 @@ void Bot::tick() {
 }
 
 void Bot::decideAndExecute(const WorldState& ws) const {
-  _passBetween.pFuncExec(ws, _motion.get());
-  /*
+  //_passBetween.pFuncExec(ws, _motion.get());
   if (ws.lineSeen) {
     _lineEscape.pFuncExec(ws, _motion.get());
     return;
@@ -182,6 +181,7 @@ void Bot::decideAndExecute(const WorldState& ws) const {
     _interceptBall.pFuncExec(ws, _motionG.get());
     return;
   }
+  */
 
 
   if (ws.ballExists && !ws.hasBall) {
@@ -190,7 +190,6 @@ void Bot::decideAndExecute(const WorldState& ws) const {
   }
 
   _goalNeutral.pFuncExec(ws, _motionG.get());
-  */
 }
 
 void Bot::decideKickAndExecute(const WorldState& ws) const {
