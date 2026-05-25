@@ -49,15 +49,15 @@ namespace I2C_ADDRESSES {
 namespace PIDConfig {
   // Y-axis motion PID
   constexpr double Y_Kp = 1.6;
-  constexpr double Y_Ki = 0.06;
-  constexpr double Y_Kd = 0.1;
+  constexpr double Y_Ki = 0.0;
+  constexpr double Y_Kd = 0.06;
   constexpr double Y_O_MIN = -70.0;
   constexpr double Y_O_MAX = 70.0;
   constexpr int Y_SampleTime = 21;
 
   // X-axis motion PID
-  constexpr double X_Kp = 2.0;
-  constexpr double X_Ki = 0.1;
+  constexpr double X_Kp = 1.6;
+  constexpr double X_Ki = 0.0;
   constexpr double X_Kd = 0.06;
   constexpr double X_O_MIN = -70.0;
   constexpr double X_O_MAX = 70.0;
