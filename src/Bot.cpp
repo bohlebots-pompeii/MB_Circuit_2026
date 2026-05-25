@@ -96,7 +96,10 @@ void Bot::tick() {
   }
 
   // ally logic ---
-  const bool switchWanted = getSwitchWanted(ws);
+  bool switchWanted = false;
+  if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
+    switchWanted = getSwitchWanted(ws);
+  }
 
   EspNow::getInstance().tick(ws, *_gameState, switchWanted); // update espnow
 
@@ -180,6 +183,7 @@ void Bot::decideAndExecute(const WorldState& ws) const {
   }
   */
 
+
   if (ws.ballExists && !ws.hasBall) {
     _halfCircleGuard.pFuncExec(ws, _motionG.get());
     return;
@@ -239,6 +243,10 @@ bool Bot::getSwitchWanted(const WorldState& ws) {
   }
 
   if (switchWantedCooldownTimer < 2000) {
+    return false;
+  }
+
+  if (!ws.ballExists) {
     return false;
   }
 

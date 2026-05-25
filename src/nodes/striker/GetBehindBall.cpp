@@ -7,6 +7,7 @@
 #include <config/config.h>
 #include <cmath>
 #include <algorithm>
+#include <numbers>
 
 // helper
 inline double wrapAngleRad(double a) {
@@ -15,147 +16,208 @@ inline double wrapAngleRad(double a) {
   return a;
 }
 
-static Vector2 getBallApproachVec(const WorldState& ws, const int speed);
+// ── Tuning constants ─────────────────────────────────────────────────────────
+
+static constexpr double APPROACH_ANGLE_WIDE_RAD = 70.0 * std::numbers::pi / 180.0;
+static constexpr double APPROACH_ANGLE_TIGHT_RAD = 90.0 * std::numbers::pi / 180.0;
+static constexpr double ELLIPSE_RADIUS_LONGITUDINAL = 21.0; // cm
+static constexpr double ELLIPSE_RADIUS_LATERAL = 22.0; // cm
+static constexpr double FRONT_CONE_HALF_ANGLE_RAD = 45.0 * std::numbers::pi / 180.0;
+static constexpr double ARC_LOOKAHEAD_RAD = 47.0 * std::numbers::pi / 180.0;
+static constexpr double ARC_SLIDE_START_DISTANCE = 218.0; // cm — arc-to-through blend begins here
+static constexpr double THROUGH_POINT_OFFSET = 12.53; // cm past ball
+
+// Corridor (lateral alignment) parameters
+static constexpr double CORRIDOR_INNER_HALF_WIDTH = ObjectHeights::BALL * 0.0;
+static constexpr double CORRIDOR_OUTER_HALF_WIDTH = ObjectHeights::BALL * 0.99;
+static constexpr double CORRIDOR_BLEND_HALF_WIDTH = ObjectHeights::BALL * 0.0;
+static constexpr double CORRIDOR_INNER_FLARE_RAD = 0.0 * std::numbers::pi / 180.0;
+static constexpr double CORRIDOR_OUTER_FLARE_RAD = 17.92 * std::numbers::pi / 180.0;
+static constexpr double CORRIDOR_BLEND_FLARE_RAD = 0.0 * std::numbers::pi / 180.0;
+
+// Speed-scaling by ball angle relative to robot
+static constexpr double BASE_SPEED_FACTOR = 2.3;
+static constexpr double BALL_ANGLE_RAMP_START_DEG = 60.0; // below this, base factor applies
+static constexpr double BALL_ANGLE_RAMP_MAX_FACTOR = 4.0; // added factor at 180 deg
+static constexpr double BALL_ANGLE_BURST_LOW_DEG = 80.0; // burst window: ball is roughly
+static constexpr double BALL_ANGLE_BURST_HIGH_DEG = 100.0; //   perpendicular to the robot
+static constexpr double BALL_ANGLE_BURST_MULTIPLIER = 3.0;
+
+// Behind-ball boost parameters
+static constexpr double BEHIND_BOOST_DISTANCE = 9.0; // cm
+static constexpr double BEHIND_BOOST_MAX_MULTIPLIER = 2.0;
+
+// Close-range escape parameters
+static constexpr double ESCAPE_TRIGGER_DISTANCE = 12.0; // cm
+static constexpr double ESCAPE_LATERAL_DEADZONE = 8.0; // cm — |Y| inside this triggers escape
+static constexpr double ESCAPE_TARGET_LATERAL = 25.0; // cm
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+static double computeBehindFactor(const double longitudinalComponent) {
+  // 0 when ball is directly ahead of the robot, 1 when squarely behind
+  return std::clamp((longitudinalComponent + 0.5) / 1.5, 0.0, 1.0);
+}
+
+static double clampApproachAngle(const double rawAngleRad, const double behindFactor) {
+  const double dynamicLimit = APPROACH_ANGLE_WIDE_RAD
+    + behindFactor * (APPROACH_ANGLE_WIDE_RAD - APPROACH_ANGLE_TIGHT_RAD);
+  return std::min(rawAngleRad, dynamicLimit);
+}
+
+static double computeAlignmentBlend(const double longitudinalDist, const double lateralDist) {
+  // How well the robot is lined up behind the ball laterally.
+  // Returns 1 when centred on the approach corridor, 0 when wide of it.
+  if (longitudinalDist <= -5.0)
+    return 0.0;
+
+  const double effectiveLon = std::max(0.0, longitudinalDist);
+  const double innerWidth = CORRIDOR_INNER_HALF_WIDTH + effectiveLon * std::tan(CORRIDOR_INNER_FLARE_RAD);
+  const double blendWidth = CORRIDOR_BLEND_HALF_WIDTH + effectiveLon * std::tan(CORRIDOR_BLEND_FLARE_RAD);
+  const double outerWidth = CORRIDOR_OUTER_HALF_WIDTH + effectiveLon * std::tan(CORRIDOR_OUTER_FLARE_RAD);
+
+  if (lateralDist <= innerWidth || lateralDist <= blendWidth)
+    return 1.0;
+
+  const double lateralFraction = std::clamp(
+    (lateralDist - blendWidth) / (outerWidth - blendWidth + 1e-5), 0.0, 1.0);
+  const double depthFraction = std::clamp((longitudinalDist + 5.0) / 15.0, 0.0, 1.0);
+
+  return (1.0 - lateralFraction) * depthFraction;
+}
+
+static double computeSpeedFactor(const double ballAngleDeg) {
+  double factor = BASE_SPEED_FACTOR;
+
+  if (ballAngleDeg > BALL_ANGLE_RAMP_START_DEG) {
+    const double t = std::clamp(
+      (ballAngleDeg - BALL_ANGLE_RAMP_START_DEG) / (180.0 - BALL_ANGLE_RAMP_START_DEG),
+      0.0, 1.0);
+    factor += t * (BALL_ANGLE_RAMP_MAX_FACTOR - 1.0);
+  }
+
+  return factor;
+}
+
+static double computeBehindBoostMultiplier(const Vector2& ballVec) {
+  const bool ballIsAhead = ballVec.getX() < 0.0;
+  const double ballDistance = ballVec.getMagnitude();
+
+  if (!ballIsAhead)
+    return 1.0;
+
+  double blend = 0.0;
+  if (BEHIND_BOOST_DISTANCE > ELLIPSE_RADIUS_LONGITUDINAL) {
+    blend = std::clamp(
+      (ballDistance - ELLIPSE_RADIUS_LONGITUDINAL) / (BEHIND_BOOST_DISTANCE - ELLIPSE_RADIUS_LONGITUDINAL),
+      0.0, 1.0);
+  }
+  else {
+    blend = (ballDistance < BEHIND_BOOST_DISTANCE) ? 1.0 : 0.0;
+  }
+
+  return 1.0 + blend * (BEHIND_BOOST_MAX_MULTIPLIER - 1.0);
+}
+
+static Vector2 computeFrontConeTarget(const Vector2& ballVec, const double sideSign) {
+  // Ball is nearly straight ahead: sidestep around it.
+  return ballVec + Vector2(0.0, sideSign * ELLIPSE_RADIUS_LATERAL);
+}
+
+static Vector2 computeArcTarget(
+  const Vector2& ballVec,
+  const Vector2& orbitDir,
+  const double longitudinalDist,
+  const double lateralDist,
+  const double behindFactor,
+  const double sideSign) {
+  const Vector2 idealCirclePoint = ballVec + Vector2(
+    ELLIPSE_RADIUS_LONGITUDINAL * orbitDir.getX(),
+    ELLIPSE_RADIUS_LATERAL * orbitDir.getY());
+  const double distToIdealCirclePoint = idealCirclePoint.getMagnitude();
+
+  // Advance the target along the arc so the robot doesn't stall on approach.
+  const double orbitAngle = std::atan2(orbitDir.getY(), orbitDir.getX());
+  const double backAxisAngle = std::atan2(-1.0, 0.0); // axisBack = (-1, 0)
+  double lookaheadDelta = wrapAngleRad(backAxisAngle - orbitAngle) * sideSign;
+  lookaheadDelta = std::max(0.0, lookaheadDelta + ARC_LOOKAHEAD_RAD);
+  lookaheadDelta *= behindFactor * behindFactor * sideSign;
+
+  const double slideProgress = std::clamp(
+    1.0 - distToIdealCirclePoint / ARC_SLIDE_START_DISTANCE, 0.0, 1.0);
+  const double targetAngle = orbitAngle + slideProgress * lookaheadDelta;
+
+  const Vector2 arcPoint = ballVec + Vector2(
+    ELLIPSE_RADIUS_LONGITUDINAL * std::cos(targetAngle),
+    ELLIPSE_RADIUS_LATERAL * std::sin(targetAngle));
+
+  const Vector2 throughPoint = ballVec + Vector2(THROUGH_POINT_OFFSET, 0.0);
+
+  // Blend from arc point toward through-ball point based on alignment and proximity.
+  const double alignmentBlend = computeAlignmentBlend(longitudinalDist, lateralDist);
+  const double proximityBlendRaw = std::clamp(
+    1.0 - (distToIdealCirclePoint - 8.0) / (ARC_SLIDE_START_DISTANCE - 8.0), 0.0, 1.0);
+  const double proximityBlend = proximityBlendRaw * alignmentBlend;
+  const double blendToThrough = std::max(alignmentBlend, proximityBlend);
+
+  return Vector2::lerp(arcPoint, throughPoint, blendToThrough);
+}
 
 static Vector2 getBallPursuitVec(const WorldState& ws) {
   const Vector2 ballVec = ws.ballVec;
 
-  const auto axisBack = Vector2(-1.0, 0.0);
-  const auto axisSide = Vector2(0.0, 1.0);
+  // Coordinate axes
+  const Vector2 axisBack(-1.0, 0.0);
+  const Vector2 axisSide(0.0, 1.0);
 
-  const double lonDist = Vector2::dotProduct(ballVec * -1.0, axisBack);
-  const double latDist = std::abs(Vector2::dotProduct(ballVec * -1.0, axisSide));
+  Vector2 robotToBallDir = ballVec * -1.0;
+  robotToBallDir.normalize();
+  const double longitudinalDist = Vector2::dotProduct(ballVec * -1.0, axisBack);
+  const double lateralDist = std::abs(Vector2::dotProduct(ballVec * -1.0, axisSide));
+  const double longitudinalComponent = Vector2::dotProduct(robotToBallDir, axisBack);
+  const double lateralComponent = Vector2::dotProduct(robotToBallDir, axisSide);
+  const double sideSign = lateralComponent >= 0.0 ? 1.0 : -1.0;
 
-  Vector2 ballToRobotVec = ballVec * -1.0;
-  ballToRobotVec.normalize();
+  // Clamp approach angle based on how far behind the ball the robot is
+  const double behindFactor = computeBehindFactor(longitudinalComponent);
+  const double rawApproachAngle = std::atan2(std::abs(lateralComponent), longitudinalComponent);
+  const double approachAngle = clampApproachAngle(rawApproachAngle, behindFactor);
 
-  const double backComp = Vector2::dotProduct(ballToRobotVec, axisBack);
-  const double sideComp = Vector2::dotProduct(ballToRobotVec, axisSide);
-  const double sideSign = sideComp >= 0.0 ? 1.0 : -1.0;
+  // Build the clamped direction toward the ellipse orbit point.
+  Vector2 orbitDir = (axisBack * std::cos(approachAngle)
+    + axisSide * std::sin(approachAngle) * sideSign);
+  orbitDir.normalize();
 
-  // Updated parameters to match Python defaults
-  constexpr double angleWide = 70.0 * std::numbers::pi / 180.0;
-  constexpr double angleTight = 90.0 * std::numbers::pi / 180.0;
-  constexpr double circleRadiusX = 21.0;
-  constexpr double circleRadiusY = 22.0;
-  constexpr double frontAngleRad = 45.0 * std::numbers::pi / 180.0;
-  constexpr double arcLookahead = 47.0 * std::numbers::pi / 180.0;
-  constexpr double slideStart = 218.0;
-  constexpr double throughDist = 12.53;
+  const double angleFromForward = std::abs(std::atan2(
+    robotToBallDir.getY(), robotToBallDir.getX()));
 
-  // Corridor parameters
-  constexpr double innerHalfWidthAtBall = ObjectHeights::BALL * 0.0;
-  constexpr double outerHalfWidthAtBall = ObjectHeights::BALL * 0.99;
-  constexpr double blendHalfWidthAtBall = ObjectHeights::BALL * 0.0;
-  constexpr double innerAngle = 0.0 * std::numbers::pi / 180.0;
-  constexpr double outerAngle = 17.92 * std::numbers::pi / 180.0;
-  constexpr double blendAngle = 0.0 * std::numbers::pi / 180.0;
-
-  const double behindFactor = std::clamp((backComp + 0.5) / 1.5, 0.0, 1.0);
-  const double dynamicLimit = angleWide + behindFactor * (angleWide - angleTight);
-
-  double currentAngle = std::atan2(std::abs(sideComp), backComp);
-  if (currentAngle > dynamicLimit) currentAngle = dynamicLimit;
-
-  const double nb = std::cos(currentAngle);
-  const double ns = std::sin(currentAngle) * sideSign;
-
-  Vector2 circleDirVec = axisBack * nb + axisSide * ns;
-  circleDirVec.normalize();
-
-  const double angleFromForward = std::abs(std::atan2(ballToRobotVec.getY(), ballToRobotVec.getX()));
   Vector2 target;
-  Vector2 throughPoint = ballVec + Vector2(throughDist, 0.0);
-
-  if (angleFromForward < frontAngleRad) {
-    target = ballVec + Vector2(0.0, sideSign * circleRadiusY);
-  } else {
-    const Vector2 idealCirclePoint = ballVec + Vector2(circleRadiusX * circleDirVec.getX(), circleRadiusY * circleDirVec.getY());
-    const double distToCircle = idealCirclePoint.getMagnitude();
-
-    const double idealAngle = std::atan2(circleDirVec.getY(), circleDirVec.getX());
-    const double backAngle = std::atan2(axisBack.getY(), axisBack.getX());
-
-    double angleDiff = wrapAngleRad(backAngle - idealAngle);
-    angleDiff *= sideSign;
-    angleDiff = std::max(0.0, angleDiff + arcLookahead);
-
-    const double lookaheadScale = behindFactor * behindFactor;
-    angleDiff *= lookaheadScale;
-    angleDiff *= sideSign;
-
-    const double slideT = std::clamp(1.0 - distToCircle / slideStart, 0.0, 1.0);
-    const double arcAdvance = slideT * angleDiff;
-
-    const double targetAngle = idealAngle + arcAdvance;
-    const Vector2 circlePoint = ballVec + Vector2(circleRadiusX * std::cos(targetAngle), circleRadiusY * std::sin(targetAngle));
-
-    double tAlign = 0.0;
-    if (lonDist > -5.0) {
-      const double effectiveLon = std::max(0.0, lonDist);
-      const double currentInnerWidth = innerHalfWidthAtBall + effectiveLon * std::tan(innerAngle);
-      const double currentBlendWidth = blendHalfWidthAtBall + effectiveLon * std::tan(blendAngle);
-      const double currentOuterWidth = outerHalfWidthAtBall + effectiveLon * std::tan(outerAngle);
-
-      const bool insideInner = latDist <= currentInnerWidth;
-      const bool insideBlend = latDist <= currentBlendWidth;
-      if (insideInner || insideBlend) {
-        tAlign = 1.0;
-      } else {
-        tAlign = 1.0 - std::clamp(
-          (latDist - currentBlendWidth) / (currentOuterWidth - currentBlendWidth + 1e-5), 0.0, 1.0);
-        const double depthBlend = std::clamp((lonDist + 5.0) / 15.0, 0.0, 1.0);
-        tAlign *= depthBlend;
-      }
-    }
-
-    const double tProxRaw = std::clamp(1.0 - (distToCircle - 8.0) / (slideStart - 8.0), 0.0, 1.0);
-    const double tProx = tProxRaw * tAlign;
-    const double t = std::max(tAlign, tProx);
-
-    target = Vector2::lerp(circlePoint, throughPoint, t);
+  if (angleFromForward < FRONT_CONE_HALF_ANGLE_RAD) {
+    target = computeFrontConeTarget(ballVec, sideSign);
+  }
+  else {
+    target = computeArcTarget(
+      ballVec, orbitDir, longitudinalDist, lateralDist, behindFactor, sideSign);
   }
 
-  double rot = std::abs(ws.ballRot);
+  // ── Scale by ball angle relative to robot ─────────────────────────────────
+  // The further to the side or behind the ball is, the faster the robot pursues.
 
-  double factor = 2.3;
+  const double ballAngleDeg = std::abs(ws.ballRot);
+  const double speedFactor = computeSpeedFactor(ballAngleDeg);
+  target *= speedFactor;
 
-  if (rot > 60.0) {
-    double t = (rot - 60.0) / (180.0 - 60.0);
+  if (ballAngleDeg > BALL_ANGLE_BURST_LOW_DEG && ballAngleDeg < BALL_ANGLE_BURST_HIGH_DEG)
+    target *= BALL_ANGLE_BURST_MULTIPLIER; // ball is ~perpendicular: maximum urgency
 
-    // clamp to [0, 1]
-    t = std::clamp(t, 0.0, 1.0);
+  target *= computeBehindBoostMultiplier(ballVec);
 
-    factor = factor + t * (4.0 - 1.0);
-  }
-
-  target *= factor;
-
-  if (80 < rot && rot < 100) {
-    target *= 3;
-  }
-
-  // NEW: Smooth distance-based boost when bot is behind the ball
-  const double ball_distance = ballVec.getMagnitude();
-  constexpr double behindBoostDistance = 9.0;  // cm
-  constexpr double behindBoostFactor = 2.0;
-
-  if (ballVec.getX() < 0.0) {  // Bot is behind the ball (ball is in front of bot)
-    double blend = 0.0;
-    if (behindBoostDistance > circleRadiusX) {
-      blend = std::clamp((ball_distance - circleRadiusX) / (behindBoostDistance - circleRadiusX), 0.0, 1.0);
-    } else {
-      blend = (ball_distance < behindBoostDistance) ? 1.0 : 0.0;
-    }
-    const double multiplier = 1.0 + blend * (behindBoostFactor - 1.0);
-    target = target * multiplier;
-  }
-
-  // Ensure target stays on the bot's side of the ball
-  if (sideSign > 0.0) {
-    target.setY(std::max(target.getY() - 10, ballVec.getY() - 10));
-  } else {
-    target.setY(std::min(target.getY() + 5, ballVec.getY() + 5));
+  if (const double distToBall = ballVec.getMagnitude(); distToBall < ESCAPE_TRIGGER_DISTANCE) {
+    const double ballY = ballVec.getY();
+    if (ballY <= 0.0 && ballY > -ESCAPE_LATERAL_DEADZONE)
+      return Vector2(0.0, ESCAPE_TARGET_LATERAL);
+    if (ballY > 0.0 && ballY < ESCAPE_LATERAL_DEADZONE)
+      return Vector2(0.0, -ESCAPE_TARGET_LATERAL);
   }
 
   return target;
@@ -178,11 +240,11 @@ static bool checkBallOnLine(const WorldState& ws) {
   const double ballRadians = toRad(globalBallRot);
   const double ballGlobalY = globalY + sin(ballRadians) * ballDist;
 
-  if (globalY > FieldConfig::LinePositionY && ballGlobalY > globalY) {
+  if (globalY > FieldConfig::LINE_POS_Y && ballGlobalY > globalY) {
     return true;
   }
 
-  if (globalY < -FieldConfig::LinePositionY && ballGlobalY < globalY) {
+  if (globalY < -FieldConfig::LINE_POS_Y && ballGlobalY < globalY) {
     return true;
   }
 
@@ -194,7 +256,7 @@ static bool checkBallInPocket(const WorldState& ws) {
   while (absoluteGoalDir > 180.0) absoluteGoalDir -= 360.0;
   while (absoluteGoalDir < -180.0) absoluteGoalDir += 360.0;
 
-  return std::abs(absoluteGoalDir) > FieldConfig::PocketAngle;
+  return std::abs(absoluteGoalDir) > FieldConfig::IN_POCKET_ANGLE;
 }
 
 void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
@@ -204,19 +266,27 @@ void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
   double rotInput = 0;
   bool usePID;
 
-  if (ballInEdgeCase) {
+  if (ws.peerRunning && ws.globalX < FieldConfig::HARD_BARRIER) {
+    target = getToPointVec(ws.globalX, ws.globalY, FieldConfig::HARD_BARRIER + GeneralConfig::BOT_DIAMETER / 2.0,
+                           ws.globalY);
+    rotInput = ws.heading;
     usePID = false;
-    target = getBallApproachVec(ws, ws.ballDist < 20.0 ? 15 : 30);
+  }
 
-    if (std::abs(ws.heading) >= GeneralConfig::HeadingLimitDeg) {
+  else if (ballInEdgeCase) {
+    usePID = true;
+    //target = getBallApproachVec(ws, ws.ballDist < 20.0 ? 15 : 30);
+    target = getBallPursuitVec(ws);
+
+    if (std::abs(ws.heading) >= GeneralConfig::HEADING_HARD_LIMIT_DEG) {
       if (ws.ballRot > 0.0) {
-        rotInput = ws.heading + GeneralConfig::HeadingLimitDeg;
+        rotInput = ws.heading + GeneralConfig::HEADING_HARD_LIMIT_DEG;
       }
       else {
-        rotInput = ws.heading - GeneralConfig::HeadingLimitDeg;
+        rotInput = ws.heading - GeneralConfig::HEADING_HARD_LIMIT_DEG;
       }
     }
-    else if (std::abs(ws.ballRot) > GeneralConfig::HeadingLimitDeg) {
+    else if (std::abs(ws.ballRot) > GeneralConfig::HEADING_HARD_LIMIT_DEG) {
       rotInput = ws.heading;
     }
     else {

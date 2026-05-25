@@ -161,7 +161,7 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector) 
     return;
   }
 
-  constexpr float minSpeed = 20.0f;
+  constexpr float minSpeed = 0.0f;
 
   const auto newVx = static_cast<float>(vx * factor);
   const auto newVy = static_cast<float>(vy * factor);

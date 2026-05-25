@@ -45,32 +45,19 @@ namespace I2C_ADDRESSES {
   constexpr int BUTTON_MODULE_ADDR = 0x20;
 }
 
-namespace SpeedLimiting {
-  constexpr double MAX_DIST = 70.0;
-  constexpr double SLOWING_DIST = 60.0;
-}
-
-namespace Goalie {
-  constexpr unsigned long BALL_STATIONARY_MS = 2000;
-  constexpr unsigned long DRIVE_TO_BALL_MS = 600;
-  constexpr double BALL_MOVED_THRESH = 5.0;
-  constexpr float BALL_AVOID_DIST = 50.0;
-  constexpr double HALF_CIRCLE_RADIUS = 60.0;
-}
-
 // PID Configuration
 namespace PIDConfig {
   // Y-axis motion PID
   constexpr double Y_Kp = 1.6;
-  constexpr double Y_Ki = 0.06;
-  constexpr double Y_Kd = 0.1;
+  constexpr double Y_Ki = 0.0;
+  constexpr double Y_Kd = 0.06;
   constexpr double Y_O_MIN = -70.0;
   constexpr double Y_O_MAX = 70.0;
   constexpr int Y_SampleTime = 21;
 
   // X-axis motion PID
-  constexpr double X_Kp = 2.0;
-  constexpr double X_Ki = 0.1;
+  constexpr double X_Kp = 1.6;
+  constexpr double X_Ki = 0.0;
   constexpr double X_Kd = 0.06;
   constexpr double X_O_MIN = -70.0;
   constexpr double X_O_MAX = 70.0;
@@ -91,7 +78,7 @@ namespace PIDConfig {
 // Goalie PID configuration
 namespace GoaliePIDConfig {
   // Y-axis motion PID
-  constexpr double Y_Kp = 2.2;
+  constexpr double Y_Kp = 2.0;
   constexpr double Y_Ki = 0.07;
   constexpr double Y_Kd = 0.08;
   constexpr double Y_O_MIN = -70.0;
@@ -119,13 +106,7 @@ namespace GoaliePIDConfig {
 }
 
 namespace FieldConfig {
-  constexpr double LINE_POS_Y = 60.0;
-  constexpr double IN_POCKET_ANGLE = 40.0;
-  constexpr double GOAL_NEUTRAL_POS_X = -60.0;
-  constexpr double POINT_REACHED_DIST = 11.0;
-  constexpr double KICK_DISTANCE = 65.0;
-
-  // @ToDo needs tuning
+  // main field config
   const auto MAX_FIELD_MEASUREMENTS = Vector2(112, 72); // measure max x and max y
 
   const double REAL_FIELD_HEIGHT = MAX_FIELD_MEASUREMENTS.getX() * 2;
@@ -139,7 +120,7 @@ namespace FieldConfig {
   constexpr double GY = 40.0 + GeneralConfig::BOT_DIAMETER / 2.0;
   constexpr double GX = PERFECT_FIELD_HEIGHT / 2.0 - 25.0;
 
-  const std::array<Vector2, 12> FIELD_CONTOUR = {
+  const std::array FIELD_CONTOUR = {
     Vector2( Hx,  Wy),  // top right
     Vector2( Hx,  GY),  // down till right corner of penalty (enmy)
     Vector2( GX,  GY),  // in
@@ -153,4 +134,22 @@ namespace FieldConfig {
     Vector2(-Hx,  GY),  // out
     Vector2(-Hx,  Wy)   // till top left
   };
+
+  constexpr double GOAL_NEUTRAL_POS_X = -GX + GeneralConfig::BOT_DIAMETER;
+  constexpr double LINE_POS_Y = Wy - GeneralConfig::BOT_DIAMETER * 3;
+
+  constexpr double IN_POCKET_ANGLE = 40.0;
+  constexpr double POINT_REACHED_DIST = GeneralConfig::BOT_DIAMETER / 2.0;
+  constexpr double KICK_DISTANCE = GX + GeneralConfig::BOT_DIAMETER * 2;
+
+  constexpr double HARD_BARRIER = -GX + GeneralConfig::BOT_DIAMETER * 2;
+}
+
+namespace Goalie {
+  constexpr unsigned long BALL_STATIONARY_MS = 2000;
+  constexpr unsigned long DRIVE_TO_BALL_MS = 600;
+  constexpr double BALL_MOVED_THRESH = 5.0;
+
+  constexpr float BALL_AVOID_DIST = GeneralConfig::BOT_DIAMETER * 2.0;
+  constexpr double HALF_CIRCLE_RADIUS = FieldConfig::GX + GeneralConfig::BOT_DIAMETER * 1.5;
 }
