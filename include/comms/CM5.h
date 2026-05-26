@@ -40,6 +40,15 @@ public:
     return {cos(angle_rad) * targetGoalDist, sin(angle_rad) * targetGoalDist};
   }
 
+  // Target goal target
+  [[nodiscard]] double getTargetGoalTargetRot() const { return targetGoalTargetRot; }
+  [[nodiscard]] double getTargetGoalTargetDist() const { return targetGoalTargetDist; }
+  [[nodiscard]] Vector2 getTargetGoalTargetVec() const {
+    if (targetGoalTargetDist == 0) return {0, 0};
+    const double angle_rad = toRad(targetGoalTargetRot);
+    return {cos(angle_rad) * targetGoalTargetDist, sin(angle_rad) * targetGoalTargetDist};
+  }
+
   // Own goal
   [[nodiscard]] double getOwnGoalRot() const { return ownGoalRot; }
   [[nodiscard]] double getOwnGoalDist() const { return ownGoalDist; }
@@ -47,6 +56,15 @@ public:
     if (ownGoalDist == 0) return {0, 0};
     const double angle_rad = toRad(ownGoalRot);
     return {cos(angle_rad) * ownGoalDist, sin(angle_rad) * ownGoalDist};
+  }
+
+  // Own goal target
+  [[nodiscard]] double getOwnGoalTargetRot() const { return ownGoalTargetRot; }
+  [[nodiscard]] double getOwnGoalTargetDist() const { return ownGoalTargetDist; }
+  [[nodiscard]] Vector2 getOwnGoalTargetVec() const {
+    if (ownGoalTargetDist == 0) return {0, 0};
+    const double angle_rad = toRad(ownGoalTargetRot);
+    return {cos(angle_rad) * ownGoalTargetDist, sin(angle_rad) * ownGoalTargetDist};
   }
 
   // ball
@@ -97,11 +115,18 @@ private:
   double ownGoalRot = 0;
   double ownGoalDist = 0;
 
+  double targetGoalTargetRot = 0;
+  double targetGoalTargetDist = 0;
+  double ownGoalTargetRot = 0;
+  double ownGoalTargetDist = 0;
+
   double awayFromOwnGoalAngle = 0;
 
   // Goal label mapping: 1=blue, 2=yellow
-  uint8_t targetGoalLabel = 2; // default: attack yellow
-  uint8_t ownGoalLabel = 1;    // default: defend blue
+  uint8_t targetGoalLabel = 2;       // default: attack blue
+  uint8_t targetGoalTargetLabel = 5; // blue target
+  uint8_t ownGoalLabel = 1;          // default: defend yellow
+  uint8_t ownGoalTargetLabel = 4;    // yellow target
 
   double ballRot = 0;
   double ballDist = 0;
@@ -111,6 +136,8 @@ private:
 
   bool goalValid = false;
 
+  bool Objects_DEBUG = false; // toggle for object label printing
+
   static double distanceFunctionBall(double x);
   static double distanceFunctionGoal(double x);
 
@@ -118,9 +145,8 @@ private:
 
   static void computeCenters(Detection* det, int num_det);
 
-  void computeRotationsAndDistances(const Detection* det, int num_det);
+  void computeRotationsAndDistances(const Detection* det, const int num_det);
   void computeAwayFromOwnGoalAngle();
 
   void computeHeadingAndPosition(const Detection* det, int num_det);
 };
-

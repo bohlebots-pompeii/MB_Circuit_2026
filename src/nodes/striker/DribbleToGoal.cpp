@@ -5,15 +5,15 @@
 #include <util/helper.h>
 #include <util/Vector2.hpp>
 
-static Vector2 getBallAlignedVec(const WorldState& ws, int speed) {
-  Vector2 target = degToVec(ws.targetGoalRot);
+static Vector2 getBallAlignedVec(const WorldState& ws, const int speed) {
+  Vector2 target = degToVec(ws.targetGoalTargetRot);
   target.normalize();
   return target * speed;
 }
 
 void executeDribbleToGoal(const WorldState& ws, MotionController* motion) {
   constexpr bool useRotDelta = true;
-  const auto rotInput = static_cast<float>(ws.targetGoalRot);
+  const auto rotInput = static_cast<float>(ws.targetGoalTargetRot);
   const Vector2 target = getBallAlignedVec(ws, 50);
 
   auto [vx, vy, rot] = motion->compute(target, rotInput, true);

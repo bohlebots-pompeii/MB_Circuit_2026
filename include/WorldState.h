@@ -35,10 +35,20 @@ struct WorldState {
   double targetGoalRot;
   double targetGoalDist;
   Vector2 targetGoalVec;
+
   double ownGoalRot;
   double ownGoalDist;
   Vector2 ownGoalVec;
+
   double awayFromOwnGoalAngle;
+
+  double targetGoalTargetRot;
+  double targetGoalTargetDist;
+  Vector2 targetGoalTargetVec;
+
+  double ownGoalTargetRot;
+  double ownGoalTargetDist;
+  Vector2 ownGoalTargetVec;
 
   bool goalValid;
 

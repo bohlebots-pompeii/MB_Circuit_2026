@@ -14,7 +14,7 @@ namespace GeneralConfig {
 
   constexpr double HEADING_HARD_LIMIT_DEG = 45.0;
 
-  constexpr bool USE_COMMUNICATION = true;
+  constexpr bool USE_COMMUNICATION = false;
 
   constexpr bool DISABLE_WARNINGS = true;
 
@@ -78,16 +78,16 @@ namespace PIDConfig {
 // Goalie PID configuration
 namespace GoaliePIDConfig {
   // Y-axis motion PID
-  constexpr double Y_Kp = 2.0;
-  constexpr double Y_Ki = 0.07;
+  constexpr double Y_Kp = 1.8;
+  constexpr double Y_Ki = 0.00;
   constexpr double Y_Kd = 0.08;
   constexpr double Y_O_MIN = -70.0;
   constexpr double Y_O_MAX = 70.0;
   constexpr int Y_SAMPLE_T = 21;
 
   // X-axis motion PID
-  constexpr double X_Kp = 2.0;
-  constexpr double X_Ki = 0.07;
+  constexpr double X_Kp = 1.8;
+  constexpr double X_Ki = 0.00;
   constexpr double X_Kd = 0.08;
   constexpr double X_O_MIN = -70.0;
   constexpr double X_O_MAX = 70.0;
@@ -151,5 +151,5 @@ namespace Goalie {
   constexpr double BALL_MOVED_THRESH = 5.0;
 
   constexpr float BALL_AVOID_DIST = GeneralConfig::BOT_DIAMETER * 2.0;
-  constexpr double HALF_CIRCLE_RADIUS = FieldConfig::GX + GeneralConfig::BOT_DIAMETER * 1.5;
+  constexpr double HALF_CIRCLE_RADIUS = 25.0 + GeneralConfig::BOT_DIAMETER * 1.5;
 }

@@ -56,10 +56,20 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.targetGoalRot = cm5.getTargetGoalRot();
   ws.targetGoalDist = cm5.getTargetGoalDist();
   ws.targetGoalVec = cm5.getTargetGoalVec();
+
   ws.ownGoalRot = cm5.getOwnGoalRot();
   ws.ownGoalDist = cm5.getOwnGoalDist();
   ws.ownGoalVec = cm5.getOwnGoalVec();
+
   ws.awayFromOwnGoalAngle = cm5.getAwayFromOwnGoalAngle();
+
+  ws.targetGoalTargetRot = cm5.getTargetGoalTargetRot();
+  ws.targetGoalTargetDist = cm5.getTargetGoalTargetDist();
+  ws.targetGoalTargetVec = cm5.getTargetGoalTargetVec();
+
+  ws.ownGoalTargetRot = cm5.getOwnGoalTargetRot();
+  ws.ownGoalTargetDist = cm5.getOwnGoalTargetDist();
+  ws.ownGoalTargetVec = cm5.getOwnGoalTargetVec();
 
   ws.goalValid = cm5.getGoalValid();
 
