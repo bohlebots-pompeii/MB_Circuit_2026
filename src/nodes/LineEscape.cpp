@@ -15,7 +15,18 @@ static Vector2 getAwayFromLineVec(const WorldState& ws, int speed) {
   auto midVec = Vector2(-ws.globalX, -ws.globalY);
   midVec.normalize();
 
-  Vector2 target = line * 0.0 + midVec * 1.0;
+  Vector2 target;
+  if (ws.isGoalie) {
+    target = line * 0.7 + midVec * 0.3;
+    if (checkInOwnPocket(ws)) {
+      if (target.getX() < 0.0) {
+        target.setX(-target.getX());
+      }
+    }
+  }
+  else {
+    target = midVec;
+  }
   target.normalize();
   target *= speed;
 
@@ -41,6 +52,17 @@ static bool checkBallOnLine(const WorldState& ws) {
     return true;
   }
 
+  return false;
+}
+
+static bool checkInOwnPocket(const WorldState& ws) {
+  double globalOwnGoalRot = ws.ownGoalRot - ws.heading;
+  if (globalOwnGoalRot > 180.0) globalOwnGoalRot -= 360.0;
+  if (globalOwnGoalRot < -180.0) globalOwnGoalRot += 360.0;
+
+  if (std::abs(globalOwnGoalRot) > FieldConfig::IN_POCKET_ANGLE) {
+    return true;
+  }
   return false;
 }
 

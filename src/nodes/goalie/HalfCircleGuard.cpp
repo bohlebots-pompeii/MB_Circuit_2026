@@ -5,28 +5,21 @@
 #include <config/config.h>
 #include <util/helper.h>
 #include <util/Vector2.hpp>
-#include <util/MovingAverage.h>
 #include <cmath>
 #include <numbers>
-
-static MovingAverage<double, 10> g_strikerAvgX;
-static MovingAverage<double, 10> g_strikerAvgY;
 
 static Vector2 getHalfCircleTarget(const WorldState& ws) {
   const Vector2 ownGoalVec = ws.ownGoalVec;
   const Vector2 ballVec = ws.ballVec;
 
-  const Vector2 goalToBall = ballVec - ownGoalVec;
+  Vector2 dir = ballVec - ownGoalVec;
 
-  Vector2 targetPoint = ownGoalVec + goalToBall * 0.5;
+  const double dist = dir.getMagnitude();
+  dir.normalize();
 
-  const Vector2 goalToTarget = goalToBall * 0.5;
+  const double targetDist = std::max(dist * 0.5, Goalie::HALF_CIRCLE_RADIUS);
 
-  if (goalToTarget.getMagnitude() < Goalie::HALF_CIRCLE_RADIUS) {
-    targetPoint = Vector2::normalize(targetPoint) * Goalie::HALF_CIRCLE_RADIUS;
-  }
-
-  return targetPoint;
+  return ownGoalVec + dir * targetDist;
 }
 
 static Vector2 getAwayFromLineVec(const WorldState& ws) {

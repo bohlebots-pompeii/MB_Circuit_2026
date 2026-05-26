@@ -6,6 +6,8 @@ class MotionController;
 
 void executeLineEscape(const WorldState& ws, MotionController* motion);
 
+static bool checkInOwnPocket(const WorldState& ws);
+
 struct ActionLineEscape {
   ACTION_EXEC_FUNC pFuncExec = &executeLineEscape;
 };

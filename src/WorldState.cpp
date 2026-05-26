@@ -24,6 +24,9 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
 
   if (ws.ballExists) {
     s_lastBallSeenTime = 0;
+    ws.lastBallVec = ws.ballVec;
+    ws.lastBallDist = ws.ballDist;
+    ws.lastBallRot = ws.ballRot;
   }
 
   if (!ws.hasBall) {
@@ -32,6 +35,14 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
 
   ws.lastBallSeenTime = s_lastBallSeenTime;
   ws.hasBallTime = s_hasBallTime;
+
+  // keep ballVec in mem for ball short lost
+  if (ws.lastBallSeenTime < 1000 && !ws.ballExists) {
+    ws.ballVec = ws.lastBallVec;
+    ws.ballDist = ws.lastBallDist;
+    ws.ballRot = ws.lastBallRot;
+    ws.ballExists = true;
+  }
 
   // line sensor
   ws.lineSeen = sensors.getLineSeen();

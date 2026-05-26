@@ -20,6 +20,10 @@ struct WorldState {
   bool ballExists;
   bool hasBall;
 
+  Vector2 lastBallVec;
+  double lastBallDist;
+  double lastBallRot;
+
   // line sensor
   bool lineSeen;
   float lineRot;
