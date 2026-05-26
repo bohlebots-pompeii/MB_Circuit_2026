@@ -40,6 +40,8 @@ struct WorldState {
   Vector2 ownGoalVec;
   double awayFromOwnGoalAngle;
 
+  bool goalValid;
+
   // timers
   elapsedMillis lastBallSeenTime;
   elapsedMillis hasBallTime;

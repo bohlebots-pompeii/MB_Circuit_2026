@@ -61,6 +61,8 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.ownGoalVec = cm5.getOwnGoalVec();
   ws.awayFromOwnGoalAngle = cm5.getAwayFromOwnGoalAngle();
 
+  ws.goalValid = cm5.getGoalValid();
+
   // peer robot (ESP-NOW)
   ws.peerAlive = espNowPeerAlive();
   if (ws.peerAlive) {

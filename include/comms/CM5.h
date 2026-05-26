@@ -72,6 +72,9 @@ public:
   // helper for goalie
   [[nodiscard]] double getAwayFromOwnGoalAngle() const { return awayFromOwnGoalAngle; }
 
+  // if both goals are missing we are cooked
+  [[nodiscard]] bool getGoalValid() const { return goalValid; }
+
   // for target goal select
   enum COLOR {
     BLUE = 1,
@@ -105,6 +108,8 @@ private:
 
   double g_x = 0;
   double g_y = 0;
+
+  bool goalValid = false;
 
   static double distanceFunctionBall(double x);
   static double distanceFunctionGoal(double x);

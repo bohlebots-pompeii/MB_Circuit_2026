@@ -138,6 +138,7 @@ void CM5::computeAwayFromOwnGoalAngle() {
 void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
   double x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0;
   bool foundOwnGoal = false, foundTargetGoal = false;
+  goalValid = true;
 
   for (int i = 0; i < num_det; ++i) {
     const double theta = toRad(objects[i].rotation_deg);
@@ -178,6 +179,7 @@ void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
     heading = awayFromOwnGoalAngle;
   }
   else {
+    goalValid = false;
     heading = 0.0;
   }
 }

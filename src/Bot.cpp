@@ -69,8 +69,8 @@ void Bot::tick() {
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
 
-  if (!ws.cm5Running) {
-    // cm5 not running
+  if (!ws.cm5Running || !ws.goalValid) {
+    // cm5 not running or both goals not seen so no position or rotation
     _sensors->haltLEDs();
     halt();
     return;
