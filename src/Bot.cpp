@@ -25,6 +25,7 @@
 #include <nodes/goalie/GoalNeutral.h>
 #include <nodes/striker/HiddenBallNPocket.h>
 #include <nodes/passBetween.h>
+#include <nodes/striker/OwnPocket.h>
 
 Bot::Bot() {
   Wire.begin(); // pcb communication
@@ -161,6 +162,11 @@ void Bot::decideAndExecute(const WorldState& ws) const {
 
     if (ws.ballExists && !ws.hasBall) {
       _getBehindBall.pFuncExec(ws, _motion.get());
+      return;
+    }
+
+    if (checkBallInOwnPocket(ws) && !ws.hasBall) {
+      _ownPocket.pFuncExec(ws, _motion.get());
       return;
     }
 

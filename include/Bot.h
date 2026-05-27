@@ -22,6 +22,7 @@
 #include <nodes/striker/GetBehindBall.h>
 #include <nodes/striker/HoldNeutral.h>
 #include <nodes/striker/HiddenBallNPocket.h>
+#include "nodes/striker/OwnPocket.h"
 #include <nodes/goalie/InterceptBall.h>
 #include <nodes/goalie/HalfCircleGuard.h>
 #include <nodes/goalie/EmergencyPosition.h>
@@ -54,6 +55,7 @@ private:
   ActionDribbleToGoal _dribbleToGoal;
   ActionGetBehindBall _getBehindBall;
   ActionHoldNeutral _holdNeutral;
+  ActionOwnPocket _ownPocket;
   ActionInterceptBall _interceptBall;
   ActionHalfCircleGuard _halfCircleGuard;
   ActionEmergencyPosition _emergencyPosition;

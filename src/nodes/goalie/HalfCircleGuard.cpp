@@ -8,7 +8,7 @@
 #include <cmath>
 #include <numbers>
 
-static Vector2 getHalfCircleTarget(const WorldState& ws) {
+Vector2 getHalfCircleTarget(const WorldState& ws) {
   const Vector2 ownGoalVec = ws.ownGoalVec;
   const Vector2 ballVec = ws.ballVec;
 
