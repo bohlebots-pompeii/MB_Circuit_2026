@@ -72,7 +72,8 @@ void Bot::tick() {
 
   if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
     MotionController::setInstance(_motion.get());
-  } else {
+  }
+  else {
     MotionController::setInstance(_motionG.get());
   }
 
@@ -247,7 +248,8 @@ bool Bot::getSwitchWanted(const WorldState& ws) {
     return true;
   }
 
-  if (ws.gameRunningTime < 1000) { // prevent switches from not perfect button presses
+  if (ws.gameRunningTime < 1000) {
+    // prevent switches from not perfect button presses
     return false;
   }
 
@@ -262,24 +264,6 @@ bool Bot::getSwitchWanted(const WorldState& ws) {
 
   if (!ws.ballExists) {
     return false;
-  }
-
-  const auto allyPosition = Vector2(ws.globalX, ws.globalY);
-  const auto allyBallVec = Vector2(std::cos(toRad(ws.peerBallRot)), std::sin(toRad(ws.peerBallRot))) * ws.peerBallDist;
-  const Vector2 allyBallPos = allyPosition - allyBallVec;
-
-  const bool teammateBehindBall = allyBallPos.getX() >= 0;
-  const bool ownBehindBall = ws.ballVec.getX() >= 0;
-  const bool muchBetterAngle = std::abs(ws.ballRot) < std::abs(ws.peerBallRot) / 2.0;
-  const bool muchBetterDistance = std::abs(ws.ballDist) < std::abs(ws.peerBallDist) / 2.0;
-
-  if (teammateBehindBall == ownBehindBall) {
-    return muchBetterDistance;
-  }
-
-  if (muchBetterDistance && muchBetterAngle) {
-    switchWantedCooldownTimer = 0;
-    return true;
   }
 
   return false;

@@ -126,7 +126,8 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   bool isGameRunning = false;
   if (GeneralConfig::USE_COMMUNICATION && ws.peerAlive) {
     isGameRunning = gameState.isRunning() || ws.peerRunning;
-  } else {
+  }
+  else {
     isGameRunning = gameState.isRunning();
   }
 
@@ -141,7 +142,7 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.cm5Running = cm5.getCM5Running();
 
   // reconstruct if data lost
-  if (!ws.ballExists && ws.peerBallValid) {
+  if (!ws.ballExists && ws.peerBallValid && ws.peerRunning) {
     ws.ballExists = true;
     Vector2 ownToAllyVec = Vector2(ws.peerGlobalX, ws.peerGlobalY) - Vector2(ws.globalX, ws.globalY);
     ws.ballVec = ownToAllyVec + degToVec(ws.peerBallRot) * ws.peerBallDist;
