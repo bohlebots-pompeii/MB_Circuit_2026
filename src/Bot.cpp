@@ -160,13 +160,13 @@ void Bot::decideAndExecute(const WorldState& ws) const {
       return;
     }
 
-    if (ws.ballExists && !ws.hasBall) {
-      _getBehindBall.pFuncExec(ws, _motion.get());
+    if (checkBallInOwnPocket(ws) && !ws.hasBall) {
+      _ownPocket.pFuncExec(ws, _motion.get());
       return;
     }
 
-    if (checkBallInOwnPocket(ws) && !ws.hasBall) {
-      _ownPocket.pFuncExec(ws, _motion.get());
+    if (ws.ballExists && !ws.hasBall) {
+      _getBehindBall.pFuncExec(ws, _motion.get());
       return;
     }
 

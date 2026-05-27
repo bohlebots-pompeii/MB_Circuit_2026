@@ -31,7 +31,7 @@ bool checkBallInOwnPocket(const WorldState& ws) {
 
 void executeOwnPocket(const WorldState& ws, MotionController* motion){
   constexpr bool useRotDelta = true;
-  const auto rotInput = static_cast<float>(ws.ownGoalRot - 180.0);
+  const auto rotInput = static_cast<float>(ws.awayFromOwnGoalAngle);
   Vector2 target = getHalfCircleTarget(ws);
 
   if (abs(ws.ballRot) < 10.0) {
