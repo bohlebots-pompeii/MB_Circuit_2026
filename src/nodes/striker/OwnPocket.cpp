@@ -20,26 +20,53 @@ bool checkBallInOwnPocket(const WorldState& ws) {
 
   const double ballRadians = globalBallRot * (std::numbers::pi / 180.0);
 
-  double ballGlobalX = ws.globalX + std::cos(ballRadians) * ws.ballDist;
+  const double ballGlobalX = ws.globalX + std::cos(ballRadians) * ws.ballDist;
 
   bool ballInOwnPocket = false;
 
-  if (ballGlobalX < (-FieldConfig::Hx) + 20.0) ballInOwnPocket = true;
+  if (ballGlobalX < (-FieldConfig::Hx) + 50.0) ballInOwnPocket = true;
 
   return ballInOwnPocket;
 }
 
 void executeOwnPocket(const WorldState& ws, MotionController* motion){
-  constexpr bool useRotDelta = true;
-  const auto rotInput = static_cast<float>(ws.awayFromOwnGoalAngle);
-  Vector2 target = getHalfCircleTarget(ws);
+  Vector2 target;
+  auto rotInput = ws.heading;
+  constexpr bool usePID = true;
+
+  if (ws.lineSeen) {
+    if (ws.lineProgress < 16) {
+      const Vector2 desiredTarget = getHalfCircleTarget(ws);
+      target = driveOnLine(ws, desiredTarget);
+    }
+    else {
+      target = getAwayFromLineVec(ws);
+    }
+  }
+  else {
+    target = getHalfCircleTarget(ws);
+  }
+
+  const int drib = ws.ballDist < 40 && ws.ballDist != 0 ? 100 : 0;
+
+  rotInput = ws.awayFromOwnGoalAngle;
+
+  if (abs(ws.ownGoalRot) < 130) {
+    rotInput = ws.ballRot;
+    target = Vector2(target.getX() / 3, target.getY() / 3);
+  }
+
+  if (ws.globalY < 0) {
+    rotInput -= 20;
+  }
+  else {
+    rotInput += 20;
+  }
 
   if (abs(ws.ballRot) < 10.0) {
     target = ws.ballVec;
   }
 
-  auto [vx, vy, rot] = motion->compute(target, rotInput, true);
-
-  constexpr int dribblerSpeed = 100;
-  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, useRotDelta);
+  auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID);
+  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
 }

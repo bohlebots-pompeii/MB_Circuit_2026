@@ -22,7 +22,7 @@ Vector2 getHalfCircleTarget(const WorldState& ws) {
   return ownGoalVec + dir * targetDist;
 }
 
-static Vector2 getAwayFromLineVec(const WorldState& ws) {
+Vector2 getAwayFromLineVec(const WorldState& ws) {
   Vector2 lineVec = degToVec(ws.lineRot);
   lineVec.rotate(std::numbers::pi);
   lineVec.normalize();
@@ -37,7 +37,7 @@ static Vector2 getAwayFromLineVec(const WorldState& ws) {
   return target * 30.0;
 }
 
-static Vector2 driveOnLine(const WorldState& ws, const Vector2& target) {
+Vector2 driveOnLine(const WorldState& ws, const Vector2& target) {
   Vector2 lineNormal = degToVec(ws.lineRot);
   lineNormal.rotate(std::numbers::pi);
   lineNormal.normalize();
@@ -53,7 +53,7 @@ static Vector2 driveOnLine(const WorldState& ws, const Vector2& target) {
   return target;
 }
 
-static void applyBallAvoidance(const WorldState& ws, Vector2& target) {
+void applyBallAvoidance(const WorldState& ws, Vector2& target) {
   const double ballDist = ws.ballDist;
   if (!(ballDist > 0 && ballDist < Goalie::BALL_AVOID_DIST && std::abs(ws.ballRot) > 90.0)) {
     return;
