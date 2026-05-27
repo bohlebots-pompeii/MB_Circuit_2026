@@ -71,6 +71,9 @@ EspNow& EspNow::getInstance() {
 }
 
 void EspNow::init() {
+    if (!GeneralConfig::USE_COMMUNICATION) {
+        return;
+    }
     WiFiClass::mode(WIFI_STA);
     WiFi.disconnect();
 
@@ -122,7 +125,7 @@ void EspNow::init() {
 }
 
 void EspNow::tick(const WorldState& ws, const GameStateHandler& gameState, bool switchWanted) {
-    if (!s_initialized) return;
+    if (!GeneralConfig::USE_COMMUNICATION || !s_initialized) return;
 
     EspNowPacket toSend = {};
     toSend.globalX = ws.globalX;

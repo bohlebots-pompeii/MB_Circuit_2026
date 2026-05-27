@@ -79,7 +79,11 @@ Vector2 Vector2::operator-(const Vector2& v) const { return Vector2::subtract(*t
 
 Vector2 Vector2::operator*(const double& d) const { return Vector2::multiply(*this, d); }
 
-double Vector2::operator*(const Vector2& v) { return Vector2::dotProduct(*this, v); }
+double Vector2::operator*(const Vector2& v) const { return Vector2::dotProduct(*this, v); }
+
+Vector2 Vector2::operator/(const double& d) const {
+  return Vector2(this->_x / d, this->_y / d);
+}
 
 ////////////////////////////////////////////////////////////////
 //--- ADDITION --- intern ------------------------------------//

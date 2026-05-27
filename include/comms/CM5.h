@@ -35,7 +35,7 @@ public:
   [[nodiscard]] double getTargetGoalRot() const { return targetGoalRot; }
   [[nodiscard]] double getTargetGoalDist() const { return targetGoalDist; }
   [[nodiscard]] Vector2 getTargetGoalVec() const {
-    if (targetGoalDist == 0) return {0, 0};
+    if (targetGoalDist <= 0.001) return {0, 0};
     const double angle_rad = toRad(targetGoalRot);
     return {cos(angle_rad) * targetGoalDist, sin(angle_rad) * targetGoalDist};
   }
@@ -44,16 +44,16 @@ public:
   [[nodiscard]] double getTargetGoalTargetRot() const { return targetGoalTargetRot; }
   [[nodiscard]] double getTargetGoalTargetDist() const { return targetGoalTargetDist; }
   [[nodiscard]] Vector2 getTargetGoalTargetVec() const {
-    if (targetGoalTargetDist == 0) return {0, 0};
-    const double angle_rad = toRad(targetGoalTargetRot);
-    return {cos(angle_rad) * targetGoalTargetDist, sin(angle_rad) * targetGoalTargetDist};
+    if (targetGoalTargetDist <= 0.001) return {0, 0};
+    const double rad = targetGoalTargetRot * (M_PI / 180.0);
+    return {std::cos(rad) * targetGoalTargetDist, std::sin(rad) * targetGoalTargetDist};
   }
 
   // Own goal
   [[nodiscard]] double getOwnGoalRot() const { return ownGoalRot; }
   [[nodiscard]] double getOwnGoalDist() const { return ownGoalDist; }
   [[nodiscard]] Vector2 getOwnGoalVec() const {
-    if (ownGoalDist == 0) return {0, 0};
+    if (ownGoalDist <= 0.001) return {0, 0};
     const double angle_rad = toRad(ownGoalRot);
     return {cos(angle_rad) * ownGoalDist, sin(angle_rad) * ownGoalDist};
   }
@@ -62,15 +62,15 @@ public:
   [[nodiscard]] double getOwnGoalTargetRot() const { return ownGoalTargetRot; }
   [[nodiscard]] double getOwnGoalTargetDist() const { return ownGoalTargetDist; }
   [[nodiscard]] Vector2 getOwnGoalTargetVec() const {
-    if (ownGoalTargetDist == 0) return {0, 0};
-    const double angle_rad = toRad(ownGoalTargetRot);
-    return {cos(angle_rad) * ownGoalTargetDist, sin(angle_rad) * ownGoalTargetDist};
+    if (ownGoalTargetDist <= 0.001) return {0, 0};
+    const double rad = ownGoalTargetRot * (M_PI / 180.0);
+    return {std::cos(rad) * ownGoalTargetDist, std::sin(rad) * ownGoalTargetDist};
   }
 
   // ball
   [[nodiscard]] double getBallRot() const { return ballRot; }
   [[nodiscard]] double getBallDist() const { return ballDist; }
-  [[nodiscard]] bool getBallExists() const { return ballDist != 0; }
+  [[nodiscard]] bool getBallExists() const { return ballDist > 0.001; }
   [[nodiscard]] Vector2 getBallVec() const {
     if (!getBallExists()) return {0, 0};
     const double angle_rad = toRad(ballRot);

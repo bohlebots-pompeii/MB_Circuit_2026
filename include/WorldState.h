@@ -15,12 +15,12 @@ class GameStateHandler;
 struct WorldState {
   // ball
   Vector2 ballVec;
+  Vector2 lastBallVec{0, 0};
   double ballDist;
   double ballRot;
   bool ballExists;
   bool hasBall;
 
-  Vector2 lastBallVec;
   double lastBallDist;
   double lastBallRot;
 

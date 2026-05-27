@@ -55,7 +55,7 @@ static bool checkBallOnLine(const WorldState& ws) {
   return false;
 }
 
-static bool checkInOwnPocket(const WorldState& ws) {
+bool checkInOwnPocket(const WorldState& ws) {
   double globalOwnGoalRot = ws.ownGoalRot - ws.heading;
   if (globalOwnGoalRot > 180.0) globalOwnGoalRot -= 360.0;
   if (globalOwnGoalRot < -180.0) globalOwnGoalRot += 360.0;

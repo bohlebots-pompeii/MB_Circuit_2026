@@ -71,6 +71,13 @@ void Bot::tick() {
 
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
+  _motionG->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
+
+  if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
+    MotionController::setInstance(_motion.get());
+  } else {
+    MotionController::setInstance(_motionG.get());
+  }
 
   if (!ws.cm5Running || !ws.goalValid) {
     // cm5 not running or both goals not seen so no position or rotation
@@ -110,7 +117,7 @@ void Bot::tick() {
     _gameState->setRole(GameStateHandler::Role::STRIKER);
   }
 
-  if (ws.peerSwitchWanted) {
+  if (ws.peerAlive && ws.peerSwitchWanted) {
     _gameState->setRole(GameStateHandler::Role::GOALIE);
   }
   // ally logic end ---
