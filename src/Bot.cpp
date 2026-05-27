@@ -104,7 +104,7 @@ void Bot::tick() {
 
   // ally logic ---
   bool switchWanted = false;
-  if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
+  if (_gameState->getRole() == GameStateHandler::Role::GOALIE) {
     switchWanted = getSwitchWanted(ws);
   }
 
@@ -183,10 +183,12 @@ void Bot::decideAndExecute(const WorldState& ws) const {
   }
 
   // Goalie logic
+  /*
   if (!ws.ballExists && ws.peerBallValid && ws.peerAlive) {
     _emergencyPosition.pFuncExec(ws, _motionG.get());
     return;
   }
+  */
 
   /*
   if (ws.ballExists && canExecuteInterceptBall(ws)) {
@@ -245,7 +247,7 @@ bool Bot::getSwitchWanted(const WorldState& ws) {
     return true;
   }
 
-  if (ws.gameRunningTime < 500) { // prevent switches from not perfect button presses
+  if (ws.gameRunningTime < 1000) { // prevent switches from not perfect button presses
     return false;
   }
 
