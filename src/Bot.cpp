@@ -66,9 +66,6 @@ void Bot::tick() {
   // build world state frame
   const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
 
-  Serial.println(ws.globalX);
-  Serial.println(ws.globalY);
-
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
   _motionG->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
@@ -79,8 +76,8 @@ void Bot::tick() {
     MotionController::setInstance(_motionG.get());
   }
 
-  if (!ws.cm5Running || !ws.goalValid) {
-    // cm5 not running or both goals not seen so no position or rotation
+  if (!ws.cm5Running) {
+    // cm5 not running
     _sensors->haltLEDs();
     halt();
     return;
@@ -121,6 +118,11 @@ void Bot::tick() {
     _gameState->setRole(GameStateHandler::Role::GOALIE);
   }
   // ally logic end ---
+
+  if (!ws.goalValid) {
+    halt();
+    return;
+  }
 
   // Action decider
   decideAndExecute(ws);

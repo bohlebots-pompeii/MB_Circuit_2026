@@ -53,7 +53,7 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
       1.0
     );
 
-    target = target.lerp(target, throughPoint, t);
+    target = Vector2::lerp(target, throughPoint, t);
   }
 
   if (std::abs(ws.ballRot) > driveForwardStart && std::abs(ws.ballRot) < backwardsMultiplierStart) {
