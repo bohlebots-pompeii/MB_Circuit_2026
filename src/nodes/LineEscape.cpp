@@ -15,7 +15,22 @@ static Vector2 getAwayFromLineVec(const WorldState& ws, int speed) {
   auto midVec = Vector2(-ws.globalX, -ws.globalY);
   midVec.normalize();
 
-  Vector2 target = line * 0.0 + midVec * 1.0;
+  Vector2 target;
+  if (ws.isGoalie) {
+    target = line * 0.7 + midVec * 0.3;
+    if (checkInOwnPocket(ws)) {
+      if (target.getX() < 0.0) {
+        target.setX(-target.getX());
+      }
+    }
+  }
+  else {
+    target = midVec;
+    if (checkInPocket(ws)) {
+      target = line * 0.7 + midVec * 0.3;
+    }
+  }
+
   target.normalize();
   target *= speed;
 
@@ -42,6 +57,36 @@ static bool checkBallOnLine(const WorldState& ws) {
   }
 
   return false;
+}
+
+bool checkInOwnPocket(const WorldState& ws) {
+  double globalOwnGoalRot = ws.ownGoalRot - ws.heading;
+  if (globalOwnGoalRot > 180.0) globalOwnGoalRot -= 360.0;
+  if (globalOwnGoalRot < -180.0) globalOwnGoalRot += 360.0;
+
+  if (std::abs(globalOwnGoalRot) > FieldConfig::IN_POCKET_ANGLE) {
+    return true;
+  }
+  return false;
+}
+
+bool checkInPocket(const WorldState& ws) {
+  double globalGoalRot = ws.targetGoalRot - ws.heading;
+  if (globalGoalRot > 180.0) globalGoalRot -= 360.0;
+  if (globalGoalRot < -180.0) globalGoalRot += 360.0;
+
+  if (std::abs(globalGoalRot) > FieldConfig::IN_POCKET_ANGLE) {
+    return true;
+  }
+  return false;
+}
+
+int checkOnLine(const WorldState& ws) {
+  if (std::abs(ws.globalY) > FieldConfig::LINE_POS_Y) {
+    if (ws.globalY > 0.0) return 1;
+    return -1;
+  }
+  return 0;
 }
 
 void executeLineEscape(const WorldState& ws, MotionController* motion) {

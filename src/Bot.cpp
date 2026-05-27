@@ -68,6 +68,13 @@ void Bot::tick() {
 
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
+  _motionG->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
+
+  if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
+    MotionController::setInstance(_motion.get());
+  } else {
+    MotionController::setInstance(_motionG.get());
+  }
 
   if (!ws.cm5Running) {
     // cm5 not running
@@ -107,10 +114,15 @@ void Bot::tick() {
     _gameState->setRole(GameStateHandler::Role::STRIKER);
   }
 
-  if (ws.peerSwitchWanted) {
+  if (ws.peerAlive && ws.peerSwitchWanted) {
     _gameState->setRole(GameStateHandler::Role::GOALIE);
   }
   // ally logic end ---
+
+  if (!ws.goalValid) {
+    halt();
+    return;
+  }
 
   // Action decider
   decideAndExecute(ws);
@@ -202,14 +214,14 @@ void Bot::decideKickAndExecute(const WorldState& ws) const {
   }
 
   // distance condition
-  if (!(ws.targetGoalDist > 0.0 && ws.targetGoalDist < FieldConfig::KICK_DISTANCE)) {
+  if (!(ws.targetGoalDist > 0.0 && ws.targetGoalTargetDist < FieldConfig::KICK_DISTANCE)) {
     return;
   }
 
   // dynamic angle condition
-  const double theta = std::atan(30.0 / ws.targetGoalDist);
+  const double theta = std::atan(30.0 / ws.targetGoalTargetDist);
 
-  if (const double windowDeg = toDeg(theta); !(std::abs(ws.targetGoalRot) < windowDeg)) {
+  if (const double windowDeg = toDeg(theta); !(std::abs(ws.targetGoalTargetRot) < windowDeg)) {
     return;
   }
 

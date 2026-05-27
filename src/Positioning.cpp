@@ -141,8 +141,13 @@ double computeSpeedScale(const Vector2& pos, const Vector2& driveVec, double loo
 }
 
 void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector) const {
-  const double x = _cm5->getGlobalX();
-  const double y = _cm5->getGlobalY();
+  const double rawX = _cm5->getGlobalX();
+  const double scaleX = FieldConfig::PERFECT_FIELD_HEIGHT / FieldConfig::REAL_FIELD_HEIGHT;
+  const double x = rawX * scaleX;
+
+  const double rawY = _cm5->getGlobalY();
+  const double scaleY = FieldConfig::PERFECT_FIELD_WIDTH / FieldConfig::REAL_FIELD_WIDTH;
+  const double y = rawY * scaleY;
 
   const Vector2 pos(x, y);
 
@@ -152,7 +157,7 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector) 
   globalDriveVec.rotate(headingRad); // Changed from -headingRad to +headingRad
 
   // Magic number lookahead
-  constexpr double lookaheadFactor = 1.6;
+  constexpr double lookaheadFactor = 1.7;
 
   int hitEdge = -1;
   const double factor = computeSpeedScale(pos, globalDriveVec, lookaheadFactor, hitEdge);
@@ -161,7 +166,7 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector) 
     return;
   }
 
-  constexpr float minSpeed = 0.0f;
+  constexpr double minSpeed = 15.0;
 
   const auto newVx = static_cast<float>(vx * factor);
   const auto newVy = static_cast<float>(vy * factor);

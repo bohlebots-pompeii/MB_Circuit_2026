@@ -15,10 +15,14 @@ class GameStateHandler;
 struct WorldState {
   // ball
   Vector2 ballVec;
+  Vector2 lastBallVec{0, 0};
   double ballDist;
   double ballRot;
   bool ballExists;
   bool hasBall;
+
+  double lastBallDist;
+  double lastBallRot;
 
   // line sensor
   bool lineSeen;
@@ -35,10 +39,22 @@ struct WorldState {
   double targetGoalRot;
   double targetGoalDist;
   Vector2 targetGoalVec;
+
   double ownGoalRot;
   double ownGoalDist;
   Vector2 ownGoalVec;
+
   double awayFromOwnGoalAngle;
+
+  double targetGoalTargetRot;
+  double targetGoalTargetDist;
+  Vector2 targetGoalTargetVec;
+
+  double ownGoalTargetRot;
+  double ownGoalTargetDist;
+  Vector2 ownGoalTargetVec;
+
+  bool goalValid;
 
   // timers
   elapsedMillis lastBallSeenTime;

@@ -15,6 +15,11 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   static elapsedMillis s_hasBallTime;
   static elapsedMillis s_gameRunningTime;
 
+  static bool s_hasSeenBall = false;
+  static Vector2 s_lastBallVec{0, 0};
+  static double s_lastBallDist = 0.0;
+  static double s_lastBallRot = 0.0;
+
   // ball
   ws.ballVec = cm5.getBallVec();
   ws.ballDist = cm5.getBallDist();
@@ -23,8 +28,16 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.hasBall = Sensors::getHasBall();
 
   if (ws.ballExists) {
+    s_hasSeenBall = true;
     s_lastBallSeenTime = 0;
+    s_lastBallVec = ws.ballVec;
+    s_lastBallDist = ws.ballDist;
+    s_lastBallRot = ws.ballRot;
   }
+
+  ws.lastBallVec = s_lastBallVec;
+  ws.lastBallDist = s_lastBallDist;
+  ws.lastBallRot = s_lastBallRot;
 
   if (!ws.hasBall) {
     s_hasBallTime = 0;
@@ -32,6 +45,14 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
 
   ws.lastBallSeenTime = s_lastBallSeenTime;
   ws.hasBallTime = s_hasBallTime;
+
+  // keep ballVec in mem for ball short lost
+  if (s_hasSeenBall && ws.lastBallSeenTime < 1000 && !ws.ballExists) {
+    ws.ballVec = ws.lastBallVec;
+    ws.ballDist = ws.lastBallDist;
+    ws.ballRot = ws.lastBallRot;
+    ws.ballExists = true;
+  }
 
   // line sensor
   ws.lineSeen = sensors.getLineSeen();
@@ -56,10 +77,22 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.targetGoalRot = cm5.getTargetGoalRot();
   ws.targetGoalDist = cm5.getTargetGoalDist();
   ws.targetGoalVec = cm5.getTargetGoalVec();
+
   ws.ownGoalRot = cm5.getOwnGoalRot();
   ws.ownGoalDist = cm5.getOwnGoalDist();
   ws.ownGoalVec = cm5.getOwnGoalVec();
+
   ws.awayFromOwnGoalAngle = cm5.getAwayFromOwnGoalAngle();
+
+  ws.targetGoalTargetRot = cm5.getTargetGoalTargetRot();
+  ws.targetGoalTargetDist = cm5.getTargetGoalTargetDist();
+  ws.targetGoalTargetVec = cm5.getTargetGoalTargetVec();
+
+  ws.ownGoalTargetRot = cm5.getOwnGoalTargetRot();
+  ws.ownGoalTargetDist = cm5.getOwnGoalTargetDist();
+  ws.ownGoalTargetVec = cm5.getOwnGoalTargetVec();
+
+  ws.goalValid = cm5.getGoalValid();
 
   // peer robot (ESP-NOW)
   ws.peerAlive = espNowPeerAlive();

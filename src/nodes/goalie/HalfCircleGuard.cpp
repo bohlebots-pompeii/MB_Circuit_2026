@@ -5,27 +5,21 @@
 #include <config/config.h>
 #include <util/helper.h>
 #include <util/Vector2.hpp>
-#include <util/MovingAverage.h>
 #include <cmath>
 #include <numbers>
-
-static MovingAverage<double, 10> g_strikerAvgX;
-static MovingAverage<double, 10> g_strikerAvgY;
 
 static Vector2 getHalfCircleTarget(const WorldState& ws) {
   const Vector2 ownGoalVec = ws.ownGoalVec;
   const Vector2 ballVec = ws.ballVec;
 
-  Vector2 goalToBall = ballVec - ownGoalVec;
-  if (goalToBall.getMagnitude() < 1e-3) {
-    goalToBall = ownGoalVec * -1.0;
-  }
-  goalToBall.normalize();
+  Vector2 dir = ballVec - ownGoalVec;
 
-  Vector2 awayFromGoal = ownGoalVec * -1.0;
-  awayFromGoal.normalize();
+  const double dist = dir.getMagnitude();
+  dir.normalize();
 
-  return ownGoalVec + goalToBall * Goalie::HALF_CIRCLE_RADIUS;
+  const double targetDist = std::max(dist * 0.5, Goalie::HALF_CIRCLE_RADIUS);
+
+  return ownGoalVec + dir * targetDist;
 }
 
 static Vector2 getAwayFromLineVec(const WorldState& ws) {
@@ -86,7 +80,7 @@ static void applyBallAvoidance(const WorldState& ws, Vector2& target) {
 
 void executeHalfCircleGuard(const WorldState& ws, MotionController* motion) {
   Vector2 target;
-  const auto rotInput = static_cast<float>(ws.awayFromOwnGoalAngle);
+  const auto rotInput = ws.heading;
   constexpr bool usePID = true;
 
   if (ws.lineSeen) {
@@ -104,7 +98,7 @@ void executeHalfCircleGuard(const WorldState& ws, MotionController* motion) {
 
   applyBallAvoidance(ws, target);
 
-  const int drib = (ws.ballDist < 40 && ws.ballDist != 0) ? 100 : 0;
-  auto [vx, vy, rot] = motion->compute(target, rotInput, usePID);
+  const int drib = ws.ballDist < 40 && ws.ballDist != 0 ? 100 : 0;
+  auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID);
   pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
 }

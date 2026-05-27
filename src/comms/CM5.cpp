@@ -91,6 +91,10 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
   targetGoalRot = 0;
   ownGoalDist = 0;
   ownGoalRot = 0;
+  targetGoalTargetDist = 0;
+  targetGoalTargetRot = 0;
+  ownGoalTargetDist = 0;
+  ownGoalTargetRot = 0;
   ballDist = 0;
   ballRot = 0;
 
@@ -113,6 +117,19 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
     }
     objects[i].dist_cm = dist_cm;
 
+    if (Objects_DEBUG) {
+      Serial.print("Obj[");
+      Serial.print(i);
+      Serial.print("] L:");
+      Serial.print(objects[i].label);
+      Serial.print(" rot:");
+      Serial.print(objects[i].rotation_deg);
+      Serial.print(" d_px:");
+      Serial.print(dist_px);
+      Serial.print(" d_cm:");
+      Serial.println(objects[i].dist_cm);
+    }
+
     if (det[i].label == targetGoalLabel) {
       targetGoalRot = angle_deg;
       targetGoalDist = dist_cm;
@@ -120,6 +137,14 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
     else if (det[i].label == ownGoalLabel) {
       ownGoalRot = angle_deg;
       ownGoalDist = dist_cm;
+    }
+    else if (det[i].label == targetGoalTargetLabel) {
+      targetGoalTargetRot = angle_deg;
+      targetGoalTargetDist = dist_cm;
+    }
+    else if (det[i].label == ownGoalTargetLabel) {
+      ownGoalTargetRot = angle_deg;
+      ownGoalTargetDist = dist_cm;
     }
     else if (det[i].label == BALL_LABEL) {
       ballRot = angle_deg;
@@ -138,6 +163,7 @@ void CM5::computeAwayFromOwnGoalAngle() {
 void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
   double x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0;
   bool foundOwnGoal = false, foundTargetGoal = false;
+  goalValid = true;
 
   for (int i = 0; i < num_det; ++i) {
     const double theta = toRad(objects[i].rotation_deg);
@@ -178,6 +204,7 @@ void CM5::computeHeadingAndPosition(const Detection* det, const int num_det) {
     heading = awayFromOwnGoalAngle;
   }
   else {
+    goalValid = false;
     heading = 0.0;
   }
 }
@@ -187,7 +214,7 @@ void CM5::update() {
     lastUpdateTimer = 0;
     const int num_detections_in = Serial2.read();
 
-    if (num_detections_in <= 0) {
+    if (num_detections_in <= 0 || num_detections_in > MAX_DETECTIONS) {
       num_detections = 0;
       if constexpr (!GeneralConfig::DISABLE_WARNINGS) { Serial.println("WARN: No detections received."); }
       return;
@@ -196,6 +223,7 @@ void CM5::update() {
     const int stored_detections = std::min(num_detections_in, MAX_DETECTIONS);
     num_detections = stored_detections;
 
+    // Read all labels first
     for (int i = 0; i < num_detections_in; i++) {
       elapsedMillis timeout;
       while (Serial2.available() < 1) {
@@ -210,6 +238,7 @@ void CM5::update() {
       }
     }
 
+    // Then read all bboxes
     for (int i = 0; i < num_detections_in; i++) {
       elapsedMillis timeout;
       while (Serial2.available() < 8) {
@@ -219,15 +248,13 @@ void CM5::update() {
         }
       }
 
-      uint16_t raw[4];
-      for (int j = 0; j < 4; j++) {
+      for (double & j : detections[i].bbox) {
         uint8_t bytes[2];
         bytes[0] = Serial2.read();
         bytes[1] = Serial2.read();
-        raw[j] = (bytes[1] << 8) | bytes[0];
-
+        const uint16_t raw = (bytes[1] << 8) | bytes[0];
         if (i < stored_detections) {
-          detections[i].bbox[j] = halfToFloat(raw[j]);
+          j = halfToFloat(raw);
         }
       }
     }
@@ -244,6 +271,18 @@ void CM5::setTargetGoal(const uint8_t goalLabel) {
     Serial.println("ERROR: Goal label incorrect");
     return;
   }
-  targetGoalLabel = goalLabel;
-  ownGoalLabel = goalLabel == 1 ? 2 : 1;
+  if (goalLabel == 1) {
+    // 1 = Blue
+    targetGoalLabel = 1; // blue goal
+    targetGoalTargetLabel = 4; // blue target
+    ownGoalLabel = 2; // yellow goal
+    ownGoalTargetLabel = 5; // yellow target
+  }
+  else {
+    // 2 = Yellow
+    targetGoalLabel = 2; // yellow goal
+    targetGoalTargetLabel = 5; // yellow target
+    ownGoalLabel = 1; // blue goal
+    ownGoalTargetLabel = 4; // blue target
+  }
 }

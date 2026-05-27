@@ -23,12 +23,17 @@ public:
   [[nodiscard]] bool getButtonState(int device, int nr) const;
   void setLED(int device, int nr, int color);
 
+  // getters
   [[nodiscard]] int16_t getLineRot() const { return line_rot; }
-  [[nodiscard]] int16_t getProgress() const { return progress; }
+
   [[nodiscard]] bool getLineSeen() const { return progress != -1 && line_rot != -1; }
+
+  [[nodiscard]] static bool getHasBall() { return analogRead(PINS::LIGHT_GATE_PIN) > 3900; }
+  [[nodiscard]] static int getBallLightGate() { return analogRead(PINS::LIGHT_GATE_PIN); }
+
+  [[nodiscard]] int16_t getProgress() const { return progress; }
+
   [[nodiscard]] bool getEna() const { return ena; }
-  [[nodiscard]] static bool getHasBall() { return analogRead(39) > 3900; }
-  [[nodiscard]] static int getBallLightGate() { return analogRead(39); }
   [[nodiscard]] static bool getForceHalt() { return digitalRead(PINS::COMMS_MODULE_PIN) == LOW; }
 
   enum COLOR {
