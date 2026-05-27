@@ -136,7 +136,7 @@ namespace FieldConfig {
     Vector2(-Hx, Wy) // till top left
   };
 
-  constexpr double GOAL_NEUTRAL_POS_X = -GX + GeneralConfig::BOT_DIAMETER;
+  constexpr double GOAL_NEUTRAL_POS_X = -GX + GeneralConfig::BOT_DIAMETER * 1.5;
   constexpr double LINE_POS_Y = Wy - GeneralConfig::BOT_DIAMETER * 3;
 
   constexpr double IN_POCKET_ANGLE = 40.0;

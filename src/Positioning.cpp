@@ -10,6 +10,7 @@
 #include <elapsedMillis.h>
 #include "util/MovingAverage.h"
 #include <config/config.h>
+#include <WorldState.h>
 
 elapsedMillis rotationDeltaTimer;
 elapsedMillis velocityTimer;
@@ -140,7 +141,7 @@ double computeSpeedScale(const Vector2& pos, const Vector2& driveVec, double loo
   return bestT;
 }
 
-void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector) const {
+void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector, const WorldState& ws) const {
   const double rawX = _cm5->getGlobalX();
   const double scaleX = FieldConfig::PERFECT_FIELD_HEIGHT / FieldConfig::REAL_FIELD_HEIGHT;
   const double x = rawX * scaleX;
@@ -157,7 +158,12 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector) 
   globalDriveVec.rotate(headingRad); // Changed from -headingRad to +headingRad
 
   // Magic number lookahead
-  constexpr double lookaheadFactor = 1.7;
+  if (!ws.isGoalie) {
+    const double lookaheadFactor = 1.7;
+  }
+  else {
+    const double factor = 2.0; // untested @ToDo
+  }
 
   int hitEdge = -1;
   const double factor = computeSpeedScale(pos, globalDriveVec, lookaheadFactor, hitEdge);
