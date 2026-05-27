@@ -118,7 +118,7 @@ namespace FieldConfig {
   constexpr double Hx = PERFECT_FIELD_HEIGHT / 2.0;
   constexpr double Wy = PERFECT_FIELD_WIDTH / 2.0;
   constexpr double GY = 40.0 + GeneralConfig::BOT_DIAMETER / 2.0;
-  constexpr double GX = PERFECT_FIELD_HEIGHT / 2.0 - 25.0;
+  constexpr double GX = PERFECT_FIELD_HEIGHT / 2.0 - 25.0 - GeneralConfig::BOT_DIAMETER / 2.0;
 
   const std::array FIELD_CONTOUR = {
     Vector2( Hx,  Wy),  // top right
