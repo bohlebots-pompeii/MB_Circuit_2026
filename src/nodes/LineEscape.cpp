@@ -13,21 +13,24 @@ static Vector2 getAwayFromLineVec(const WorldState& ws, int speed) {
   line.rotate(std::numbers::pi);
 
   auto midVec = Vector2(-ws.globalX, -ws.globalY);
+  midVec.rotate(toRad(ws.heading));
   midVec.normalize();
 
   Vector2 target;
   if (ws.isGoalie) {
     target = line * 0.7 + midVec * 0.3;
     if (checkInOwnPocket(ws)) {
+      target.rotate(-ws.heading);
       if (target.getX() < 0.0) {
         target.setX(-target.getX());
       }
+      target.rotate(ws.heading);
     }
   }
   else {
     target = midVec;
     if (checkInPocket(ws)) {
-      target = line * 0.7 + midVec * 0.3;
+      target = line * 0.5 + midVec * 0.5;
     }
   }
 
@@ -97,6 +100,7 @@ void executeLineEscape(const WorldState& ws, MotionController* motion) {
   while (globalBallDir > 180) globalBallDir -= 360;
   while (globalBallDir < -180) globalBallDir += 360;
 
+  /*
   if (checkBallOnLine(ws)) {
     if (std::abs(ws.heading) >= GeneralConfig::HEADING_HARD_LIMIT_DEG) {
       if (ws.ballRot > 0.0) {
@@ -116,6 +120,8 @@ void executeLineEscape(const WorldState& ws, MotionController* motion) {
   else {
     rotInput = static_cast<float>(ws.heading);
   }
+  */
+  rotInput = 0.0;
 
   auto [vx, vy, rot] = motion->compute(target, rotInput, false, ws);
 
