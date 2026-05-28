@@ -14,7 +14,7 @@
 bool checkBallInOwnPocket(const WorldState& ws) {
   if (!ws.ballExists) return false;
 
-  double globalBallRot = ws.ballRot - ws.heading;
+  double globalBallRot = ws.ballRot + ws.heading;
   if (globalBallRot > 180.0) globalBallRot -= 360.0;
   if (globalBallRot < -180.0) globalBallRot += 360.0;
 
@@ -24,14 +24,14 @@ bool checkBallInOwnPocket(const WorldState& ws) {
 
   bool ballInOwnPocket = false;
 
-  if (ballGlobalX < (-FieldConfig::Hx) + 50.0) ballInOwnPocket = true;
+  if (ballGlobalX < (-FieldConfig::Hx) + 25.0) ballInOwnPocket = true;
 
   return ballInOwnPocket;
 }
 
 void executeOwnPocket(const WorldState& ws, MotionController* motion){
   Vector2 target;
-  auto rotInput = ws.heading;
+  auto rotInput = ws.awayFromOwnGoalAngle;
   constexpr bool usePID = true;
 
   if (ws.lineSeen) {
@@ -49,18 +49,16 @@ void executeOwnPocket(const WorldState& ws, MotionController* motion){
 
   const int drib = ws.ballDist < 40 && ws.ballDist != 0 ? 100 : 0;
 
-  rotInput = ws.awayFromOwnGoalAngle;
-
-  if (abs(ws.ownGoalRot) < 130) {
+  if (abs(ws.ownGoalRot) < 150) {
     rotInput = ws.ballRot;
     target = Vector2(target.getX() / 3, target.getY() / 3);
   }
 
   if (ws.globalY < 0) {
-    rotInput -= 20;
+    rotInput += 20;
   }
   else {
-    rotInput += 20;
+    rotInput -= 20;
   }
 
   if (abs(ws.ballRot) < 10.0) {
