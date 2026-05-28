@@ -14,7 +14,7 @@
 bool checkBallInOwnPocket(const WorldState& ws) {
   if (!ws.ballExists) return false;
 
-  double globalBallRot = ws.ballRot + ws.heading;
+  double globalBallRot = ws.ballRot - ws.heading;
   if (globalBallRot > 180.0) globalBallRot -= 360.0;
   if (globalBallRot < -180.0) globalBallRot += 360.0;
 
@@ -55,10 +55,10 @@ void executeOwnPocket(const WorldState& ws, MotionController* motion){
   }
 
   if (ws.globalY < 0) {
-    rotInput += 20;
+    rotInput -= 20;
   }
   else {
-    rotInput -= 20;
+    rotInput += 20;
   }
 
   if (abs(ws.ballRot) < 10.0) {
