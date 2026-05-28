@@ -104,9 +104,11 @@ public:
 
   Vector2 operator -(const Vector2& v) const;
 
+  double operator *(const Vector2& v) const;
+
   Vector2 operator *(const double& d) const;
 
-  double operator *(const Vector2& v);
+  Vector2 operator /(const double& d) const;
 
   /************************************************************
   *

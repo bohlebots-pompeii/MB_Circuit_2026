@@ -38,6 +38,7 @@ static double calculateShotAngle(const WorldState& ws, const Vector2& targetPos)
 void executePassBetween(const WorldState& ws, MotionController* motion) {
   if (!ws.peerAlive) {
     pushData(false, false, 0, 0, 0, 0, false);
+    return;
   }
   const auto targetPosition = Vector2(ws.peerGlobalX, ws.peerGlobalY);
   const double angleSetpoint = calculateShotAngle(ws, targetPosition);

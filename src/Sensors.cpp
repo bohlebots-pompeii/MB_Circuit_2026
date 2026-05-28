@@ -53,25 +53,27 @@ void Sensors::updateLineSensor() {
     line_rot = static_cast<int16_t>(lineRot_u);
     progress = static_cast<int16_t>(progress_u);
 
-    // Adjust line rotation based on progress and approach direction
-    static bool coming_from_front = false;
-    if (lastLineProgress != 16) {
-      coming_from_front = (lastLineRot < 90 || lastLineRot >= 270);
-    }
-
-    if (coming_from_front) {
-      if (progress >= 16) {
-        line_rot += 180;
+    if (line_rot != -1 && progress != -1) {
+      // Adjust line rotation based on progress and approach direction
+      static bool coming_from_front = false;
+      if (lastLineProgress != 16) {
+        coming_from_front = (lastLineRot >= 0 && (lastLineRot < 90 || lastLineRot >= 270));
       }
-    }
-    else {
-      if (progress > 16) {
-        line_rot += 180;
-      }
-    }
 
-    if (line_rot >= 360) {
-      line_rot -= 360;
+      if (coming_from_front) {
+        if (progress >= 16) {
+          line_rot += 180;
+        }
+      }
+      else {
+        if (progress > 16) {
+          line_rot += 180;
+        }
+      }
+
+      if (line_rot >= 360) {
+        line_rot -= 360;
+      }
     }
 
     lastLineRot = line_rot;

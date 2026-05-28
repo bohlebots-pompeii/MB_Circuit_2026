@@ -7,15 +7,12 @@
 
 void executeGoalNeutral(const WorldState& ws, MotionController* motion) {
   Vector2 target;
-  /*
-  if (ws.lastBallSeenTime < 2000) {
+  if (ws.lastBallSeenTime < 2500) {
     target = Vector2(0, 0);
   }
   else {
     target = getToPointVec(ws.globalX, ws.globalY, FieldConfig::GOAL_NEUTRAL_POS_X, 0);
   }
-  */
-  target = Vector2(0.0, 0.0);
   const auto rotInput = static_cast<float>(ws.heading);
   constexpr bool usePID = true;
 

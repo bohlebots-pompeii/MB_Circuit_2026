@@ -15,6 +15,11 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   static elapsedMillis s_hasBallTime;
   static elapsedMillis s_gameRunningTime;
 
+  static bool s_hasSeenBall = false;
+  static Vector2 s_lastBallVec{0, 0};
+  static double s_lastBallDist = 0.0;
+  static double s_lastBallRot = 0.0;
+
   // ball
   ws.ballVec = cm5.getBallVec();
   ws.ballDist = cm5.getBallDist();
@@ -23,11 +28,16 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.hasBall = Sensors::getHasBall();
 
   if (ws.ballExists) {
+    s_hasSeenBall = true;
     s_lastBallSeenTime = 0;
-    ws.lastBallVec = ws.ballVec;
-    ws.lastBallDist = ws.ballDist;
-    ws.lastBallRot = ws.ballRot;
+    s_lastBallVec = ws.ballVec;
+    s_lastBallDist = ws.ballDist;
+    s_lastBallRot = ws.ballRot;
   }
+
+  ws.lastBallVec = s_lastBallVec;
+  ws.lastBallDist = s_lastBallDist;
+  ws.lastBallRot = s_lastBallRot;
 
   if (!ws.hasBall) {
     s_hasBallTime = 0;
@@ -37,7 +47,7 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.hasBallTime = s_hasBallTime;
 
   // keep ballVec in mem for ball short lost
-  if (ws.lastBallSeenTime < 1000 && !ws.ballExists) {
+  if (s_hasSeenBall && ws.lastBallSeenTime < 1000 && !ws.ballExists) {
     ws.ballVec = ws.lastBallVec;
     ws.ballDist = ws.lastBallDist;
     ws.ballRot = ws.lastBallRot;
@@ -116,7 +126,8 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   bool isGameRunning = false;
   if (GeneralConfig::USE_COMMUNICATION && ws.peerAlive) {
     isGameRunning = gameState.isRunning() || ws.peerRunning;
-  } else {
+  }
+  else {
     isGameRunning = gameState.isRunning();
   }
 
@@ -129,6 +140,15 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.isGoalie = gameState.getRole() == GameStateHandler::Role::GOALIE;
   ws.ena = sensors.getEna();
   ws.cm5Running = cm5.getCM5Running();
+
+  // reconstruct if data lost
+  if (!ws.ballExists && ws.peerBallValid && ws.peerRunning) {
+    ws.ballExists = true;
+    Vector2 ownToAllyVec = Vector2(ws.peerGlobalX, ws.peerGlobalY) - Vector2(ws.globalX, ws.globalY);
+    ws.ballVec = ownToAllyVec + degToVec(ws.peerBallRot) * ws.peerBallDist;
+    ws.ballRot = toDeg(ws.ballVec.getAngle());
+    ws.ballDist = ws.ballVec.getMagnitude();
+  }
 
   return ws;
 }

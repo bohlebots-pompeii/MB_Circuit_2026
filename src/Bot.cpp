@@ -67,14 +67,19 @@ void Bot::tick() {
   // build world state frame
   const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
 
-  Serial.println(ws.globalX);
-  Serial.println(ws.globalY);
-
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
+  _motionG->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
 
-  if (!ws.cm5Running || !ws.goalValid) {
-    // cm5 not running or both goals not seen so no position or rotation
+  if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
+    MotionController::setInstance(_motion.get());
+  }
+  else {
+    MotionController::setInstance(_motionG.get());
+  }
+
+  if (!ws.cm5Running) {
+    // cm5 not running
     _sensors->haltLEDs();
     halt();
     return;
@@ -101,7 +106,7 @@ void Bot::tick() {
 
   // ally logic ---
   bool switchWanted = false;
-  if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
+  if (_gameState->getRole() == GameStateHandler::Role::GOALIE) {
     switchWanted = getSwitchWanted(ws);
   }
 
@@ -111,10 +116,15 @@ void Bot::tick() {
     _gameState->setRole(GameStateHandler::Role::STRIKER);
   }
 
-  if (ws.peerSwitchWanted) {
+  if (ws.peerAlive && ws.peerSwitchWanted) {
     _gameState->setRole(GameStateHandler::Role::GOALIE);
   }
   // ally logic end ---
+
+  if (!ws.goalValid) {
+    halt();
+    return;
+  }
 
   // Action decider
   decideAndExecute(ws);
@@ -180,10 +190,12 @@ void Bot::decideAndExecute(const WorldState& ws) const {
   }
 
   // Goalie logic
+  /*
   if (!ws.ballExists && ws.peerBallValid && ws.peerAlive) {
     _emergencyPosition.pFuncExec(ws, _motionG.get());
     return;
   }
+  */
 
   /*
   if (ws.ballExists && canExecuteInterceptBall(ws)) {
@@ -242,7 +254,8 @@ bool Bot::getSwitchWanted(const WorldState& ws) {
     return true;
   }
 
-  if (ws.gameRunningTime < 500) { // prevent switches from not perfect button presses
+  if (ws.gameRunningTime < 1000) {
+    // prevent switches from not perfect button presses
     return false;
   }
 
@@ -257,24 +270,6 @@ bool Bot::getSwitchWanted(const WorldState& ws) {
 
   if (!ws.ballExists) {
     return false;
-  }
-
-  const auto allyPosition = Vector2(ws.globalX, ws.globalY);
-  const auto allyBallVec = Vector2(std::cos(toRad(ws.peerBallRot)), std::sin(toRad(ws.peerBallRot))) * ws.peerBallDist;
-  const Vector2 allyBallPos = allyPosition - allyBallVec;
-
-  const bool teammateBehindBall = allyBallPos.getX() >= 0;
-  const bool ownBehindBall = ws.ballVec.getX() >= 0;
-  const bool muchBetterAngle = std::abs(ws.ballRot) < std::abs(ws.peerBallRot) / 2.0;
-  const bool muchBetterDistance = std::abs(ws.ballDist) < std::abs(ws.peerBallDist) / 2.0;
-
-  if (teammateBehindBall == ownBehindBall) {
-    return muchBetterDistance;
-  }
-
-  if (muchBetterDistance && muchBetterAngle) {
-    switchWantedCooldownTimer = 0;
-    return true;
   }
 
   return false;
