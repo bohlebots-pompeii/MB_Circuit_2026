@@ -14,7 +14,7 @@ namespace GeneralConfig {
 
   constexpr double HEADING_HARD_LIMIT_DEG = 45.0;
 
-  constexpr bool USE_COMMUNICATION = true;
+  constexpr bool USE_COMMUNICATION = false;
 
   constexpr bool DISABLE_WARNINGS = false;
 

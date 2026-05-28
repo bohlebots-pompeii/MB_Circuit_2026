@@ -18,4 +18,7 @@ void applyBallAvoidance(const WorldState& ws, Vector2& target);
 
 struct ActionHalfCircleGuard {
   ACTION_EXEC_FUNC pFuncExec = &executeHalfCircleGuard;
+  ACTION_GET_VEC_WS pFuncGetHalfCircleTarget = &getHalfCircleTarget;
+  ACTION_GET_VEC_WS pFuncGetAwayFromLineVec = &getAwayFromLineVec;
+  ACTION_GET_VEC_WS_TARGET pFuncDriveOnLine = &driveOnLine;
 };
