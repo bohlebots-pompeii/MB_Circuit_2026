@@ -22,6 +22,6 @@ void executeDriveToNeutral(const WorldState& ws, MotionController* motion) {
   const Vector2 target = getMoveToCenterVec(ws);
   const double rotInput = ws.heading;
 
-  auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), true);
+  auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), true, ws);
   pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, 0, true);
 }

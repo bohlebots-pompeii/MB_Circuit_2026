@@ -1,6 +1,7 @@
 #include "MotionController.h"
 #include <config/config.h>
 #include <cmath>
+#include <WorldState.h>
 
 MotionController* MotionController::_instance = nullptr;
 
@@ -59,7 +60,7 @@ void MotionController::initGoalie() {
   }
 }
 
-MotionController::Output MotionController::compute(const Vector2& target, const float rotInput, const bool usePID) {
+MotionController::Output MotionController::compute(const Vector2& target, const float rotInput, const bool usePID, const WorldState& ws) {
   Output out{};
 
   _lastTarget = target;
@@ -88,7 +89,7 @@ MotionController::Output MotionController::compute(const Vector2& target, const 
     out.vy = static_cast<float>(target.getY());
   }
 
-  _positioning->speedLimit(out.vx, out.vy, target);
+  _positioning->speedLimit(out.vx, out.vy, target, ws);
 
   return out;
 }

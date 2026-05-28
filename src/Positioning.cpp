@@ -158,11 +158,12 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector, 
   globalDriveVec.rotate(headingRad); // Changed from -headingRad to +headingRad
 
   // Magic number lookahead
+  double lookaheadFactor;
   if (!ws.isGoalie) {
-    const double lookaheadFactor = 1.7;
+    lookaheadFactor = 1.8;
   }
   else {
-    const double factor = 2.0; // untested @ToDo
+    lookaheadFactor = 2.0;
   }
 
   int hitEdge = -1;
