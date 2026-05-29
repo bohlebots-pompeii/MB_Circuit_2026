@@ -57,6 +57,6 @@ void executeOwnPocket(const WorldState& ws, MotionController* motion, const Acti
 
   const int drib = ws.ballDist < 40 && ws.ballDist != 0 ? 100 : 0;
 
-  auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID);
+  auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID, ws);
   pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
 }
