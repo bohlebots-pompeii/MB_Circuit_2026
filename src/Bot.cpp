@@ -170,7 +170,7 @@ void Bot::decideAndExecute(const WorldState& ws) const {
       return;
     }
 
-    if (_ownPocket.pFuncCheck(ws) && !ws.hasBall) {
+    if (_ownPocket.pFuncCheck(ws) && !ws.hasBall && ws.globalX < FieldConfig::GX + GeneralConfig::BOT_DIAMETER * 2) {
       _ownPocket.pFuncExec(ws, _motion.get(), _halfCircleGuard);
       return;
     }
