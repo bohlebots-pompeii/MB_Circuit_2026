@@ -34,6 +34,9 @@ void MotionController::init() {
     _xPID.SetOutputLimits(PIDConfig::X_O_MIN, PIDConfig::X_O_MAX);
     _xPID.SetSampleTime(PIDConfig::X_SAMPLE_T);
 
+    _xPID.SetDTermFilter(true, 0.4);
+    _yPID.SetDTermFilter(true, 0.4);
+
     _initialized = true;
   }
 }
@@ -89,6 +92,12 @@ MotionController::Output MotionController::compute(const Vector2& target, const 
   else {
     out.vx = static_cast<float>(target.getX()); // linear motion
     out.vy = static_cast<float>(target.getY());
+  }
+
+  if (!ws.ena) {
+    _rotPID.ResetIntegral();
+    _xPID.ResetIntegral();
+    _yPID.ResetIntegral();
   }
 
   _positioning->speedLimit(out.vx, out.vy, target, ws);

@@ -215,7 +215,7 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector, 
   // Magic number lookahead
   double lookaheadFactor;
   if (!ws.isGoalie) {
-    lookaheadFactor = 1.7;
+    lookaheadFactor = 1.9;
   }
   else {
     lookaheadFactor = 2.0;

@@ -50,14 +50,14 @@ namespace PIDConfig {
   // Y-axis motion PID
   constexpr double Y_Kp = 1.6;
   constexpr double Y_Ki = 0.25;
-  constexpr double Y_Kd = 0.12;
+  constexpr double Y_Kd = 0.2;
   constexpr double Y_O_MIN = -70.0;
   constexpr double Y_O_MAX = 70.0;
   constexpr int Y_SampleTime = 21;
 
   // X-axis motion PID
   constexpr double X_Kp = 1.8;
-  constexpr double X_Ki = 0.0;
+  constexpr double X_Ki = 0.2;
   constexpr double X_Kd = 0.09;
   constexpr double X_O_MIN = -70.0;
   constexpr double X_O_MAX = 70.0;
