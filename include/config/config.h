@@ -48,9 +48,9 @@ namespace I2C_ADDRESSES {
 // PID Configuration
 namespace PIDConfig {
   // Y-axis motion PID
-  constexpr double Y_Kp = 1.8;
-  constexpr double Y_Ki = 0.0;
-  constexpr double Y_Kd = 0.09;
+  constexpr double Y_Kp = 1.6;
+  constexpr double Y_Ki = 0.25;
+  constexpr double Y_Kd = 0.12;
   constexpr double Y_O_MIN = -70.0;
   constexpr double Y_O_MAX = 70.0;
   constexpr int Y_SampleTime = 21;
@@ -58,7 +58,7 @@ namespace PIDConfig {
   // X-axis motion PID
   constexpr double X_Kp = 1.8;
   constexpr double X_Ki = 0.0;
-  constexpr double X_Kd = 0.07;
+  constexpr double X_Kd = 0.09;
   constexpr double X_O_MIN = -70.0;
   constexpr double X_O_MAX = 70.0;
   constexpr int X_SAMPLE_T = 21;
@@ -119,7 +119,7 @@ namespace FieldConfig {
   constexpr double Wy = PERFECT_FIELD_WIDTH / 2.0;
   constexpr double GY = 40.0 + GeneralConfig::BOT_DIAMETER / 2.0;
   constexpr double GX = PERFECT_FIELD_HEIGHT / 2.0 - 25.0;
-  constexpr double TARGET_GX = GX - (GeneralConfig::BOT_DIAMETER / 2.0);
+  constexpr double TARGET_GX = GX - GeneralConfig::BOT_DIAMETER / 2.0;
 
   const std::array FIELD_CONTOUR = {
     Vector2(Hx, Wy), // top right
@@ -130,13 +130,13 @@ namespace FieldConfig {
     Vector2(Hx, -Wy), // bottom right
     Vector2(-Hx, -Wy), // bottom left
     Vector2(-Hx, -GY), // up till right corner of penalty (own)
-    Vector2(-GX, -GY), // in
-    Vector2(-GX, GY), // up till left corner of penalty (own)
+    Vector2(-TARGET_GX, -GY), // in
+    Vector2(-TARGET_GX, GY), // up till left corner of penalty (own)
     Vector2(-Hx, GY), // out
     Vector2(-Hx, Wy) // till top left
   };
 
-  constexpr double GOAL_NEUTRAL_POS_X = -GX + GeneralConfig::BOT_DIAMETER;
+  constexpr double GOAL_NEUTRAL_POS_X = -GX + GeneralConfig::BOT_DIAMETER * 1.5;
   constexpr double LINE_POS_Y = Wy - GeneralConfig::BOT_DIAMETER * 3;
 
   constexpr double IN_POCKET_ANGLE = 40.0;

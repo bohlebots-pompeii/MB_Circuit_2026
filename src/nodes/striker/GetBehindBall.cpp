@@ -38,7 +38,7 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
   Vector2 target = ballVec + circlePoint;
 
   // clamp base target to make sure no overshoot
-  if (std::abs(target.getY()) > std::abs(ballVec.getY()) && target.getY() != 0) {
+  if (ballVec.getX() > 0 && std::abs(target.getY()) > std::abs(ballVec.getY()) && target.getY() != 0) {
     const double scale = std::abs(ballVec.getY() / target.getY());
     target *= scale;
   }
@@ -148,7 +148,7 @@ void executeGetBehindBall(const WorldState& ws, MotionController* motion) {
 
   constexpr int dribblerSpeed = 100;
 
-  const auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID);
+  const auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID, ws);
 
   pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, true);
 }

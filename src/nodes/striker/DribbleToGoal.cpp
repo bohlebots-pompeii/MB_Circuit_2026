@@ -16,7 +16,7 @@ void executeDribbleToGoal(const WorldState& ws, MotionController* motion) {
   const auto rotInput = static_cast<float>(ws.targetGoalTargetRot);
   const Vector2 target = getBallAlignedVec(ws, 50);
 
-  auto [vx, vy, rot] = motion->compute(target, rotInput, true);
+  auto [vx, vy, rot] = motion->compute(target, rotInput, true, ws);
 
   constexpr int dribblerSpeed = 100;
   pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribblerSpeed, useRotDelta);

@@ -38,7 +38,7 @@ void executeHiddenBallNPocket(const WorldState& ws, MotionController* motion) {
       target *= 15.0;
     }
 
-    auto [vx, vy, rot] = motion->compute(target, 0.0f, false);
+    auto [vx, vy, rot] = motion->compute(target, 0.0f, false, ws);
     rot = static_cast<int>(std::round(rotIn));
 
     constexpr int dribblerSpeed = 100;
@@ -76,7 +76,7 @@ void executeHiddenBallNPocket(const WorldState& ws, MotionController* motion) {
     target *= 15.0;
   }
 
-  auto [vx, vy, rot] = motion->compute(target, 0.0f, false);
+  auto [vx, vy, rot] = motion->compute(target, 0.0f, false, ws);
   rot = static_cast<int>(std::round(rotIn));
 
   constexpr int dribblerSpeed = 100;

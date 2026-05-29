@@ -19,6 +19,6 @@ void executeHoldNeutral(const WorldState& ws, MotionController* motion) {
   constexpr bool usePID = true;
   constexpr int dribSpeed = 100;
 
-  auto [vx, vy, rot] = motion->compute(g_lastDriveVec, rotInput, usePID);
+  auto [vx, vy, rot] = motion->compute(g_lastDriveVec, rotInput, usePID, ws);
   pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, dribSpeed, true);
 }
