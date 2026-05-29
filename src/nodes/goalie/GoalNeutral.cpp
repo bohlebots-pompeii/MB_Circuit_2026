@@ -16,6 +16,6 @@ void executeGoalNeutral(const WorldState& ws, MotionController* motion) {
   const auto rotInput = static_cast<float>(ws.heading);
   constexpr bool usePID = true;
 
-  auto [vx, vy, rot] = motion->compute(target, rotInput, usePID);
+  auto [vx, vy, rot] = motion->compute(target, rotInput, usePID, ws);
   pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, 0, true);
 }

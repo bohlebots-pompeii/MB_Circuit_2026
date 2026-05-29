@@ -34,6 +34,7 @@ public:
   // Target goal
   [[nodiscard]] double getTargetGoalRot() const { return targetGoalRot; }
   [[nodiscard]] double getTargetGoalDist() const { return targetGoalDist; }
+
   [[nodiscard]] Vector2 getTargetGoalVec() const {
     if (targetGoalDist <= 0.001) return {0, 0};
     const double angle_rad = toRad(targetGoalRot);
@@ -43,6 +44,7 @@ public:
   // Target goal target
   [[nodiscard]] double getTargetGoalTargetRot() const { return targetGoalTargetRot; }
   [[nodiscard]] double getTargetGoalTargetDist() const { return targetGoalTargetDist; }
+
   [[nodiscard]] Vector2 getTargetGoalTargetVec() const {
     if (targetGoalTargetDist <= 0.001) return {0, 0};
     const double rad = targetGoalTargetRot * (M_PI / 180.0);
@@ -52,6 +54,7 @@ public:
   // Own goal
   [[nodiscard]] double getOwnGoalRot() const { return ownGoalRot; }
   [[nodiscard]] double getOwnGoalDist() const { return ownGoalDist; }
+
   [[nodiscard]] Vector2 getOwnGoalVec() const {
     if (ownGoalDist <= 0.001) return {0, 0};
     const double angle_rad = toRad(ownGoalRot);
@@ -61,6 +64,7 @@ public:
   // Own goal target
   [[nodiscard]] double getOwnGoalTargetRot() const { return ownGoalTargetRot; }
   [[nodiscard]] double getOwnGoalTargetDist() const { return ownGoalTargetDist; }
+
   [[nodiscard]] Vector2 getOwnGoalTargetVec() const {
     if (ownGoalTargetDist <= 0.001) return {0, 0};
     const double rad = ownGoalTargetRot * (M_PI / 180.0);
@@ -71,6 +75,7 @@ public:
   [[nodiscard]] double getBallRot() const { return ballRot; }
   [[nodiscard]] double getBallDist() const { return ballDist; }
   [[nodiscard]] bool getBallExists() const { return ballDist > 0.001; }
+
   [[nodiscard]] Vector2 getBallVec() const {
     if (!getBallExists()) return {0, 0};
     const double angle_rad = toRad(ballRot);
@@ -85,7 +90,7 @@ public:
   [[nodiscard]] double getGlobalY() const { return g_y; }
 
   // cm5 alive
-  [[nodiscard]] bool getCM5Running() const { return lastUpdateTimer < 50;}
+  [[nodiscard]] bool getCM5Running() const { return lastUpdateTimer < 50; }
 
   // helper for goalie
   [[nodiscard]] double getAwayFromOwnGoalAngle() const { return awayFromOwnGoalAngle; }
@@ -123,10 +128,10 @@ private:
   double awayFromOwnGoalAngle = 0;
 
   // Goal label mapping: 1=blue, 2=yellow
-  uint8_t targetGoalLabel = 2;       // default: attack blue
+  uint8_t targetGoalLabel = 2; // default: attack blue
   uint8_t targetGoalTargetLabel = 5; // blue target
-  uint8_t ownGoalLabel = 1;          // default: defend yellow
-  uint8_t ownGoalTargetLabel = 4;    // yellow target
+  uint8_t ownGoalLabel = 1; // default: defend yellow
+  uint8_t ownGoalTargetLabel = 4; // yellow target
 
   double ballRot = 0;
   double ballDist = 0;

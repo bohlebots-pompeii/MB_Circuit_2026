@@ -7,6 +7,9 @@
 #include <memory>
 #include <comms/CM5.h>
 #include <util/Vector2.hpp>
+#include <WorldState.h>
+
+struct WorldState;
 
 class Positioning {
 public:
@@ -15,7 +18,7 @@ public:
   void update();
 
   [[nodiscard]] Vector2 getMiddlePointVector() const { return _middlePointVector; }
-  void speedLimit(float& vx, float& vy, const Vector2& _driveVector) const;
+  void speedLimit(float& vx, float& vy, const Vector2& _driveVector, const WorldState& ws) const;
   [[nodiscard]] double getRotationDelta() const { return _rotationDelta; }
   [[nodiscard]] Vector2 getVelocity() const { return _velocity; }
 

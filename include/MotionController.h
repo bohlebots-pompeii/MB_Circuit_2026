@@ -1,8 +1,11 @@
 #pragma once
 #include <util/Vector2.hpp>
-#include <PID_v1.h>
+#include <PID.h>
 #include <memory>
 #include "Positioning.h"
+#include <WorldState.h>
+
+struct WorldState;
 
 class MotionController {
 public:
@@ -37,7 +40,7 @@ public:
 
   explicit MotionController(std::shared_ptr<Positioning> positioning, bool goalie);
 
-  Output compute(const Vector2& target, float rotInput, bool usePID = false);
+  Output compute(const Vector2& target, float rotInput, bool usePID, const WorldState& ws);
 
   [[nodiscard]] Vector2 getLastTarget() const;
 

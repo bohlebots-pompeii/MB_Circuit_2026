@@ -10,6 +10,7 @@
 #include <elapsedMillis.h>
 #include "util/MovingAverage.h"
 #include <config/config.h>
+#include <WorldState.h>
 
 elapsedMillis rotationDeltaTimer;
 elapsedMillis velocityTimer;
@@ -106,15 +107,66 @@ bool segmentsIntersect(const Vector2& a, const Vector2& b,
   return false;
 }
 
+bool isPointInsidePolygon(const Vector2& p, const auto& poly) {
+  bool inside = false;
+  for (size_t i = 0, j = poly.size() - 1; i < poly.size(); j = i++) {
+    if (poly[i].getY() > p.getY() != poly[j].getY() > p.getY() &&
+      p.getX() < (poly[j].getX() - poly[i].getX()) * (p.getY() - poly[i].getY()) / (poly[j].getY() - poly[i].getY()) +
+      poly[i].getX()) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+Vector2 getNearestPointOnSegment(const Vector2& p, const Vector2& a, const Vector2& b) {
+  const Vector2 ap = p - a;
+  const Vector2 ab = b - a;
+  double t = (ap.getX() * ab.getX() + ap.getY() * ab.getY()) / (ab.getX() * ab.getX() + ab.getY() * ab.getY());
+  t = std::clamp(t, 0.0, 1.0);
+  return a + ab * t;
+}
+
+Vector2 projectToPolygon(const Vector2& p, const auto& poly) {
+  Vector2 closest = p;
+  double minDist = 1e9;
+  Vector2 bestInwardNormal(0, 0);
+  for (size_t i = 0; i < poly.size(); i++) {
+    const Vector2 a = poly[i];
+    const Vector2 b = poly[(i + 1) % poly.size()];
+    const Vector2 proj = getNearestPointOnSegment(p, a, b);
+    const double dist = (p - proj).getMagnitude();
+    if (dist < minDist) {
+      minDist = dist;
+      closest = proj;
+      const Vector2 s = b - a;
+      bestInwardNormal = Vector2(s.getY(), -s.getX());
+    }
+  }
+  bestInwardNormal.normalize();
+  return closest + bestInwardNormal * 0.5; // Project slightly inward so we are safely inside
+}
+
 double getFirstHitT(const Vector2& pos, const Vector2& future, const Vector2& a, const Vector2& b) {
   const Vector2 r = future - pos;
   const Vector2 s = b - a;
+
+  // if drive vector is pointing inward, ignore this segment!
+  if (const Vector2 outwardNormal(-s.getY(), s.getX()); r.getX() * outwardNormal.getX() + r.getY() * outwardNormal.
+    getY() <= 0.0) {
+    return -1.0;
+  }
+
   const double denom = cross(r, s);
   if (std::abs(denom) < 1e-9) return -1.0;
 
   const double t = cross(a - pos, s) / denom;
   const double u = cross(a - pos, r) / denom;
-  if (t >= 0.0 && t <= 1.0 && u >= 0.0 && u <= 1.0) return t;
+
+  // Accept t around 0 to catch exact edge hits, prevent driving outwards if already on edge
+  if (t >= -1e-4 && t <= 1.0 && u >= -1e-4 && u <= 1.0001) {
+    return std::max(0.0, t);
+  }
   return -1.0;
 }
 
@@ -140,7 +192,7 @@ double computeSpeedScale(const Vector2& pos, const Vector2& driveVec, double loo
   return bestT;
 }
 
-void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector) const {
+void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector, const WorldState& ws) const {
   const double rawX = _cm5->getGlobalX();
   const double scaleX = FieldConfig::PERFECT_FIELD_HEIGHT / FieldConfig::REAL_FIELD_HEIGHT;
   const double x = rawX * scaleX;
@@ -149,7 +201,11 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector) 
   const double scaleY = FieldConfig::PERFECT_FIELD_WIDTH / FieldConfig::REAL_FIELD_WIDTH;
   const double y = rawY * scaleY;
 
-  const Vector2 pos(x, y);
+  Vector2 pos(x, y);
+
+  if (!isPointInsidePolygon(pos, FieldConfig::FIELD_CONTOUR)) {
+    pos = projectToPolygon(pos, FieldConfig::FIELD_CONTOUR);
+  }
 
   // Convert the local drive vector to a global vector based on the robot's heading
   Vector2 globalDriveVec = _driveVector.clone();
@@ -157,7 +213,13 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector) 
   globalDriveVec.rotate(headingRad); // Changed from -headingRad to +headingRad
 
   // Magic number lookahead
-  constexpr double lookaheadFactor = 1.7;
+  double lookaheadFactor;
+  if (!ws.isGoalie) {
+    lookaheadFactor = 1.9;
+  }
+  else {
+    lookaheadFactor = 2.0;
+  }
 
   int hitEdge = -1;
   const double factor = computeSpeedScale(pos, globalDriveVec, lookaheadFactor, hitEdge);
@@ -166,7 +228,7 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector) 
     return;
   }
 
-  constexpr double minSpeed = 15.0;
+  constexpr double minSpeed = 10.0;
 
   const auto newVx = static_cast<float>(vx * factor);
   const auto newVy = static_cast<float>(vy * factor);

@@ -55,6 +55,6 @@ void executePassBetween(const WorldState& ws, MotionController* motion) {
   const auto target = getToPointVec(ws.globalX, ws.globalY, -60, 0);
   //const auto target = Vector2(0,0);
 
-  auto [vx, vy, rot] = motion->compute(target, rotInput, true);
+  auto [vx, vy, rot] = motion->compute(target, rotInput, true, ws);
   pushData(ws.ena, false, static_cast<int>(round(vx)), static_cast<int>(round(vy)), rot, 0, true);
 }

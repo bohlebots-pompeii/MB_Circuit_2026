@@ -66,14 +66,16 @@ void sendData() {
 
   Vector2 global_drive(_current_vx, _current_vy);
   if (_useRotDelta) {
-    const double rotDeltaRad = MotionController::getInstance() ? MotionController::getInstance()->getRotDeltaRad() : 0.0;
+    const double rotDeltaRad = MotionController::getInstance()
+                                 ? MotionController::getInstance()->getRotDeltaRad()
+                                 : 0.0;
     global_drive.rotate(-rotDeltaRad * 2.0f);
   }
 
   const int vx_rot = constrain(static_cast<int>(global_drive.getX()), -70, 70);
   const int vy_rot = constrain(static_cast<int>(global_drive.getY()), -70, 70);
   const int rot_final = constrain(rotCalc, -50, 50);
-  const int dribbler_final = constrain(_drib, -25, 25);
+  const int dribbler_final = constrain(_drib, -30, 30);
 
   cmd.flags = 0;
   if (_ena) cmd.flags |= 0x01;
