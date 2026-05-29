@@ -135,7 +135,7 @@ double getFirstHitT(const Vector2& pos, const Vector2& future, const Vector2& a,
 }
 
 double computeSpeedScale(const Vector2& pos, const Vector2& future, int& outHitEdge) {
-  const auto& poly = FieldConfig::FIELD_CONTOUR;
+  const auto& poly = FieldConfig::FIELD_OUTER_CONTOUR;
   constexpr int n = poly.size();
 
   double bestT = 1.0;
@@ -162,39 +162,49 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector, 
   const double y = rawY * scaleY;
 
   Vector2 pos(x, y);
-  const Vector2 startingPos = pos;
+  if (!isPointInsidePolygon(pos, FieldConfig::FIELD_OUTER_CONTOUR)) {
+    pos = projectToPolygon(pos, FieldConfig::FIELD_OUTER_CONTOUR);
+  }
 
   Vector2 globalDriveVec = _driveVector.clone();
-  //globalDriveVec.rotate(toRad(ws.heading));
+  const double lookaheadFactor = ws.isGoalie ? 2.0 : 2.5;
 
-  double lookaheadFactor;
-  if (!ws.isGoalie) {
-    lookaheadFactor = 2.5;
-  }
-  else {
-    lookaheadFactor = 2.0;
-  }
+  Vector2 perp(-globalDriveVec.getY(), globalDriveVec.getX());
+  if (perp.getMagnitude() > 1e-6) perp.normalize();
+  const double r = GeneralConfig::BOT_DIAMETER / 2.0;
 
-  pos = pos + globalDriveVec * lookaheadFactor;
+  const Vector2 starts[3] = {
+    pos,
+    pos + perp * r,
+    pos - perp * r
+  };
 
-  if (!isPointInsidePolygon(pos, FieldConfig::FIELD_CONTOUR)) {
-    pos = projectToPolygon(pos, FieldConfig::FIELD_CONTOUR);
-  }
-
+  double bestDist = 1e9;
   int hitEdge = -1;
-  double factor = computeSpeedScale(startingPos, pos, hitEdge);
 
-  factor = std::clamp(factor, 0.0, 1.0);
-
-  constexpr double minSpeed = 5.0;
-
-  const auto newVx = static_cast<float>(vx * factor);
-  const auto newVy = static_cast<float>(vy * factor);
-
-  if (std::abs(vx) >= minSpeed) {
-    vx = std::abs(newVx) < minSpeed ? (vx > 0 ? minSpeed : -minSpeed) : newVx;
+  for (const auto& start : starts) {
+    Vector2 future = start + globalDriveVec * lookaheadFactor;
+    int edge = -1;
+    double t = computeSpeedScale(start, future, edge);
+    if (t >= 0.0 && t < 1.0) {
+      double dist = (future - start).getMagnitude() * t;
+      if (dist < bestDist) {
+        bestDist = dist;
+        hitEdge = edge;
+      }
+    }
   }
-  if (std::abs(vy) >= minSpeed) {
-    vy = std::abs(newVy) < minSpeed ? (vy > 0 ? minSpeed : -minSpeed) : newVy;
-  }
+
+  if (hitEdge == -1) return;
+
+  const double currentSpeed = Vector2(vx, vy).getMagnitude();
+  if (currentSpeed < 1e-6) return;
+
+  constexpr double BRAKE_DISTANCE = 40.0; // cm - tune this
+  constexpr double MIN_SPEED = 10.0;
+
+  const double factor = std::clamp(bestDist / BRAKE_DISTANCE, MIN_SPEED / currentSpeed, 1.0);
+
+  vx = static_cast<float>(vx * factor);
+  vy = static_cast<float>(vy * factor);
 }
