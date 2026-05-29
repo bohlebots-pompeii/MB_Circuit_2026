@@ -111,7 +111,8 @@ bool isPointInsidePolygon(const Vector2& p, const auto& poly) {
   bool inside = false;
   for (size_t i = 0, j = poly.size() - 1; i < poly.size(); j = i++) {
     if (poly[i].getY() > p.getY() != poly[j].getY() > p.getY() &&
-        p.getX() < (poly[j].getX() - poly[i].getX()) * (p.getY() - poly[i].getY()) / (poly[j].getY() - poly[i].getY()) + poly[i].getX()) {
+      p.getX() < (poly[j].getX() - poly[i].getX()) * (p.getY() - poly[i].getY()) / (poly[j].getY() - poly[i].getY()) +
+      poly[i].getX()) {
       inside = !inside;
     }
   }
@@ -129,7 +130,7 @@ Vector2 getNearestPointOnSegment(const Vector2& p, const Vector2& a, const Vecto
 Vector2 projectToPolygon(const Vector2& p, const auto& poly) {
   Vector2 closest = p;
   double minDist = 1e9;
-  Vector2 bestInwardNormal(0,0);
+  Vector2 bestInwardNormal(0, 0);
   for (size_t i = 0; i < poly.size(); i++) {
     const Vector2 a = poly[i];
     const Vector2 b = poly[(i + 1) % poly.size()];
@@ -151,7 +152,8 @@ double getFirstHitT(const Vector2& pos, const Vector2& future, const Vector2& a,
   const Vector2 s = b - a;
 
   // if drive vector is pointing inward, ignore this segment!
-  if (const Vector2 outwardNormal(-s.getY(), s.getX()); r.getX() * outwardNormal.getX() + r.getY() * outwardNormal.getY() <= 0.0) {
+  if (const Vector2 outwardNormal(-s.getY(), s.getX()); r.getX() * outwardNormal.getX() + r.getY() * outwardNormal.
+    getY() <= 0.0) {
     return -1.0;
   }
 

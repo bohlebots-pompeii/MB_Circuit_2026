@@ -248,7 +248,7 @@ void CM5::update() {
         }
       }
 
-      for (double & j : detections[i].bbox) {
+      for (double& j : detections[i].bbox) {
         uint8_t bytes[2];
         bytes[0] = Serial2.read();
         bytes[1] = Serial2.read();

@@ -8,7 +8,8 @@ MotionController* MotionController::_instance = nullptr;
 MotionController::MotionController(std::shared_ptr<Positioning> positioning, bool goalie)
   : _xPID(&_xIn, &_xOut, &_xSet, PIDConfig::X_Kp, PIDConfig::X_Ki, PIDConfig::X_Kd, DIRECT),
     _yPID(&_yIn, &_yOut, &_ySet, PIDConfig::Y_Kp, PIDConfig::Y_Ki, PIDConfig::Y_Kd, DIRECT),
-    _rotPID(&_rotIn, &_rotOut, &_rotSet, PIDConfig::ROTATION_Kp, PIDConfig::ROTATION_Ki, PIDConfig::ROTATION_Kd, DIRECT),
+    _rotPID(&_rotIn, &_rotOut, &_rotSet, PIDConfig::ROTATION_Kp, PIDConfig::ROTATION_Ki, PIDConfig::ROTATION_Kd,
+            DIRECT),
     _positioning(std::move(positioning)) {
   if (!goalie) { init(); }
   else { initGoalie(); }
@@ -60,7 +61,8 @@ void MotionController::initGoalie() {
   }
 }
 
-MotionController::Output MotionController::compute(const Vector2& target, const float rotInput, const bool usePID, const WorldState& ws) {
+MotionController::Output MotionController::compute(const Vector2& target, const float rotInput, const bool usePID,
+                                                   const WorldState& ws) {
   Output out{};
 
   _lastTarget = target;

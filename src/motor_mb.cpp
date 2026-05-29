@@ -66,7 +66,9 @@ void sendData() {
 
   Vector2 global_drive(_current_vx, _current_vy);
   if (_useRotDelta) {
-    const double rotDeltaRad = MotionController::getInstance() ? MotionController::getInstance()->getRotDeltaRad() : 0.0;
+    const double rotDeltaRad = MotionController::getInstance()
+                                 ? MotionController::getInstance()->getRotDeltaRad()
+                                 : 0.0;
     global_drive.rotate(-rotDeltaRad * 2.0f);
   }
 
