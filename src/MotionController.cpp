@@ -100,7 +100,11 @@ MotionController::Output MotionController::compute(const Vector2& target, const 
     _yPID.ResetIntegral();
   }
 
-  const auto driveVector = Vector2(out.vx, out.vy);
+  auto driveVector = Vector2(out.vx, out.vy);
+
+  if (!usePID) {
+    driveVector.rotate(toRad(-ws.heading));
+  }
 
   _positioning->speedLimit(out.vx, out.vy, driveVector, ws);
 

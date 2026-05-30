@@ -100,7 +100,6 @@ void executeLineEscape(const WorldState& ws, MotionController* motion) {
   while (globalBallDir > 180) globalBallDir -= 360;
   while (globalBallDir < -180) globalBallDir += 360;
 
-  /*
   if (checkBallOnLine(ws)) {
     if (std::abs(ws.heading) >= GeneralConfig::HEADING_HARD_LIMIT_DEG) {
       if (ws.ballRot > 0.0) {
@@ -120,8 +119,6 @@ void executeLineEscape(const WorldState& ws, MotionController* motion) {
   else {
     rotInput = static_cast<float>(ws.heading);
   }
-  */
-  rotInput = 0.0;
 
   auto [vx, vy, rot] = motion->compute(target, rotInput, false, ws);
 

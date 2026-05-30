@@ -135,7 +135,7 @@ double getFirstHitT(const Vector2& pos, const Vector2& future, const Vector2& a,
 }
 
 double computeSpeedScale(const Vector2& pos, const Vector2& future, int& outHitEdge) {
-  const auto& poly = FieldConfig::FIELD_OUTER_CONTOUR;
+  const auto& poly = FieldConfig::FIELD_CONTOUR;
   constexpr int n = poly.size();
 
   double bestT = 1.0;
@@ -153,31 +153,22 @@ double computeSpeedScale(const Vector2& pos, const Vector2& future, int& outHitE
 }
 
 void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector, const WorldState& ws) const {
-  const double rawX = _cm5->getGlobalX();
-  const double scaleX = FieldConfig::PERFECT_FIELD_HEIGHT / FieldConfig::REAL_FIELD_HEIGHT;
-  const double x = rawX * scaleX;
-
-  const double rawY = _cm5->getGlobalY();
-  const double scaleY = FieldConfig::PERFECT_FIELD_WIDTH / FieldConfig::REAL_FIELD_WIDTH;
-  const double y = rawY * scaleY;
+  const double x = _cm5->getGlobalX() * (FieldConfig::PERFECT_FIELD_HEIGHT / FieldConfig::REAL_FIELD_HEIGHT);
+  const double y = _cm5->getGlobalY() * (FieldConfig::PERFECT_FIELD_WIDTH  / FieldConfig::REAL_FIELD_WIDTH);
 
   Vector2 pos(x, y);
-  if (!isPointInsidePolygon(pos, FieldConfig::FIELD_OUTER_CONTOUR)) {
-    pos = projectToPolygon(pos, FieldConfig::FIELD_OUTER_CONTOUR);
+  if (!isPointInsidePolygon(pos, FieldConfig::FIELD_CONTOUR)) {
+    pos = projectToPolygon(pos, FieldConfig::FIELD_CONTOUR);
   }
 
-  Vector2 globalDriveVec = _driveVector.clone();
-  const double lookaheadFactor = ws.isGoalie ? 2.0 : 2.5;
+  const Vector2 globalDriveVec = _driveVector.clone();
+  const double lookaheadFactor = ws.isGoalie ? 1.5 : 1.6;
 
   Vector2 perp(-globalDriveVec.getY(), globalDriveVec.getX());
   if (perp.getMagnitude() > 1e-6) perp.normalize();
-  const double r = GeneralConfig::BOT_DIAMETER / 2.0;
+  constexpr double r = GeneralConfig::BOT_DIAMETER / 2.0;
 
-  const Vector2 starts[3] = {
-    pos,
-    pos + perp * r,
-    pos - perp * r
-  };
+  const Vector2 starts[3] = { pos, pos + perp * r, pos - perp * r };
 
   double bestDist = 1e9;
   int hitEdge = -1;
@@ -200,10 +191,11 @@ void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector, 
   const double currentSpeed = Vector2(vx, vy).getMagnitude();
   if (currentSpeed < 1e-6) return;
 
-  constexpr double BRAKE_DISTANCE = 40.0; // cm - tune this
-  constexpr double MIN_SPEED = 10.0;
+  constexpr double MIN_SPEED = 20.0;
+  constexpr double DAMPING   = 0.80;
 
-  const double factor = std::clamp(bestDist / BRAKE_DISTANCE, MIN_SPEED / currentSpeed, 1.0);
+  const double newSpeed = std::clamp(bestDist * DAMPING, MIN_SPEED, currentSpeed);
+  const double factor   = newSpeed / currentSpeed;
 
   vx = static_cast<float>(vx * factor);
   vy = static_cast<float>(vy * factor);

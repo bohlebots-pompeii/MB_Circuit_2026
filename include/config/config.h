@@ -136,13 +136,6 @@ namespace FieldConfig {
     Vector2(-Hx, Wy) // till top left
   };
 
-  const std::array FIELD_OUTER_CONTOUR = {
-    Vector2(Hx, Wy),    // top right
-    Vector2(Hx, -Wy),   // bottom right
-    Vector2(-Hx, -Wy),  // bottom left
-    Vector2(-Hx, Wy)    // top left
-  };
-
   constexpr double GOAL_NEUTRAL_POS_X = -GX + GeneralConfig::BOT_DIAMETER * 1.5;
   constexpr double LINE_POS_Y = Wy - GeneralConfig::BOT_DIAMETER * 3;
 
