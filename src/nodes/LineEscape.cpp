@@ -29,7 +29,7 @@ static Vector2 getAwayFromLineVec(const WorldState& ws, int speed) {
   }
   else {
     target = midVec;
-    if (checkInPocket(ws)) {
+    if (checkInPocket(ws) || checkInOwnPocket(ws)) {
       target = line * 0.5 + midVec * 0.5;
     }
   }
@@ -67,7 +67,7 @@ bool checkInOwnPocket(const WorldState& ws) {
   if (globalOwnGoalRot > 180.0) globalOwnGoalRot -= 360.0;
   if (globalOwnGoalRot < -180.0) globalOwnGoalRot += 360.0;
 
-  if (std::abs(globalOwnGoalRot) > FieldConfig::IN_POCKET_ANGLE) {
+  if (std::abs(globalOwnGoalRot) > FieldConfig::IN_POCKET_ANGLE && ws.globalX < 0.0 && std::abs(ws.globalY) > FieldConfig::GY) {
     return true;
   }
   return false;
@@ -78,7 +78,7 @@ bool checkInPocket(const WorldState& ws) {
   if (globalGoalRot > 180.0) globalGoalRot -= 360.0;
   if (globalGoalRot < -180.0) globalGoalRot += 360.0;
 
-  if (std::abs(globalGoalRot) > FieldConfig::IN_POCKET_ANGLE) {
+  if (std::abs(globalGoalRot) > FieldConfig::IN_POCKET_ANGLE && ws.globalX > 0.0 && std::abs(ws.globalY) > FieldConfig::GY) {
     return true;
   }
   return false;
