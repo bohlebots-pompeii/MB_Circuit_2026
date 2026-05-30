@@ -124,14 +124,14 @@ namespace FieldConfig {
   const std::array FIELD_CONTOUR = {
     Vector2(Hx, Wy), // top right
     Vector2(Hx, GY), // down till right corner of penalty (enmy)
-    Vector2(TARGET_GX, GY), // in
-    Vector2(TARGET_GX, -GY), // down till left corner of penalty (enemy)
+    Vector2(GX, GY), // in
+    Vector2(GX, -GY), // down till left corner of penalty (enemy)
     Vector2(Hx, -GY), // out
     Vector2(Hx, -Wy), // bottom right
     Vector2(-Hx, -Wy), // bottom left
     Vector2(-Hx, -GY), // up till right corner of penalty (own)
-    Vector2(-TARGET_GX, -GY), // in
-    Vector2(-TARGET_GX, GY), // up till left corner of penalty (own)
+    Vector2(-GX, -GY), // in
+    Vector2(-GX, GY), // up till left corner of penalty (own)
     Vector2(-Hx, GY), // out
     Vector2(-Hx, Wy) // till top left
   };

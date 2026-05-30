@@ -77,36 +77,6 @@ void Positioning::updateVelocity() {
 
 double cross(const Vector2& a, const Vector2& b) { return a.getX() * b.getY() - a.getY() * b.getX(); }
 
-int orient(const Vector2& a, const Vector2& b, const Vector2& c) {
-  const double v = cross(b - a, c - a);
-  if (v > 0) return 1;
-  if (v < 0) return -1;
-  return 0;
-}
-
-bool onSegment(const Vector2& a, const Vector2& b, const Vector2& p) {
-  return std::min(a.getX(), b.getX()) <= p.getX() && p.getX() <= std::max(a.getX(), b.getX()) &&
-    std::min(a.getY(), b.getY()) <= p.getY() && p.getY() <= std::max(a.getY(), b.getY());
-}
-
-bool segmentsIntersect(const Vector2& a, const Vector2& b,
-                       const Vector2& c, const Vector2& d) {
-  const int o1 = orient(a, b, c);
-  const int o2 = orient(a, b, d);
-  const int o3 = orient(c, d, a);
-  const int o4 = orient(c, d, b);
-
-  if (o1 != o2 && o3 != o4) return true;
-
-  // collinear cases
-  if (o1 == 0 && onSegment(a, b, c)) return true;
-  if (o2 == 0 && onSegment(a, b, d)) return true;
-  if (o3 == 0 && onSegment(c, d, a)) return true;
-  if (o4 == 0 && onSegment(c, d, b)) return true;
-
-  return false;
-}
-
 bool isPointInsidePolygon(const Vector2& p, const auto& poly) {
   bool inside = false;
   for (size_t i = 0, j = poly.size() - 1; i < poly.size(); j = i++) {
@@ -151,12 +121,6 @@ double getFirstHitT(const Vector2& pos, const Vector2& future, const Vector2& a,
   const Vector2 r = future - pos;
   const Vector2 s = b - a;
 
-  // if drive vector is pointing inward, ignore this segment!
-  if (const Vector2 outwardNormal(-s.getY(), s.getX()); r.getX() * outwardNormal.getX() + r.getY() * outwardNormal.
-    getY() <= 0.0) {
-    return -1.0;
-  }
-
   const double denom = cross(r, s);
   if (std::abs(denom) < 1e-9) return -1.0;
 
@@ -170,73 +134,69 @@ double getFirstHitT(const Vector2& pos, const Vector2& future, const Vector2& a,
   return -1.0;
 }
 
-double computeSpeedScale(const Vector2& pos, const Vector2& driveVec, double lookaheadFactor, int& outHitEdge) {
-  const Vector2 future = pos + driveVec * lookaheadFactor;
+double computeSpeedScale(const Vector2& pos, const Vector2& future, int& outHitEdge) {
   const auto& poly = FieldConfig::FIELD_CONTOUR;
   constexpr int n = poly.size();
 
   double bestT = 1.0;
-  bool hit = false;
   outHitEdge = -1;
 
   for (int i = 0; i < n; ++i) {
-    if (const double t = getFirstHitT(pos, future, poly[i], poly[(i + 1) % n]); t >= 0.0 && t < bestT) {
-      hit = true;
+    const double t = getFirstHitT(pos, future, poly[i], poly[(i + 1) % n]);
+    if  (t >= 0.0 && t < bestT) {
       bestT = t;
       outHitEdge = i;
     }
   }
 
-  // Pure polygon factor: 1.0 means no hit within lookahead.
-  // < 1.0 means we hit the edge, so we directly use t as the scaling factor!
   return bestT;
 }
 
 void Positioning::speedLimit(float& vx, float& vy, const Vector2& _driveVector, const WorldState& ws) const {
-  const double rawX = _cm5->getGlobalX();
-  const double scaleX = FieldConfig::PERFECT_FIELD_HEIGHT / FieldConfig::REAL_FIELD_HEIGHT;
-  const double x = rawX * scaleX;
-
-  const double rawY = _cm5->getGlobalY();
-  const double scaleY = FieldConfig::PERFECT_FIELD_WIDTH / FieldConfig::REAL_FIELD_WIDTH;
-  const double y = rawY * scaleY;
+  const double x = _cm5->getGlobalX() * (FieldConfig::PERFECT_FIELD_HEIGHT / FieldConfig::REAL_FIELD_HEIGHT);
+  const double y = _cm5->getGlobalY() * (FieldConfig::PERFECT_FIELD_WIDTH  / FieldConfig::REAL_FIELD_WIDTH);
 
   Vector2 pos(x, y);
-
   if (!isPointInsidePolygon(pos, FieldConfig::FIELD_CONTOUR)) {
     pos = projectToPolygon(pos, FieldConfig::FIELD_CONTOUR);
   }
 
-  // Convert the local drive vector to a global vector based on the robot's heading
-  Vector2 globalDriveVec = _driveVector.clone();
-  const double headingRad = _cm5->getHeading() * (M_PI / 180.0);
-  globalDriveVec.rotate(headingRad); // Changed from -headingRad to +headingRad
+  const Vector2 globalDriveVec = _driveVector.clone();
+  const double lookaheadFactor = ws.isGoalie ? 1.5 : 1.6;
 
-  // Magic number lookahead
-  double lookaheadFactor;
-  if (!ws.isGoalie) {
-    lookaheadFactor = 1.9;
-  }
-  else {
-    lookaheadFactor = 2.0;
-  }
+  Vector2 perp(-globalDriveVec.getY(), globalDriveVec.getX());
+  if (perp.getMagnitude() > 1e-6) perp.normalize();
+  constexpr double r = GeneralConfig::BOT_DIAMETER / 2.0;
 
+  const Vector2 starts[3] = { pos, pos + perp * r, pos - perp * r };
+
+  double bestDist = 1e9;
   int hitEdge = -1;
-  const double factor = computeSpeedScale(pos, globalDriveVec, lookaheadFactor, hitEdge);
 
-  if (factor >= 1.0) {
-    return;
+  for (const auto& start : starts) {
+    Vector2 future = start + globalDriveVec * lookaheadFactor;
+    int edge = -1;
+    double t = computeSpeedScale(start, future, edge);
+    if (t >= 0.0 && t < 1.0) {
+      double dist = (future - start).getMagnitude() * t;
+      if (dist < bestDist) {
+        bestDist = dist;
+        hitEdge = edge;
+      }
+    }
   }
 
-  constexpr double minSpeed = 10.0;
+  if (hitEdge == -1) return;
 
-  const auto newVx = static_cast<float>(vx * factor);
-  const auto newVy = static_cast<float>(vy * factor);
+  const double currentSpeed = Vector2(vx, vy).getMagnitude();
+  if (currentSpeed < 1e-6) return;
 
-  if (std::abs(vx) >= minSpeed) {
-    vx = std::abs(newVx) < minSpeed ? (vx > 0 ? minSpeed : -minSpeed) : newVx;
-  }
-  if (std::abs(vy) >= minSpeed) {
-    vy = std::abs(newVy) < minSpeed ? (vy > 0 ? minSpeed : -minSpeed) : newVy;
-  }
+  constexpr double MIN_SPEED = 20.0;
+  constexpr double DAMPING   = 0.80;
+
+  const double newSpeed = std::clamp(bestDist * DAMPING, MIN_SPEED, currentSpeed);
+  const double factor   = newSpeed / currentSpeed;
+
+  vx = static_cast<float>(vx * factor);
+  vy = static_cast<float>(vy * factor);
 }
