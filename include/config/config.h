@@ -152,5 +152,5 @@ namespace Goalie {
   constexpr double BALL_MOVED_THRESH = 5.0;
 
   constexpr float BALL_AVOID_DIST = GeneralConfig::BOT_DIAMETER * 2.0;
-  constexpr double HALF_CIRCLE_RADIUS = 25.0 + GeneralConfig::BOT_DIAMETER * 1.5;
+  constexpr double HALF_CIRCLE_RADIUS = 25.0 + GeneralConfig::BOT_DIAMETER * 1.4;
 }
