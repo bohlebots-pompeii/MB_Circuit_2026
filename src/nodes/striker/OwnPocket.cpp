@@ -2,7 +2,7 @@
 // Created by Timo on 27.05.26.
 //
 
-#include "../../../include/nodes/striker/OwnPocket.h"
+#include "nodes/striker/OwnPocket.h"
 #include <MotionController.h>
 #include <WorldState.h>
 #include <config/config.h>
@@ -10,6 +10,17 @@
 #include <util/Vector2.hpp>
 #include <cmath>
 #include <nodes/goalie/HalfCircleGuard.h>
+
+bool checkBotInOwnPocket(const WorldState& ws) {
+  double globalOwnGoalRot = ws.ownGoalRot - ws.heading;
+  if (globalOwnGoalRot > 180.0) globalOwnGoalRot -= 360.0;
+  if (globalOwnGoalRot < -180.0) globalOwnGoalRot += 360.0;
+
+  if (std::abs(globalOwnGoalRot) > FieldConfig::IN_POCKET_ANGLE) {
+    return true;
+  }
+  return false;
+}
 
 bool checkBallInOwnPocket(const WorldState& ws) {
   if (!ws.ballExists) return false;
@@ -20,8 +31,9 @@ bool checkBallInOwnPocket(const WorldState& ws) {
   const Vector2 ballGlobal = Vector2(ws.globalX, ws.globalY) + ballVec;
 
   if (ballGlobal.getX() < 0 &&
-    std::abs(ballGlobal.getX()) > FieldConfig::Hx - 50.0 &&
-    std::abs(ballGlobal.getY()) > FieldConfig::Wy - 50.0) {
+    std::abs(ballGlobal.getX()) > FieldConfig::GX &&
+    std::abs(ballGlobal.getY()) > FieldConfig::GY &&
+    checkBotInOwnPocket(ws)) {
     return true;
   }
 
@@ -40,11 +52,14 @@ void executeOwnPocket(const WorldState& ws, MotionController* motion, const Acti
     target.normalize();
     target *= 20.0;
     usePID = false;
+    rotInput = ws.ballRot / 2.0;
   }
 
-  // check if we're not looking at the goal
-  if (std::abs(ws.ownGoalRot) < 150.0) {
-    rotInput = ws.ballRot;
+  if (ws.peerRunning && ws.peerAlive) {
+    if (ws.globalX < FieldConfig::HARD_BARRIER) {
+      target = getToPointVec(ws.globalX, ws.globalY, FieldConfig::HARD_BARRIER, 0);
+      rotInput = ws.heading;
+    }
   }
 
   const int drib = ws.ballDist < 40.0 && ws.ballDist != 0.0 ? 100 : 0;

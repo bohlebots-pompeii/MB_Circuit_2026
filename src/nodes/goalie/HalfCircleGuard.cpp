@@ -17,7 +17,8 @@ Vector2 getHalfCircleTarget(const WorldState& ws) {
   const double dist = dir.getMagnitude();
   dir.normalize();
 
-  const double targetDist = std::max(dist * 0.5, Goalie::HALF_CIRCLE_RADIUS);
+  double targetDist = std::max(dist * 0.5, Goalie::HALF_CIRCLE_RADIUS);
+  targetDist = std::min(targetDist, 112.0); // max is mid point line
 
   return ownGoalVec + dir * targetDist;
 }
