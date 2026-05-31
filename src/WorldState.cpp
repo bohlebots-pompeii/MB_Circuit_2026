@@ -108,6 +108,7 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
     ws.peerSeesLine = espNowGetFlag(flags, 2);
     ws.peerBallValid = espNowGetFlag(flags, 3);
     ws.peerSwitchWanted = espNowGetFlag(flags, 4);
+    ws.peerGoalValid = espNowGetFlag(flags, 5);
   }
   else {
     ws.peerGlobalX = 0;
@@ -120,6 +121,7 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
     ws.peerSeesLine = false;
     ws.peerBallValid = false;
     ws.peerSwitchWanted = false;
+    ws.peerGoalValid = false;
   }
 
   // derive gameRunningTime
@@ -142,7 +144,7 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.cm5Running = cm5.getCM5Running();
 
   // reconstruct if data lost
-  if (!ws.ballExists && ws.peerBallValid && ws.peerRunning) {
+  if (!ws.ballExists && ws.peerBallValid && ws.peerRunning && ws.goalValid && ws.peerGoalValid) {
     ws.ballExists = true;
     Vector2 ownToAllyVec = Vector2(ws.peerGlobalX, ws.peerGlobalY) - Vector2(ws.globalX, ws.globalY);
     ws.ballVec = ownToAllyVec + degToVec(ws.peerBallRot) * ws.peerBallDist;

@@ -13,7 +13,7 @@ struct __attribute__((packed)) EspNowPacket {
   float heading; // robot heading in degrees
   float ballRot; // ball angle relative to robot
   float ballDist; // ball distance
-  uint8_t flags; // bit0=isRunning, bit1=isGoalie, bit2=seesLine, bit3=ballExists, bit 4=switchWanted
+  uint8_t flags; // bit0=isRunning, bit1=isGoalie, bit2=seesLine, bit3=ballExists, bit 4=switchWanted, bit 5=goalValid
 };
 
 inline void espNowSetFlag(uint8_t& flags, const uint8_t bit, const bool val) {

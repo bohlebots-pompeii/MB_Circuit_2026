@@ -73,6 +73,7 @@ struct WorldState {
   bool peerSeesLine;
   bool peerBallValid;
   bool peerSwitchWanted;
+  bool peerGoalValid;
 
   // game state
   bool isGoalie;

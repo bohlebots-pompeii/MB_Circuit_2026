@@ -106,11 +106,20 @@ void Bot::tick() {
 
   // ally logic ---
   bool switchWanted = false;
+
   if (_gameState->getRole() == GameStateHandler::Role::GOALIE) {
     switchWanted = getSwitchWanted(ws);
   }
+  else if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
+    if (ws.peerAlive && !ws.peerIsGoalie && ws.gameRunningTime > 1000) {
+      const bool ownFartherBallDist = ws.ballDist > ws.peerBallDist;
+      if (ownFartherBallDist) {
+        _gameState->setRole(GameStateHandler::Role::GOALIE);
+      }
+    }
+  }
 
-  EspNow::getInstance().tick(ws, *_gameState, switchWanted); // update espnow
+  EspNow::getInstance().tick(ws, *_gameState, switchWanted);
 
   if (switchWanted) {
     _gameState->setRole(GameStateHandler::Role::STRIKER);
