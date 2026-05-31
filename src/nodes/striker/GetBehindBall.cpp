@@ -40,10 +40,10 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
   Vector2 target = ballVec + circlePoint;
 
   if (target.getX() < 0.0) {
-    target.setX(target.getX() * 1.5);
+    target.setX(target.getX() * 1.7);
 
-    if (absBallRot < 110.0 && absBallRot > 75.0){
-      target.setX(target.getX() * 2);
+    if (absBallRot < 110.0 && absBallRot > 55.0){
+      target.setX(target.getX() * 2.5);
     }
   }
 

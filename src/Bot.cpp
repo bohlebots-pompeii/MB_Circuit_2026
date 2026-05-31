@@ -108,7 +108,12 @@ void Bot::tick() {
   bool switchWanted = false;
 
   if (_gameState->getRole() == GameStateHandler::Role::GOALIE) {
-    switchWanted = getSwitchWanted(ws);
+    if (ws.peerIsGoalie) {
+      if (ws.ballDist < ws.peerBallDist && ws.peerRunning) {
+        _gameState->setRole(GameStateHandler::Role::STRIKER);
+      }
+    }
+    else { switchWanted = getSwitchWanted(ws); }
   }
   else if (_gameState->getRole() == GameStateHandler::Role::STRIKER) {
     if (ws.peerAlive && !ws.peerIsGoalie && ws.gameRunningTime > 1000) {
@@ -125,7 +130,7 @@ void Bot::tick() {
     _gameState->setRole(GameStateHandler::Role::STRIKER);
   }
 
-  if (ws.peerAlive && ws.peerSwitchWanted) {
+  if (ws.peerAlive && ws.peerSwitchWanted && !ws.peerIsGoalie) {
     _gameState->setRole(GameStateHandler::Role::GOALIE);
   }
   // ally logic end ---
