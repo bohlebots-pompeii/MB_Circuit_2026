@@ -99,7 +99,7 @@ void executeHalfCircleGuard(const WorldState& ws, MotionController* motion) {
 
   applyBallAvoidance(ws, target);
 
-  const int drib = ws.ballDist < 40 && ws.ballDist != 0 ? 100 : 0;
+  const int drib = ws.ballDist < 20 && ws.ballDist != 0 ? 100 : 0;
   auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID, ws);
   pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, drib, true);
 }
