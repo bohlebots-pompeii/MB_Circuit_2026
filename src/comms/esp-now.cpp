@@ -146,6 +146,7 @@ void EspNow::tick(const WorldState& ws, const GameStateHandler& gameState, bool 
   espNowSetFlag(toSend.flags, 2, ws.lineSeen);
   espNowSetFlag(toSend.flags, 3, ws.ballExists);
   espNowSetFlag(toSend.flags, 4, switchWanted);
+  espNowSetFlag(toSend.flags, 5, ws.goalValid);
 
   update(toSend);
 }

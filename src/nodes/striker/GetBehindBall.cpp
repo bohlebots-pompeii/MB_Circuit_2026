@@ -18,10 +18,12 @@ inline double wrapAngleRad(double a) {
 
 static Vector2 getBallPursuitVec(const WorldState& ws) {
   constexpr double circleRadius = 27.0;
-  constexpr double driveForwardStart = 35.0;
+  constexpr double driveForwardStart = 27.0;
   constexpr double driveForwardMax = 5.0;
   constexpr double throughDist = 10.0;
   constexpr double backwardsMultiplierStart = 135.0;
+
+  const double absBallRot = std::abs(ws.ballRot);
 
   const Vector2 ballVec = ws.ballVec;
 
@@ -37,6 +39,14 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
   // base target
   Vector2 target = ballVec + circlePoint;
 
+  if (target.getX() < 0.0) {
+    target.setX(target.getX() * 1.5);
+
+    if (absBallRot < 110.0 && absBallRot > 75.0){
+      target.setX(target.getX() * 2);
+    }
+  }
+
   // clamp base target to make sure no overshoot
   if (ballVec.getX() > 0 && std::abs(target.getY()) > std::abs(ballVec.getY()) && target.getY() != 0) {
     const double scale = std::abs(ballVec.getY() / target.getY());
@@ -45,9 +55,9 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
 
   // linear interpolate to the throughpoint
   const auto throughPoint = Vector2(ballVec.getX() + throughDist, ballVec.getY());
-  if (std::abs(ws.ballRot) < driveForwardStart) {
+  if (absBallRot < driveForwardStart) {
     const double t = std::clamp(
-      (driveForwardStart - std::abs(ws.ballRot)) /
+      (driveForwardStart - absBallRot) /
       (driveForwardStart - driveForwardMax),
       0.0,
       1.0
@@ -56,9 +66,9 @@ static Vector2 getBallPursuitVec(const WorldState& ws) {
     target = Vector2::lerp(target, throughPoint, t);
   }
 
-  if (std::abs(ws.ballRot) > driveForwardStart && std::abs(ws.ballRot) < backwardsMultiplierStart) {
+  if (absBallRot > driveForwardStart && absBallRot < backwardsMultiplierStart) {
     const double t = std::clamp(
-      (driveForwardStart - std::abs(ws.ballRot)) /
+      (driveForwardStart - absBallRot) /
       (driveForwardStart - backwardsMultiplierStart),
       1.5,
       2.0
