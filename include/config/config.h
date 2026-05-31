@@ -143,7 +143,7 @@ namespace FieldConfig {
   constexpr double POINT_REACHED_DIST = GeneralConfig::BOT_DIAMETER / 2.0;
   constexpr double KICK_DISTANCE = GX + GeneralConfig::BOT_DIAMETER * 2;
 
-  constexpr double HARD_BARRIER = -GX + GeneralConfig::BOT_DIAMETER * 2;
+  constexpr double HARD_BARRIER = -GX + GeneralConfig::BOT_DIAMETER * 2.5;
 }
 
 namespace Goalie {
