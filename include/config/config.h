@@ -50,7 +50,7 @@ namespace PIDConfig {
   // Y-axis motion PID
   constexpr double Y_Kp = 1.8;
   constexpr double Y_Ki = 0.4;
-  constexpr double Y_Kd = 0.23;
+  constexpr double Y_Kd = 0.15;
   constexpr double Y_O_MIN = -70.0;
   constexpr double Y_O_MAX = 70.0;
   constexpr int Y_SampleTime = 21;
@@ -107,7 +107,7 @@ namespace GoaliePIDConfig {
 
 namespace FieldConfig {
   // main field config
-  const auto MAX_FIELD_MEASUREMENTS = Vector2(112, 72); // measure max x and max y
+  const auto MAX_FIELD_MEASUREMENTS = Vector2(89, 68); // measure max x and max y
 
   const double REAL_FIELD_HEIGHT = MAX_FIELD_MEASUREMENTS.getX() * 2;
   const double REAL_FIELD_WIDTH = MAX_FIELD_MEASUREMENTS.getY() * 2;

@@ -122,5 +122,5 @@ void executeLineEscape(const WorldState& ws, MotionController* motion) {
 
   auto [vx, vy, rot] = motion->compute(target, rotInput, false, ws);
 
-  pushData(ws.ena, false, static_cast<int>(vx), static_cast<int>(vy), rot, 100, true);
+  pushData(ws.ena, false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100, true);
 }
