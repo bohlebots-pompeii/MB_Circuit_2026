@@ -154,7 +154,12 @@ void CM5::computeRotationsAndDistances(const Detection* det, const int num_det) 
 }
 
 void CM5::computeAwayFromOwnGoalAngle() {
-  double awayAngle = ownGoalRot + 180.0;
+  const double angle = ownGoalRot;
+  if (ownGoalDist == 0 && targetGoalDist != 0) {
+    awayFromOwnGoalAngle = targetGoalRot;
+    return;
+  }
+  double awayAngle = angle + 180.0;
   if (awayAngle > 180.0) awayAngle -= 360.0;
   if (awayAngle < -180.0) awayAngle += 360.0;
   awayFromOwnGoalAngle = awayAngle;

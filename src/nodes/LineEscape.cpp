@@ -8,7 +8,7 @@
 #include <cmath>
 #include <numbers>
 
-static Vector2 getAwayFromLineVec(const WorldState& ws, int speed) {
+static Vector2 getAwayFromLineVec(const WorldState& ws, MotionController* motion, int speed) {
   Vector2 line = degToVec(ws.lineRot);
   line.rotate(std::numbers::pi);
 
@@ -36,6 +36,25 @@ static Vector2 getAwayFromLineVec(const WorldState& ws, int speed) {
 
   target.normalize();
   target *= speed;
+
+  if (!ws.goalValid) {
+    Vector2 lastT = motion->getLastTarget();
+
+    Vector2 lNorm = line;
+    lNorm.normalize();
+
+    // Wenn der Vektor noch von der Linie WEG zeigt (also dot product negativ ist, da lNorm ins Feld zeigt),
+    // invertieren wir ihn. Wenn er durch den letzten Schleifendurchlauf schon nach innen ins Feld gerichtet ist,
+    // (dot product > 0), behalten wir ihn bei, um Ping-Pong Effekte (immer drüber fahren) zu verhindern.
+    if (Vector2::dotProduct(lastT, lNorm) < 0) {
+      lastT = lastT * -1.0;
+    }
+    lastT.normalize();
+
+    target = lNorm * 0.5 + lastT * 0.5;
+    target.normalize();
+    target *= 15;
+  }
 
   return target;
 }
@@ -93,7 +112,7 @@ int checkOnLine(const WorldState& ws) {
 }
 
 void executeLineEscape(const WorldState& ws, MotionController* motion) {
-  const Vector2 target = getAwayFromLineVec(ws, 30);
+  const Vector2 target = getAwayFromLineVec(ws, motion, 25);
   float rotInput = 0;
 
   double globalBallDir = ws.ballRot - ws.heading;
@@ -122,5 +141,5 @@ void executeLineEscape(const WorldState& ws, MotionController* motion) {
 
   auto [vx, vy, rot] = motion->compute(target, rotInput, false, ws);
 
-  pushData(ws.ena, false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100, true);
+  pushData(ws.ena, false, static_cast<int>(target.getX()), static_cast<int>(target.getY()), rot, 100, false);
 }

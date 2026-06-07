@@ -67,6 +67,9 @@ void Bot::tick() {
   // build world state frame
   const WorldState ws = WorldState::build(*_cm5, *_sensors, *_positioning, *_gameState);
 
+  Serial.println(_cm5->getGlobalX());
+  Serial.println(_cm5->getGlobalY());
+
   // update rotation compensation for drive vec
   _motion->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
   _motionG->setRotDeltaRad(toRad(_positioning->getRotationDelta()));
@@ -93,11 +96,6 @@ void Bot::tick() {
 
   _gameState->update();
 
-  if (Sensors::getForceHalt()) {
-    // force halt from communication module
-    halt();
-    return;
-  }
 
   if (ledTimer > 200 && _gameState->isRunning()) {
     // disable leds after short time so we dont confuse the enemy
@@ -242,7 +240,7 @@ void Bot::decideKickAndExecute(const WorldState& ws) const {
   }
 
   // dynamic angle condition
-  const double theta = std::atan(30.0 / ws.targetGoalTargetDist);
+  const double theta = std::atan(25.0 / ws.targetGoalTargetDist);
 
   if (const double windowDeg = toDeg(theta); !(std::abs(ws.targetGoalTargetRot) < windowDeg)) {
     return;

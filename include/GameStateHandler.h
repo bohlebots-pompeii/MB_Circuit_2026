@@ -48,6 +48,8 @@ private:
 
   bool _lastLeft = false;
   bool _lastRight = false;
+  bool _lastForceHalt = false;
+  uint32_t _stateEnterMs = 0;
 
   void handleTargetSelect();
   void handleLocked();

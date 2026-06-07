@@ -40,6 +40,7 @@ void GameStateHandler::update() {
 void GameStateHandler::handleTargetSelect() {
   const bool left = _sensors->getButtonState(0, 1);
   const bool right = _sensors->getButtonState(0, 2);
+  const bool forceHalt = Sensors::getForceHalt();
 
   if (right && !_lastRight) {
     _targetIsYellow = !_targetIsYellow;
@@ -56,9 +57,12 @@ void GameStateHandler::handleTargetSelect() {
 
   _lastLeft = left;
   _lastRight = right;
+  _lastForceHalt = forceHalt;
 }
 
 void GameStateHandler::handleLocked() {
+  const bool forceHalt = Sensors::getForceHalt();
+
   if (const uint32_t now = millis(); now - _blinkLastMs >= BLINK_INTERVAL_MS) {
     _blinkLastMs = now;
     _blinkLedOn = !_blinkLedOn;
@@ -72,50 +76,71 @@ void GameStateHandler::handleLocked() {
   if (_blinkCount >= BLINK_TIMES) {
     _sensors->allLEDsOff();
     _state = State::ROLE_SELECT;
+    _stateEnterMs = millis();
     applyRoleLED();
     _lastLeft = _sensors->getButtonState(0, 1);
     _lastRight = _sensors->getButtonState(0, 2);
   }
+
+  _lastForceHalt = forceHalt;
 }
 
 void GameStateHandler::handleRoleSelect() {
   const bool left = _sensors->getButtonState(0, 1);
   const bool right = _sensors->getButtonState(0, 2);
+  const bool forceHalt = Sensors::getForceHalt();
 
   if (left && !_lastLeft) {
     _role = (_role == Role::GOALIE) ? Role::STRIKER : Role::GOALIE;
     applyRoleLED();
   }
 
-  if (right && !_lastRight) {
+  // Right button starts, OR comms module START (forceHalt going FALSE)
+  if ((right && !_lastRight) || (!forceHalt && _lastForceHalt)) {
+    Serial.println("[GameState] Transitioning to RUNNING!");
     _sensors->setEna(true);
     _state = State::RUNNING;
+    _stateEnterMs = millis();
     applyRoleLED();
     saveToEeprom(); // persist so we survive a power blip
   }
 
   _lastLeft = left;
   _lastRight = right;
+  _lastForceHalt = forceHalt;
 }
 
 void GameStateHandler::handleRunning() {
   const bool left = _sensors->getButtonState(0, 1);
   const bool right = _sensors->getButtonState(0, 2);
+  const bool forceHalt = Sensors::getForceHalt();
 
-  // Either button stops the bot → back to role select
-  if ((left && !_lastLeft) || (right && !_lastRight)) {
+  // Protect against severe voltage dips when motors activate causing immediate false stops
+  if (millis() - _stateEnterMs < 250) {
+    _lastLeft = left;
+    _lastRight = right;
+    _lastForceHalt = forceHalt;
+    return;
+  }
+
+  // Either button stops the bot → back to role select, OR comms module STOP (forceHalt going TRUE)
+  if ((left && !_lastLeft) || (right && !_lastRight) || (forceHalt && !_lastForceHalt)) {
+    Serial.println("[GameState] Transitioning back to ROLE_SELECT!");
     _sensors->setEna(false);
     _state = State::ROLE_SELECT;
+    _stateEnterMs = millis();
     _sensors->allLEDsOff();
     applyRoleLED();
     GameStateStore::clear(); // clear EEPROM for no autoresume
     _lastLeft = left;
     _lastRight = right;
+    _lastForceHalt = forceHalt;
     return;
   }
 
   _lastLeft = left;
   _lastRight = right;
+  _lastForceHalt = forceHalt;
 }
 
 // helpers

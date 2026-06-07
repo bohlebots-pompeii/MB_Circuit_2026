@@ -23,8 +23,8 @@ void executeHiddenBallNPocket(const WorldState& ws, MotionController* motion) {
   Vector2 target(0, 0);
 
   const bool inPocket = checkBallInPocket(ws);
-  const bool closeToGoal = ws.targetGoalDist < FieldConfig::KICK_DISTANCE - 4.0;
-  const bool farFromGoal = ws.targetGoalDist > FieldConfig::KICK_DISTANCE + 20.0;
+  const bool closeToGoal = ws.targetGoalDist < FieldConfig::GX - GeneralConfig::BOT_DIAMETER;
+  const bool farFromGoal = ws.targetGoalDist > FieldConfig::GX - GeneralConfig::BOT_DIAMETER * 1.5;
 
   if (!GeneralConfig::USE_HIDDEN_BALL) {
     if (inPocket) {

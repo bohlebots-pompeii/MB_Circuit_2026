@@ -25,7 +25,7 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.ballDist = cm5.getBallDist();
   ws.ballRot = cm5.getBallRot();
   ws.ballExists = cm5.getBallExists();
-  ws.hasBall = Sensors::getHasBall();
+  ws.hasBall = sensors.getHasBall();
 
   if (ws.ballExists) {
     s_hasSeenBall = true;
@@ -143,6 +143,7 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
   ws.ena = sensors.getEna();
   ws.cm5Running = cm5.getCM5Running();
 
+  /*
   // reconstruct if data lost
   if (!ws.ballExists && ws.peerBallValid && ws.peerRunning && ws.goalValid && ws.peerGoalValid) {
     ws.ballExists = true;
@@ -151,6 +152,7 @@ WorldState WorldState::build(const CM5& cm5, const Sensors& sensors, const Posit
     ws.ballRot = toDeg(ws.ballVec.getAngle());
     ws.ballDist = ws.ballVec.getMagnitude();
   }
+  */
 
   return ws;
 }

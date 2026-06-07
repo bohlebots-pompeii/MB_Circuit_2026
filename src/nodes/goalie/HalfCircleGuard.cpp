@@ -81,7 +81,7 @@ void applyBallAvoidance(const WorldState& ws, Vector2& target) {
 
 void executeHalfCircleGuard(const WorldState& ws, MotionController* motion) {
   Vector2 target;
-  const auto rotInput = ws.heading;
+  const auto rotInput = ws.awayFromOwnGoalAngle;
   constexpr bool usePID = true;
 
   if (ws.lineSeen) {
@@ -97,7 +97,15 @@ void executeHalfCircleGuard(const WorldState& ws, MotionController* motion) {
     target = getHalfCircleTarget(ws);
   }
 
+  if (std::abs(ws.ballRot) < 15 && ws.ownGoalDist < 100 && ws.ballDist < 40) {
+    target = Vector2(15, 0);
+  }
+
   applyBallAvoidance(ws, target);
+
+  if (ws.ownGoalDist == 0) {
+    target = Vector2(0,0);
+  }
 
   const int drib = ws.ballDist < 20 && ws.ballDist != 0 ? 100 : 0;
   auto [vx, vy, rot] = motion->compute(target, static_cast<float>(rotInput), usePID, ws);

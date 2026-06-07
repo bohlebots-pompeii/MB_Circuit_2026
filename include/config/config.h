@@ -18,7 +18,7 @@ namespace GeneralConfig {
 
   constexpr bool DISABLE_WARNINGS = false;
 
-  constexpr bool USE_HIDDEN_BALL = false;
+  constexpr bool USE_HIDDEN_BALL = true;
 
   constexpr double BOT_DIAMETER = 22.0;
 }

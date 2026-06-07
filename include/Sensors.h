@@ -5,6 +5,7 @@
 #pragma once
 
 #include <util/Vector2.hpp>
+#include <util/MovingAverage.h>
 #include <memory>
 #include <comms/CM5.h>
 #include <Arduino.h>
@@ -28,13 +29,33 @@ public:
 
   [[nodiscard]] bool getLineSeen() const { return progress != -1 && line_rot != -1; }
 
-  [[nodiscard]] static bool getHasBall() { return analogRead(PINS::LIGHT_GATE_PIN) > 3900; }
-  [[nodiscard]] static int getBallLightGate() { return analogRead(PINS::LIGHT_GATE_PIN); }
+  [[nodiscard]] bool getHasBall() const { return lightGateAvg.getAverage() > 2800; }
+  [[nodiscard]] int getBallLightGate() const { return lightGateAvg.getAverage(); }
 
   [[nodiscard]] int16_t getProgress() const { return progress; }
 
   [[nodiscard]] bool getEna() const { return ena; }
-  [[nodiscard]] static bool getForceHalt() { return digitalRead(PINS::COMMS_MODULE_PIN) == LOW; }
+
+  [[nodiscard]] static bool getForceHalt() {
+    static bool stableState = true; // Default to TRUE (halted) safely
+    static uint32_t lastChangeMs = 0;
+    static bool lastRaw = true;
+
+    const bool raw = (digitalRead(PINS::COMMS_MODULE_PIN) == LOW);
+
+    if (raw != lastRaw) {
+      lastChangeMs = millis();
+      lastRaw = raw;
+    }
+
+    // 50ms debounce to prevent voltage dips (when motors enable) from causing instant stops,
+    // and to filter out mechanical bouncing from the comms receiver.
+    if (millis() - lastChangeMs > 50) {
+      stableState = raw;
+    }
+
+    return stableState;
+  }
 
   enum COLOR {
     // for the LED colors
@@ -62,6 +83,8 @@ private:
 
   int16_t line_rot = -1;
   int16_t progress = -1;
+
+  MovingAverage<int, 50> lightGateAvg;
 
   std::shared_ptr<CM5> _cm5;
 

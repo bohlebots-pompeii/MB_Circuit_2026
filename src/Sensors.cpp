@@ -31,6 +31,7 @@ void Sensors::update() {
   updateLineSensor();
   // updateUS();
   updateButtons();
+  lightGateAvg.addValue(analogRead(PINS::LIGHT_GATE_PIN));
 }
 
 void Sensors::updateLineSensor() {
